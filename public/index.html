@@ -88,6 +88,10 @@
             <div style="display:grid;gap:var(--space-3)">
               <label style="font-weight:700">Client Name</label>
               <input type="text" id="client-name" placeholder="Enter client name" style="border:1px solid var(--color-border);background:var(--color-surface);border-radius:12px;padding:.65rem .9rem;color:var(--color-text);font-size:var(--text-base);width:100%" />
+              <label style="font-weight:700">Client Description</label>
+              <textarea id="client-description" placeholder="Briefly describe the client, their industry, and relevant background" rows="3" style="border:1px solid var(--color-border);background:var(--color-surface);border-radius:12px;padding:.65rem .9rem;color:var(--color-text);font-size:var(--text-base);width:100%;resize:vertical;font-family:inherit"></textarea>
+              <label style="font-weight:700">Use Case Explanation</label>
+              <textarea id="use-case-explanation" placeholder="Describe the use case to be estimated, including goals and expected outcomes" rows="3" style="border:1px solid var(--color-border);background:var(--color-surface);border-radius:12px;padding:.65rem .9rem;color:var(--color-text);font-size:var(--text-base);width:100%;resize:vertical;font-family:inherit"></textarea>
             </div>
           </div>
           <div class="project-intro">
@@ -656,6 +660,8 @@
     document.getElementById('form').addEventListener('reset', () => {
       requestAnimationFrame(() => {
         document.getElementById('client-name').value = '';
+        document.getElementById('client-description').value = '';
+        document.getElementById('use-case-explanation').value = '';
         bufferInput.value = 0;
         resetResourceRoles();
         calculate();
@@ -664,7 +670,9 @@
 
     function exportState() {
       const clientName = document.getElementById('client-name').value.trim();
-      const state = { clientName, sections: {}, buffer: bufferInput.value, resourceRoles: [] };
+      const clientDescription = document.getElementById('client-description').value.trim();
+      const useCaseExplanation = document.getElementById('use-case-explanation').value.trim();
+      const state = { clientName, clientDescription, useCaseExplanation, sections: {}, buffer: bufferInput.value, resourceRoles: [] };
       sections.forEach(section => {
         const checked = document.querySelector(`input[name="${section.id}"]:checked`);
         const multiplierEl = document.querySelector(`[data-section-multiplier="${section.id}"]`);
@@ -682,6 +690,12 @@
     function importState(state) {
       if (state.clientName !== undefined) {
         document.getElementById('client-name').value = state.clientName;
+      }
+      if (state.clientDescription !== undefined) {
+        document.getElementById('client-description').value = state.clientDescription;
+      }
+      if (state.useCaseExplanation !== undefined) {
+        document.getElementById('use-case-explanation').value = state.useCaseExplanation;
       }
       if (state.sections) {
         sections.forEach(section => {
