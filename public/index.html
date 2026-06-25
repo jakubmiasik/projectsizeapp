@@ -1,0 +1,846 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Fabric Project Sizing</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%2301696f'/%3E%3Ctext x='32' y='42' text-anchor='middle' font-size='28' font-family='Arial' fill='white'%3EF%3C/text%3E%3C/svg%3E" />
+  <style>
+    :root, [data-theme="light"] {
+      --text-xs: clamp(0.75rem, 0.7rem + 0.25vw, 0.875rem);
+      --text-sm: clamp(0.875rem, 0.8rem + 0.35vw, 1rem);
+      --text-base: clamp(1rem, 0.95rem + 0.25vw, 1.125rem);
+      --text-lg: clamp(1.125rem, 1rem + 0.75vw, 1.5rem);
+      --text-xl: clamp(1.5rem, 1.2rem + 1.25vw, 2.25rem);
+      --text-2xl: clamp(2rem, 1.2rem + 2.5vw, 3.5rem);
+      --space-2:.5rem; --space-3:.75rem; --space-4:1rem; --space-5:1.25rem; --space-6:1.5rem; --space-8:2rem; --space-10:2.5rem; --space-12:3rem;
+      --color-bg:#f7f6f2; --color-surface:#f9f8f5; --color-surface-2:#fbfbf9; --color-surface-offset:#f3f0ec; --color-border:#d4d1ca; --color-divider:#dcd9d5; --color-text:#28251d; --color-text-muted:#6d685f; --color-primary:#01696f; --color-primary-strong:#014a4f; --color-primary-soft:#dbeeed; --color-accent:#e8b923; --color-shadow:rgba(40,37,29,.08); --radius-md:16px; --radius-lg:22px; --radius-xl:28px; --shadow-sm:0 18px 40px rgba(40,37,29,.06); --font-display:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; --font-body:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+    }
+    [data-theme="dark"] { --color-bg:#171614; --color-surface:#1c1b19; --color-surface-2:#201f1d; --color-surface-offset:#22211f; --color-border:#393836; --color-divider:#262523; --color-text:#e4e0d7; --color-text-muted:#b8b3a7; --color-primary:#7ce1d6; --color-primary-strong:#95f6ec; --color-primary-soft:rgba(124,225,214,.12); --color-accent:#f2cb5c; --color-shadow:rgba(0,0,0,.28); }
+    *{box-sizing:border-box} body{margin:0;font-family:var(--font-body);font-size:var(--text-base);line-height:1.55;background:var(--color-bg);color:var(--color-text)} h1,h2,h3,h4,p{margin:0} button,input{font:inherit} .container{width:min(1320px,calc(100% - 2.5rem));margin:0 auto}
+    .header{position:sticky;top:0;z-index:20;background:color-mix(in srgb,var(--color-bg) 90%,transparent);backdrop-filter:blur(12px);border-bottom:1px solid var(--color-divider)}
+    .header-inner{display:flex;justify-content:space-between;align-items:center;padding:1rem 0}.brand{display:flex;align-items:center;gap:.8rem;font-weight:700}.logo{width:36px;height:36px;border-radius:12px;background:linear-gradient(135deg,var(--color-primary),var(--color-primary-strong));color:#fff;display:grid;place-items:center;font-weight:800;box-shadow:0 8px 18px rgba(1,105,111,.25)} .theme-toggle{border:1px solid var(--color-border);background:var(--color-surface);color:var(--color-text);border-radius:999px;padding:.75rem 1rem;display:inline-flex;align-items:center;gap:.55rem;cursor:pointer;box-shadow:var(--shadow-sm)} .header-actions{display:flex;align-items:center;gap:.5rem} .header-btn{border:1px solid var(--color-border);background:var(--color-surface);color:var(--color-text);border-radius:999px;padding:.75rem 1rem;display:inline-flex;align-items:center;gap:.45rem;cursor:pointer;font-size:var(--text-sm);font-weight:600;box-shadow:var(--shadow-sm)} .header-btn:hover{background:var(--color-surface-offset)} .header-btn svg{flex-shrink:0}
+    @media (max-width:720px){.header-actions{flex-wrap:wrap;gap:.35rem}.header-btn{padding:.55rem .7rem}}
+    .hero{padding:var(--space-12) 0 var(--space-8)} .hero-grid{display:grid;grid-template-columns:1fr;gap:var(--space-8)} .app-grid{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(460px,.8fr);gap:var(--space-8);align-items:start}
+    .eyebrow{display:inline-flex;align-items:center;gap:.5rem;padding:.45rem .8rem;border-radius:999px;background:var(--color-surface-offset);color:var(--color-primary);font-size:var(--text-sm);font-weight:700;margin-bottom:var(--space-4)}
+    .hero h1{font-family:var(--font-display);font-size:var(--text-2xl);max-width:none;width:100%;margin-bottom:var(--space-3)} .hero p{color:var(--color-text-muted);max-width:none} .section-copy,.project-copy{color:var(--color-text-muted);max-width:70ch}
+    .panel,.result{background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-xl);box-shadow:var(--shadow-sm);padding:var(--space-6)}
+    .app{padding-bottom:var(--space-12)} .result{position:sticky;top:5rem;display:grid;gap:var(--space-4);align-content:start;height:calc(100vh - 6rem);overflow:hidden} .result-scroll{display:grid;gap:var(--space-4);overflow-y:auto;padding-right:.2rem}
+    .meta-list{display:flex;flex-wrap:wrap;gap:var(--space-2);margin:0 0 var(--space-6);padding:0;list-style:none} .meta-label{display:inline-flex;align-items:center;gap:.35rem;padding:.45rem .8rem;border-radius:999px;background:var(--color-surface-offset);color:var(--color-text-muted);font-size:var(--text-sm);font-weight:600}
+    .project-intro{display:grid;gap:var(--space-3);margin-bottom:var(--space-6)}
+    .group{display:grid;gap:var(--space-4);margin-bottom:var(--space-8)} .group h3{font-size:var(--text-lg)} .options{display:grid;gap:var(--space-3)} .option{position:relative}
+    .option input{position:absolute;opacity:0;inset:0} .option label{display:block;padding:1rem 1rem 1rem 3.35rem;border:1px solid var(--color-border);background:var(--color-surface-2);border-radius:var(--radius-lg);cursor:pointer;transition:border-color .2s ease, transform .2s ease, box-shadow .2s ease;position:relative} .option label:hover{transform:translateY(-1px);box-shadow:0 10px 24px rgba(0,0,0,.06)}
+    .option label::before{content:"";position:absolute;left:1rem;top:1rem;width:1.1rem;height:1.1rem;border-radius:999px;border:2px solid #8e8b84} .option input:checked + label{border-color:var(--color-primary);box-shadow:0 0 0 3px color-mix(in srgb,var(--color-primary) 15%,transparent)} .option input:checked + label::before{background:var(--color-primary);border-color:var(--color-primary)}
+    .option-title{display:block;font-weight:700;margin-bottom:.2rem}.sub{display:block;color:var(--color-text-muted);font-size:var(--text-sm);margin-top:.2rem}
+    .section-adjustment{display:grid;gap:var(--space-2);padding:var(--space-4);border:1px solid var(--color-divider);border-radius:var(--radius-lg);background:var(--color-surface-offset)} .section-adjustment label{display:flex;align-items:center;justify-content:space-between;gap:var(--space-4)} .multiplier-field{display:inline-flex;align-items:center;gap:.6rem} .multiplier-input,.buffer-input{width:88px;border:1px solid var(--color-border);background:var(--color-surface);border-radius:12px;padding:.55rem .7rem;color:var(--color-text)} .section-adjustment-help,.buffer-note{color:var(--color-text-muted);font-size:var(--text-sm)}
+    .actions{position:sticky;bottom:0;display:flex;gap:var(--space-3);flex-wrap:wrap;padding-top:var(--space-4);padding-bottom:var(--space-2);background:linear-gradient(180deg,rgba(249,248,245,0),var(--color-surface) 28%)} .btn{border:1px solid var(--color-border);background:var(--color-surface-offset);color:var(--color-text);padding:.9rem 1.1rem;border-radius:14px;cursor:pointer;font-weight:700} .btn-primary{background:linear-gradient(135deg,var(--color-primary),var(--color-primary-strong));color:#fff;border-color:transparent}
+    .badge{display:inline-flex;align-items:center;gap:.45rem;padding:.45rem .85rem;border-radius:999px;font-weight:700;font-size:var(--text-sm)} .xs,.s,.m,.l,.xl{background:var(--color-primary-soft);color:var(--color-primary-strong)}
+    .score-pair{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--space-3)} .score-card{padding:var(--space-4);border-radius:var(--radius-lg);background:var(--color-surface-offset)} .score-card span{color:var(--color-text-muted);display:block;margin-bottom:.35rem} .score{font-size:var(--text-base);font-weight:800;word-break:break-word}
+    .buffer-box{display:grid;gap:var(--space-3);padding:var(--space-4);border-radius:var(--radius-lg);background:var(--color-surface-offset)} .buffer-row{display:grid;grid-template-columns:1fr auto;align-items:center;gap:var(--space-3)}
+    .muted{color:var(--color-text-muted)} .range-wrap{display:grid;gap:var(--space-2)} .range-scale{position:relative;padding-top:1.1rem}.range-title{display:flex;justify-content:space-between;align-items:center;gap:var(--space-4)} .range{position:relative;height:14px;border-radius:999px;background:var(--color-surface-offset);overflow:hidden} #bar{height:100%;border-radius:999px;background:linear-gradient(90deg,var(--color-primary),var(--color-accent))} .tier-marker{position:absolute;top:1.1rem;width:2px;height:14px;background:var(--color-accent)} .tier-label{display:flex;justify-content:space-between;color:var(--color-text-muted);font-size:var(--text-sm)} .tier-label-top{position:absolute;top:0;transform:translateX(-50%);font-size:var(--text-xs);color:var(--color-text-muted);white-space:nowrap;font-weight:700}
+    .mini-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:var(--space-2)} .mini{padding:var(--space-4);border-radius:var(--radius-lg);background:linear-gradient(135deg,color-mix(in srgb,var(--color-primary) 10%,var(--color-surface-offset)),var(--color-surface-offset))} .mini-head{display:flex;align-items:center;gap:.5rem;color:var(--color-text-muted);margin-bottom:.4rem}
+    .score-table{width:100%;border-collapse:separate;border-spacing:0 .65rem;font-size:var(--text-sm)} .score-table th{padding:.2rem .4rem;color:var(--color-text-muted);font-weight:700;text-align:left} .score-table td{padding:.7rem .8rem;background:var(--color-surface-offset)} .score-table td:first-child{border-radius:14px 0 0 14px}.score-table td:last-child{border-radius:0 14px 14px 0}.section-cell{display:flex;align-items:center;gap:.6rem}.section-icon{font-size:1.1rem}.section-choice{font-weight:700}
+    .summary-list{display:grid;gap:var(--space-2);padding:0;margin:0} .summary-list li{list-style:none} .summary-list details{border-radius:var(--radius-md);background:var(--color-surface-offset);padding:.85rem 1rem} .summary-list summary{cursor:pointer;font-weight:700}
+    .summary-stack{display:grid;gap:var(--space-4)} .summary-stack>details{border:1px solid var(--color-divider);border-radius:var(--radius-lg);background:var(--color-surface-offset);overflow:hidden} .summary-stack>details>summary{padding:1rem 1.1rem;cursor:pointer;font-weight:700} .summary-detail{display:grid;gap:.75rem;padding:0 1.1rem 1rem}.summary-card{padding:var(--space-4);border-radius:var(--radius-lg);background:var(--color-surface-offset)} .summary-card table{width:100%;border-collapse:collapse} .summary-card th,.summary-card td{text-align:left;padding:.45rem 0;vertical-align:top;border-bottom:1px solid var(--color-divider)} .summary-card tr:last-child th,.summary-card tr:last-child td{border-bottom:none} .summary-metric{color:var(--color-text-muted);font-size:var(--text-sm)} .impact-flag{display:inline-flex;align-items:center;padding:.25rem .6rem;border-radius:999px;background:var(--color-primary-soft);color:var(--color-primary-strong);font-size:var(--text-sm);font-weight:700}
+    .timeline-total{margin-bottom:var(--space-3);font-size:var(--text-sm);color:var(--color-text-muted)} .timeline-chart{display:grid;gap:var(--space-3)} .timeline-row{display:grid;grid-template-columns:160px 1fr;gap:var(--space-3);align-items:center} .timeline-bar-track{position:relative;height:12px;border-radius:999px;background:var(--color-surface-2);overflow:hidden} .timeline-bar-range{position:absolute;top:0;height:100%;border-radius:999px;background:linear-gradient(90deg,var(--color-primary),var(--color-accent))}
+    .resource-team{display:grid;gap:var(--space-3)} .resource-role{display:grid;grid-template-columns:1fr 120px auto;gap:var(--space-2);align-items:center} .resource-input,.resource-percent{border:1px solid var(--color-border);background:var(--color-surface);border-radius:12px;padding:.55rem .7rem;color:var(--color-text)} .resource-actions{display:flex;justify-content:space-between;align-items:center;gap:var(--space-2)} .resource-add,.resource-remove{border:1px solid var(--color-border);background:var(--color-surface);color:var(--color-text);border-radius:12px;padding:.5rem .7rem;cursor:pointer;font-weight:700}
+    @media (max-width: 980px){.app-grid,.app-grid.has-result{grid-template-columns:1fr}.result{position:sticky;top:1rem;height:auto;max-height:calc(100vh - 2rem)}.result-scroll{overflow-y:auto;padding-right:0}} @media (max-width:720px){.container{width:min(100% - 1.25rem,1180px)}.score-pair,.mini-grid{grid-template-columns:1fr}.timeline-row{grid-template-columns:1fr}.section-adjustment label,.buffer-row,.range-title,.header-inner{grid-template-columns:1fr;display:grid;justify-content:stretch}.theme-toggle{justify-content:center}}
+    .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:100;place-items:center} .modal-overlay.active{display:grid} .modal{background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-xl);padding:var(--space-6);width:min(560px,calc(100% - 2rem));max-height:80vh;overflow-y:auto;box-shadow:0 24px 48px rgba(0,0,0,.15)} .modal h3{margin-bottom:var(--space-4)} .modal-close{float:right;border:none;background:none;font-size:1.5rem;cursor:pointer;color:var(--color-text-muted)} .estimation-list{display:grid;gap:var(--space-2);margin:0;padding:0;list-style:none} .estimation-item{display:grid;grid-template-columns:1fr auto auto;gap:var(--space-2);align-items:center;padding:var(--space-3) var(--space-4);border:1px solid var(--color-border);border-radius:var(--radius-md);background:var(--color-surface-2);cursor:pointer;transition:border-color .2s} .estimation-item:hover{border-color:var(--color-primary)} .estimation-item-info{display:grid;gap:.2rem} .estimation-item-title{font-weight:700} .estimation-item-meta{font-size:var(--text-sm);color:var(--color-text-muted)} .estimation-delete{border:1px solid var(--color-border);background:var(--color-surface);color:var(--color-text-muted);border-radius:8px;padding:.4rem .6rem;cursor:pointer;font-size:var(--text-sm)} .estimation-delete:hover{color:#c0392b;border-color:#c0392b} .user-badge{display:inline-flex;align-items:center;gap:.4rem;padding:.45rem .8rem;border-radius:999px;background:var(--color-primary-soft);color:var(--color-primary-strong);font-size:var(--text-sm);font-weight:600}
+  </style>
+</head>
+<body>
+  <header class="header">
+    <div class="container header-inner">
+      <div class="brand"><div class="logo">F</div><span>Fabric Project Sizing</span></div>
+      <div class="header-actions">
+        <button class="header-btn" id="save-cloud-btn" aria-label="Save to cloud" style="display:none">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+          Save
+        </button>
+        <button class="header-btn" id="load-cloud-btn" aria-label="Load from cloud" style="display:none">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 15v4c0 1.1.9 2 2 2h14a2 2 0 0 0 2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+          Load
+        </button>
+        <button class="theme-toggle" data-theme-toggle aria-label="Switch theme"></button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero container">
+      <div class="hero-grid">
+        <div class="hero-copy">
+          <h1>T-shirt sizing for Microsoft Fabric projects</h1>
+          <span class="eyebrow">Scorecard</span>
+          <p>This scorecard helps estimate the likely size of a Microsoft Fabric implementation by combining scope, engineering complexity, governance requirements, semantic modeling, reporting needs, and delivery context into a single hours-based estimate.</p>
+          <p>It is intended as an early planning tool for shaping conversations about delivery effort, sequencing, stakeholder alignment, and the level of architecture and platform design that may be required.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="app container">
+      <div class="app-grid has-result">
+        <form class="panel" id="form">
+          <div class="group">
+            <h2 class="section-title">General Information</h2>
+            <div style="display:grid;gap:var(--space-3)">
+              <label style="font-weight:700">Client Name</label>
+              <input type="text" id="client-name" placeholder="Enter client name" style="border:1px solid var(--color-border);background:var(--color-surface);border-radius:12px;padding:.65rem .9rem;color:var(--color-text);font-size:var(--text-base);width:100%" />
+            </div>
+          </div>
+          <div class="project-intro">
+            <h2 class="section-title">Project estimator</h2>
+            <p class="project-copy">Use the questionnaire below to describe the anticipated scope of your Fabric implementation.</p>
+          </div>
+          <ul class="meta-list" aria-label="Questionnaire details">
+            <li class="meta-label">Selection: 1 option per section</li>
+            <li class="meta-label">Estimation: upper-bound hour values</li>
+            <li class="meta-label">Buffer: optional uplift on total estimated hours</li>
+          </ul>
+          <div id="questions"></div>
+          <div class="actions">
+            <button type="reset" class="btn" id="reset">Reset</button>
+          </div>
+        </form>
+
+        <aside class="result" id="result" aria-hidden="false">
+          <div class="result-scroll">
+            <div>
+              <div id="badge" class="badge s">S</div>
+            </div>
+
+            <div class="score-pair">
+              <div class="score-card">
+                <span>Estimated range</span>
+                <div id="score-range" class="score">XS</div>
+              </div>
+              <div class="score-card">
+                <span>Estimated timeline</span>
+                <div id="score-weeks" class="score">0 weeks</div>
+              </div>
+            </div>
+
+            <div class="buffer-box">
+              <div class="buffer-row">
+                <div>
+                  <h3>Safety buffer</h3>
+                </div>
+                <label>
+                  <input id="buffer" class="buffer-input" type="number" min="0" max="100" step="5" value="0" />
+                  <span class="buffer-note">%</span>
+                </label>
+              </div>
+              <p id="buffer-summary" class="muted">No safety buffer applied.</p>
+            </div>
+
+            <div>
+              <p id="narrative" class="muted">Transformation complexity is derived from the selected Objects to ingest estimate using the formula shown in each transformation option.</p>
+            </div>
+
+            <div class="range-wrap">
+              <div class="range-title">
+                <h3>Estimate overview</h3>
+                <span id="next-tier-note"></span>
+              </div>
+              <div class="range-scale">
+                <span id="next-tier-label" class="tier-label-top"></span>
+                <div class="range">
+                  <div id="bar"></div>
+                </div>
+                <div id="next-tier-marker" class="tier-marker"></div>
+              </div>
+              <div class="tier-label">
+                <span id="current-tier-note">Estimated range</span>
+                <span id="score-gap-note">Estimated timeline</span>
+              </div>
+            </div>
+
+            <div class="mini-grid" id="highlights"></div>
+
+            <div>
+              <h3>Section selections</h3>
+              <table class="score-table">
+                <thead><tr><th>Section</th><th>Selected</th></tr></thead>
+                <tbody id="rows"></tbody>
+              </table>
+            </div>
+
+            <div class="summary-stack">
+              <div class="summary-card">
+                <h4>Team allocation (FTE)</h4>
+                <div class="resource-team">
+                  <div id="resource-roles"></div>
+                  <div class="resource-actions">
+                    <button type="button" id="add-resource-role" class="resource-add">+ Add role</button>
+                    <span class="summary-metric">Capacity ratio = total utilization / 80%</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="summary-card">
+                <h4>Estimated totals</h4>
+                <table>
+                  <tbody id="hours-summary"></tbody>
+                </table>
+              </div>
+
+              <div class="summary-card">
+                <h4>Estimated timeline by phase</h4>
+                <div id="timeline-total" class="timeline-total"></div>
+                <div id="timeline-summary" class="timeline-chart"></div>
+              </div>
+            </div>
+          </div>
+        </aside>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const sectionIcons = {
+      sources: '🔌',
+      objects: '📦',
+      volume: '🗄️',
+      transform: '⚙️',
+      governance: '🛡️',
+      semantic: '🧠',
+      reports: '📊',
+      gold: '🥇',
+      latency: '⏱️',
+      methodology: '🏗️',
+      delivery: '🤝'
+    };
+
+    const timelinePhases = [
+      { label: 'Analysis', percent: 0.2 },
+      { label: 'Implementation', percent: 0.6 },
+      { label: 'UAT', percent: 0.1 },
+      { label: 'Documentation and Closeout', percent: 0.1 }
+    ];
+    const PARALLEL_EFFICIENCY = 0.8;
+
+    const tshirtBands = [
+      { label: 'XS', from: 49, to: 120 },
+      { label: 'S', from: 121, to: 329 },
+      { label: 'M', from: 330, to: 625 },
+      { label: 'L', from: 626, to: 999 },
+      { label: 'XL', from: 1000, to: Infinity }
+    ];
+
+    const sections = [
+      { id:'sources', title:'Source system', options: [
+        {label:'1', hours:4, sub:'Simple ingestion for one transactional data source'},
+        {label:'2-3', hours:12, sub:'Small set of connected source systems'},
+        {label:'4-8', hours:32, sub:'Multiple enterprise source systems'},
+        {label:'9-15', hours:60, sub:'Large portfolio of source integrations'},
+        {label:'16+', hours:64, sub:'Enterprise-scale source integration portfolio'},
+        {label:"Don't know", hours:8, sub:'Scope not yet defined'},
+        {label:'Not in scope', hours:1, sub:'No source system ingestion required'},
+      ]},
+      { id:'objects', title:'Objects to ingest', options: [
+        {label:'1-5', hours:10, sub:'Minimal object set'},
+        {label:'6-15', hours:30, sub:'Small collection of tables or files'},
+        {label:'16-50', hours:100, sub:'Medium-sized dataset'},
+        {label:'51-150', hours:300, sub:'Large dataset with many entities'},
+        {label:'151-400', hours:800, sub:'Very large data estate'},
+        {label:'400+', hours:800, sub:'Enterprise-scale object volume'},
+        {label:"Don't know", hours:40, sub:'Object count not yet defined'},
+        {label:'Not in scope', hours:8, sub:'No objects to ingest'},
+      ]},
+      { id:'volume', title:'Data volume', options: [
+        {label:'10GB', hours:2, sub:'Small data footprint'},
+        {label:'10-40GB', hours:4, sub:'Light data volume'},
+        {label:'40-200GB', hours:20, sub:'Moderate data volume'},
+        {label:'200GB-1TB', hours:30, sub:'Significant data volume'},
+        {label:'1TB+', hours:30, sub:'Enterprise-scale data volume'},
+        {label:"Don't know", hours:5, sub:'Volume not yet assessed'},
+        {label:'Not in scope', hours:1, sub:'Data volume not applicable'},
+      ]},
+      { id:'transform', title:'Transformation complexity', options: [
+        {label:'Easy', transform:{objectsPercent:0.10, factorA:2, factorB:1}, sub:'Simple rule-based transformations with minimal logic'},
+        {label:'Low', transform:{objectsPercent:0.15, factorA:4, factorB:1.5}, sub:'Standard transformations with some business rules'},
+        {label:'Moderate', transform:{objectsPercent:0.40, factorA:5, factorB:2}, sub:'Multi-step transformations with moderate complexity'},
+        {label:'Complex', transform:{objectsPercent:0.60, factorA:7, factorB:3}, sub:'Complex transformations with advanced business logic'},
+        {label:"Don't know", transform:{objectsPercent:0.15, factorA:3, factorB:1}, sub:'Transformation complexity not yet assessed'},
+        {label:'Not in scope', transform:{objectsPercent:0.10, factorA:1, factorB:1}, sub:'No transformations required'},
+      ]},
+      { id:'governance', title:'Governance and security', options: [
+        {label:'Basic', hours:4, sub:'Standard workspace access control'},
+        {label:'RLS, limited Purview', hours:16, sub:'Row-level security with basic data governance'},
+        {label:'Multi workspace, full Purview', hours:60, sub:'Cross-workspace governance with full Purview integration'},
+        {label:'Compliance heavy', hours:100, sub:'Strict compliance and regulatory requirements'},
+        {label:"Don't know", hours:20, sub:'Governance requirements not yet defined'},
+        {label:'Not in scope', hours:2, sub:'No governance requirements'},
+      ]},
+      { id:'semantic', title:'Semantic model complexity', options: [
+        {label:'Easy', hours:10, sub:'Simple flat or star schema model'},
+        {label:'Low', hours:16, sub:'Basic dimensional model with few measures'},
+        {label:'Moderate', hours:24, sub:'Multi-table model with calculations'},
+        {label:'Complex', hours:60, sub:'Advanced model with complex business logic'},
+        {label:"Don't know", hours:20, sub:'Model complexity not yet assessed'},
+        {label:'Not in scope', hours:2, sub:'No semantic model required'},
+      ]},
+      { id:'reports', title:'Power BI reports', options: [
+        {label:'1-3', hours:18, sub:'Minimal reporting surface'},
+        {label:'4-10', hours:60, sub:'Standard reporting suite'},
+        {label:'11-25', hours:150, sub:'Extensive reporting portfolio'},
+        {label:'26+', hours:156, sub:'Large-scale enterprise report library'},
+        {label:"Don't know", hours:20, sub:'Report count not yet defined'},
+        {label:'Not in scope', hours:2, sub:'No Power BI reports required'},
+      ]},
+      { id:'gold', title:'Gold layer complexity', options: [
+        {label:'1-5 (Easy)', hours:20, sub:'Simple aggregations and summary views'},
+        {label:'2-8 (Low)', hours:32, sub:'Limited business logic transformations'},
+        {label:'5-15 (Moderate)', hours:60, sub:'Moderate business layer with several entities'},
+        {label:'10-80 (Moderate +)', hours:320, sub:'Extended business logic with many entities'},
+        {label:'50-100 (Complex)', hours:400, sub:'Complex enterprise-grade gold layer'},
+        {label:'100+ (Enterprise)', hours:400, sub:'Full enterprise gold architecture'},
+        {label:"Don't know", hours:30, sub:'Gold layer scope not yet defined'},
+        {label:'Not in scope', hours:2, sub:'No gold layer required'},
+      ]},
+      { id:'latency', title:'Latency expectations', options: [
+        {label:'Daily', hours:2, sub:'Batch refresh once per day'},
+        {label:'Intra day', hours:3, sub:'Multiple refreshes during business hours'},
+        {label:'Hourly', hours:4, sub:'Scheduled hourly data refresh'},
+        {label:'Streaming', hours:32, sub:'Real-time or near-real-time data streaming'},
+        {label:"Don't know", hours:5, sub:'Latency requirements not yet defined'},
+        {label:'Not in scope', hours:2, sub:'No latency constraints'},
+      ]},
+      { id:'methodology', title:'Target methodology', options: [
+        {label:'Simple medallion', hours:8, sub:'Standard bronze, silver, gold architecture'},
+        {label:'Medalion + Kimball', hours:16, sub:'Medallion with dimensional modelling'},
+        {label:'Hybrid medallion', hours:24, sub:'Custom hybrid architecture approach'},
+        {label:'Multiple patterns', hours:40, sub:'Co-existing design patterns across domains'},
+        {label:"Don't know", hours:0, sub:'Architecture not yet decided'},
+        {label:'Not in scope', hours:0, sub:'No target methodology required'},
+      ]},
+      { id:'delivery', title:'Delivery and stakeholders', options: [
+        {label:'Single unit', hours:6, sub:'Delivery to a single team or business unit'},
+        {label:'Several stakeholders', hours:10, sub:'Multiple stakeholders across the organisation'},
+        {label:'Cross functional', hours:16, sub:'Cross-functional delivery spanning departments'},
+        {label:'Large transformation program', hours:40, sub:'Enterprise-scale delivery programme'},
+        {label:"Don't know", hours:8, sub:'Delivery context not yet defined'},
+        {label:'Not in scope', hours:2, sub:'No specific delivery considerations'},
+      ]},
+    ];
+
+    function roundUp(value) {
+      return Math.ceil(Number(value) || 0);
+    }
+
+    function formatWhole(value) {
+      return roundUp(value).toLocaleString();
+    }
+
+    function formatWeeks(value) {
+      return `${formatWhole(value)} weeks`;
+    }
+
+    function multiplyHours(hours, factor) {
+      return roundUp(hours * factor);
+    }
+
+    function getOptionHours(sectionId, option, selectedBySection) {
+      if (sectionId !== 'transform') return option.hours;
+      const objectsEstimate = selectedBySection.objects?.baseHours || 0;
+      const transformFactor = option.transform.objectsPercent * option.transform.factorA * option.transform.factorB;
+      return roundUp(objectsEstimate * transformFactor);
+    }
+
+    function getTshirt(hours) {
+      for (const band of tshirtBands) {
+        if (hours >= band.from && hours <= band.to) return band.label;
+      }
+      if (hours > 0 && hours < 49) return 'XS';
+      return '—';
+    }
+
+    function getTshirtRange(label) {
+      const band = tshirtBands.find(item => item.label === label);
+      if (!band) return '—';
+      if (band.to === Infinity) return `${band.label} (${formatWhole(band.from)}+)`;
+      return `${band.label} (${formatWhole(band.from)}-${formatWhole(band.to)})`;
+    }
+
+    function calculateTimelineWeeks(hours, capacityRatio = 1) {
+      const safeRatio = Math.max(capacityRatio || 1, 0.01);
+      const baselineWeeks = roundUp((hours / 0.7) / 40);
+      return roundUp(baselineWeeks / safeRatio);
+    }
+
+    function getTimelineRange(tshirt, capacityRatio = 1) {
+      const band = tshirtBands.find(b => b.label === tshirt);
+      if (!band) return '—';
+      const safeRatio = Math.max(capacityRatio || 1, 0.01);
+      const baselineMinWeeks = Math.ceil((band.from / 0.7) / 40);
+      const minWeeks = Math.ceil(baselineMinWeeks / safeRatio);
+      if (band.to === Infinity) return `${minWeeks}+ weeks`;
+      const baselineMaxWeeks = Math.floor((band.to / 0.7) / 40);
+      const maxWeeks = Math.max(minWeeks, Math.floor(baselineMaxWeeks / safeRatio));
+      return `${minWeeks}–${maxWeeks} weeks`;
+    }
+
+    function renderTimeline(totalWeeks, timelineRange, resourcePlan) {
+      const timelineSummary = document.getElementById('timeline-summary');
+      const timelineTotal = document.getElementById('timeline-total');
+      const maxWeeks = Math.max(totalWeeks, 1);
+
+      timelineTotal.textContent = `Total estimated timeline: ${timelineRange} · utilization: ${resourcePlan.totalUtilizationPercent}% · ratio: ${resourcePlan.capacityRatio.toFixed(2)}`;
+
+      let currentStart = 0;
+      timelineSummary.innerHTML = timelinePhases.map(phase => {
+        const start = currentStart;
+        const end = currentStart + phase.percent * maxWeeks;
+        currentStart = end;
+        const leftPercent = (start / maxWeeks) * 100;
+        const widthPercent = ((end - start) / maxWeeks) * 100;
+
+        return `
+          <div class="timeline-row">
+            <div class="timeline-phase">${phase.label}</div>
+            <div class="timeline-bar-track">
+              <div class="timeline-bar-range" style="left:${leftPercent}%; width:${widthPercent}%"></div>
+            </div>
+          </div>`;
+      }).join('');
+    }
+
+    const questionRoot = document.getElementById('questions');
+    sections.forEach((section, idx) => {
+      const defaultIndex = 0;
+      const block = document.createElement('section');
+      block.className = 'group';
+      block.innerHTML = `
+        <h3>${idx + 1}. ${section.title}</h3>
+        <div class="section-adjustment">
+          <label for="${section.id}-multiplier">
+            <span>Section multiplier</span>
+            <span class="multiplier-field">
+              <input id="${section.id}-multiplier" class="multiplier-input" type="number" min="0" max="500" step="5" value="0" data-section-multiplier="${section.id}" />
+              <span class="buffer-note">%</span>
+            </span>
+          </label>
+          <p class="section-adjustment-help">Enter a percentage to increase this section’s selected hour estimate. Example: 15 adds 15% to this section total.</p>
+        </div>
+        <div class="options">
+          ${section.options.map((opt, i) => `
+            <div class="option">
+              <input type="radio" name="${section.id}" id="${section.id}-${i}" value="${i}" data-label="${opt.label}" ${i === defaultIndex ? 'checked' : ''}>
+              <label for="${section.id}-${i}">
+                <span class="option-title">${opt.label}</span>
+                <span class="sub">${opt.sub ? opt.sub : `${formatWhole(opt.hours)} h`}</span>
+              </label>
+            </div>
+          `).join('')}
+        </div>`;
+      questionRoot.appendChild(block);
+    });
+
+    const bufferInput = document.getElementById('buffer');
+    const resourceRolesRoot = document.getElementById('resource-roles');
+    const addResourceRoleButton = document.getElementById('add-resource-role');
+    let resourceRoleIndex = 0;
+
+    function addResourceRole(roleName = '', percent = 80) {
+      resourceRoleIndex += 1;
+      const row = document.createElement('div');
+      row.className = 'resource-role';
+      row.dataset.resourceRole = String(resourceRoleIndex);
+      row.innerHTML = `
+        <input class="resource-input" type="text" placeholder="Role (e.g. Data Engineer)" value="${roleName}">
+        <div class="multiplier-field">
+          <input class="resource-percent" type="number" min="0" max="300" step="5" value="${percent}">
+          <span class="buffer-note">%</span>
+        </div>
+        <button type="button" class="resource-remove" aria-label="Remove role">×</button>`;
+      resourceRolesRoot.appendChild(row);
+    }
+
+    function resetResourceRoles() {
+      resourceRolesRoot.innerHTML = '';
+      addResourceRole('', 80);
+    }
+
+    function getResourcePlan() {
+      const rows = Array.from(resourceRolesRoot.querySelectorAll('[data-resource-role]'));
+      const totalUtilizationPercent = rows.reduce((sum, row) => {
+        const value = Number(row.querySelector('.resource-percent')?.value || 0);
+        return sum + Math.max(0, value);
+      }, 0);
+      const totalUtilization = totalUtilizationPercent / 100;
+      const capacityRatio = totalUtilization > 0
+        ? totalUtilization / PARALLEL_EFFICIENCY
+        : 1;
+      return {
+        totalUtilizationPercent: roundUp(totalUtilizationPercent),
+        capacityRatio
+      };
+    }
+
+    function updateEstimateOverview(totalHours, tshirt, capacityRatio) {
+      const nextMarker = document.getElementById('next-tier-marker');
+      const nextTierLabel = document.getElementById('next-tier-label');
+      const currentTierNote = document.getElementById('current-tier-note');
+      const nextTierNote = document.getElementById('next-tier-note');
+      const scoreGapNote = document.getElementById('score-gap-note');
+      const maxBarHours = 2000;
+      document.getElementById('bar').style.width = Math.min(100, (totalHours / maxBarHours) * 100) + '%';
+      currentTierNote.textContent = `Estimated range: ${getTshirtRange(tshirt)}`;
+      nextTierNote.textContent = getTimelineRange(tshirt, capacityRatio);
+      scoreGapNote.textContent = `Estimated timeline: ${getTimelineRange(tshirt, capacityRatio)}`;
+
+      const currentBandIndex = tshirtBands.findIndex(b => b.label === tshirt);
+      const nextBand = currentBandIndex >= 0 && currentBandIndex < tshirtBands.length - 1
+        ? tshirtBands[currentBandIndex + 1]
+        : null;
+
+      if (nextBand && nextBand.from <= maxBarHours) {
+        const additionalHours = nextBand.from - totalHours;
+        const markerPercent = (nextBand.from / maxBarHours) * 100;
+        nextMarker.style.display = 'block';
+        nextMarker.style.left = markerPercent + '%';
+        nextTierLabel.style.display = 'block';
+        nextTierLabel.style.left = markerPercent + '%';
+        nextTierLabel.textContent = `${nextBand.label} (+${formatWhole(additionalHours)}h)`;
+      } else {
+        nextMarker.style.display = 'none';
+        nextTierLabel.style.display = 'none';
+      }
+    }
+
+    function calculate() {
+      const chosen = [];
+      const selectedBySection = {};
+      let totalHours = 0;
+
+      sections.forEach(section => {
+        const input = document.querySelector(`input[name="${section.id}"]:checked`);
+        const option = section.options[Number(input.value)];
+        const multiplierInput = document.querySelector(`[data-section-multiplier="${section.id}"]`);
+        const multiplierPercent = Math.max(0, Number(multiplierInput?.value) || 0);
+        const baseHours = getOptionHours(section.id, option, selectedBySection);
+        const hours = multiplyHours(baseHours, 1 + multiplierPercent / 100);
+        totalHours += hours;
+        selectedBySection[section.id] = {
+          option,
+          baseHours,
+          hours
+        };
+        chosen.push({
+          sectionId: section.id,
+          section: section.title,
+          label: option.label,
+          baseHours,
+          multiplierPercent,
+          hours
+        });
+      });
+
+      const bufferPercent = Math.max(0, Number(bufferInput.value) || 0);
+      const bufferedTotalHours = multiplyHours(totalHours, 1 + bufferPercent / 100);
+      const resourcePlan = getResourcePlan();
+      const totalWeeks = calculateTimelineWeeks(bufferedTotalHours, resourcePlan.capacityRatio);
+      const tshirt = getTshirt(bufferedTotalHours);
+      const tshirtRange = getTshirtRange(tshirt);
+      const timelineRange = getTimelineRange(tshirt, resourcePlan.capacityRatio);
+
+      document.getElementById('score-range').textContent = tshirtRange;
+      document.getElementById('score-weeks').textContent = timelineRange;
+      document.getElementById('narrative').textContent = 'Transformation complexity is derived from the selected Objects to ingest estimate using the formula shown in each transformation option.';
+      document.getElementById('buffer-summary').textContent = bufferPercent > 0
+        ? `Safety buffer of ${formatWhole(bufferPercent)}% adds ${formatWhole(bufferedTotalHours - totalHours)} hours to the estimate.`
+        : 'No safety buffer applied.';
+
+      const badge = document.getElementById('badge');
+      badge.className = `badge ${tshirt.toLowerCase()}`;
+      badge.textContent = tshirt;
+
+      updateEstimateOverview(bufferedTotalHours, tshirt, resourcePlan.capacityRatio);
+      renderTimeline(totalWeeks, timelineRange, resourcePlan);
+
+      document.getElementById('hours-summary').innerHTML = `
+        <tr>
+          <th>Total estimated hours</th>
+          <td>${formatWhole(bufferedTotalHours)}</td>
+        </tr>
+        <tr>
+          <th>Project Management (10%)</th>
+          <td>${formatWhole(roundUp(bufferedTotalHours * 0.10))}</td>
+        </tr>
+        <tr>
+          <th>Total project hours (incl. PM)</th>
+          <td><strong>${formatWhole(bufferedTotalHours + roundUp(bufferedTotalHours * 0.10))}</strong></td>
+        </tr>
+        <tr>
+          <th>Estimated range</th>
+          <td>${tshirtRange}</td>
+        </tr>
+        <tr>
+          <th>Total resource utilization</th>
+          <td>${formatWhole(resourcePlan.totalUtilizationPercent)}%</td>
+        </tr>
+        <tr>
+          <th>Parallel capacity ratio</th>
+          <td>${resourcePlan.capacityRatio.toFixed(2)}</td>
+        </tr>
+        <tr>
+          <th>Estimated timeline</th>
+          <td>${timelineRange}</td>
+        </tr>`;
+
+      document.getElementById('rows').innerHTML = chosen.map(c => `
+        <tr>
+          <td>
+            <div class="section-cell">
+              <span class="section-icon">${sectionIcons[c.sectionId] || '•'}</span>
+              <span class="section-name">${c.section}</span>
+            </div>
+          </td>
+          <td class="section-choice">${c.label}</td>
+        </tr>`).join('');
+
+      const top = [...chosen].sort((a, b) => b.hours - a.hours).slice(0, 4);
+      document.getElementById('highlights').innerHTML = top.map(item => `
+        <div class="mini">
+          <div class="mini-head">
+            <span class="mini-icon">${sectionIcons[item.sectionId] || '•'}</span>
+            <span>${item.section}</span>
+          </div>
+          <strong>${item.label}</strong>
+        </div>`).join('');
+    }
+
+    document.getElementById('form').addEventListener('change', (event) => {
+      if (event.target.matches('input[type="radio"], input[data-section-multiplier]')) calculate();
+    });
+    bufferInput.addEventListener('input', calculate);
+    addResourceRoleButton.addEventListener('click', () => {
+      addResourceRole('', 0);
+      calculate();
+    });
+    resourceRolesRoot.addEventListener('click', (event) => {
+      if (!event.target.matches('.resource-remove')) return;
+      const rows = resourceRolesRoot.querySelectorAll('[data-resource-role]');
+      if (rows.length > 1) {
+        event.target.closest('[data-resource-role]')?.remove();
+      } else {
+        const percentInput = rows[0]?.querySelector('.resource-percent');
+        const roleInput = rows[0]?.querySelector('.resource-input');
+        if (percentInput) percentInput.value = '0';
+        if (roleInput) roleInput.value = '';
+      }
+      calculate();
+    });
+    resourceRolesRoot.addEventListener('input', (event) => {
+      if (event.target.matches('.resource-input, .resource-percent')) calculate();
+    });
+    document.querySelectorAll('input[data-section-multiplier]').forEach(input => {
+      input.addEventListener('input', calculate);
+    });
+    document.getElementById('form').addEventListener('reset', () => {
+      requestAnimationFrame(() => {
+        document.getElementById('client-name').value = '';
+        bufferInput.value = 0;
+        resetResourceRoles();
+        calculate();
+      });
+    });
+
+    function exportState() {
+      const clientName = document.getElementById('client-name').value.trim();
+      const state = { clientName, sections: {}, buffer: bufferInput.value, resourceRoles: [] };
+      sections.forEach(section => {
+        const checked = document.querySelector(`input[name="${section.id}"]:checked`);
+        const multiplierEl = document.querySelector(`[data-section-multiplier="${section.id}"]`);
+        state.sections[section.id] = { value: checked?.value, multiplier: multiplierEl?.value };
+      });
+      resourceRolesRoot.querySelectorAll('[data-resource-role]').forEach(row => {
+        state.resourceRoles.push({
+          name: row.querySelector('.resource-input')?.value || '',
+          percent: row.querySelector('.resource-percent')?.value || '0'
+        });
+      });
+      return state;
+    }
+
+    function importState(state) {
+      if (state.clientName !== undefined) {
+        document.getElementById('client-name').value = state.clientName;
+      }
+      if (state.sections) {
+        sections.forEach(section => {
+          const entry = state.sections[section.id];
+          if (!entry) return;
+          if (entry.value !== undefined) {
+            const radio = document.querySelector(`input[name="${section.id}"][value="${entry.value}"]`);
+            if (radio) radio.checked = true;
+          }
+          if (entry.multiplier !== undefined) {
+            const multiplierEl = document.querySelector(`[data-section-multiplier="${section.id}"]`);
+            if (multiplierEl) multiplierEl.value = entry.multiplier;
+          }
+        });
+      }
+      if (state.buffer !== undefined) bufferInput.value = state.buffer;
+      if (Array.isArray(state.resourceRoles) && state.resourceRoles.length > 0) {
+        resourceRolesRoot.innerHTML = '';
+        state.resourceRoles.forEach(role => addResourceRole(role.name || '', Number(role.percent) || 0));
+      }
+      calculate();
+    }
+
+    (function(){
+      const btn = document.querySelector('[data-theme-toggle]');
+      const root = document.documentElement;
+      let theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+      const draw = () => {
+        root.setAttribute('data-theme', theme);
+        btn.innerHTML = theme === 'dark'
+          ? '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"></circle><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"></path></svg>'
+          : '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>';
+      };
+      btn.addEventListener('click',()=>{ theme = theme === 'dark' ? 'light' : 'dark'; draw(); });
+      draw();
+    })();
+
+    resetResourceRoles();
+    calculate();
+
+    // Cloud save/load functionality
+    (async function initCloud() {
+      try {
+        const res = await fetch('/api/user');
+        if (!res.ok) {
+          // Not authenticated - show sign-in button
+          const signInBtn = document.createElement('button');
+          signInBtn.className = 'header-btn';
+          signInBtn.innerHTML = '&#x1F512; Sign In';
+          signInBtn.title = 'Sign in to save/load estimations';
+          signInBtn.addEventListener('click', () => { window.location.href = '/.auth/login/aad?post_login_redirect_uri=' + encodeURIComponent(window.location.pathname); });
+          document.querySelector('.header-actions').prepend(signInBtn);
+          return;
+        }
+        const user = await res.json();
+
+        // Show cloud buttons and user badge
+        document.getElementById('save-cloud-btn').style.display = '';
+        document.getElementById('load-cloud-btn').style.display = '';
+
+        // Add user badge and logout button to header
+        const badge = document.createElement('span');
+        badge.className = 'user-badge';
+        badge.textContent = user.name;
+        document.querySelector('.header-actions').prepend(badge);
+
+        const logoutBtn = document.createElement('button');
+        logoutBtn.className = 'header-btn';
+        logoutBtn.innerHTML = '&#x1F6AA; Sign Out';
+        logoutBtn.title = 'Sign out';
+        logoutBtn.addEventListener('click', () => { window.location.href = '/.auth/logout?post_logout_redirect_uri=/'; });
+        document.querySelector('.header-actions').prepend(logoutBtn);
+
+        // Save to cloud
+        document.getElementById('save-cloud-btn').addEventListener('click', async () => {
+          const stateData = exportState();
+          const clientName = stateData.clientName || '';
+          const title = prompt('Name this estimation:', `${clientName || 'Untitled'} - ${new Date().toLocaleDateString()}`);
+          if (!title) return;
+
+          try {
+            const saveRes = await fetch('/api/estimations', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ title, data: stateData })
+            });
+            if (!saveRes.ok) throw new Error('Save failed');
+            alert('Estimation saved successfully!');
+          } catch (err) {
+            alert('Failed to save estimation: ' + err.message);
+          }
+        });
+
+        // Load modal
+        const overlay = document.getElementById('load-modal');
+        const listEl = document.getElementById('estimation-list');
+
+        document.getElementById('load-cloud-btn').addEventListener('click', async () => {
+          listEl.innerHTML = '<li style="padding:1rem;color:var(--color-text-muted)">Loading...</li>';
+          overlay.classList.add('active');
+
+          try {
+            const listRes = await fetch('/api/estimations');
+            if (!listRes.ok) throw new Error('Failed to load');
+            const estimations = await listRes.json();
+
+            if (estimations.length === 0) {
+              listEl.innerHTML = '<li style="padding:1rem;color:var(--color-text-muted)">No saved estimations yet.</li>';
+              return;
+            }
+
+            listEl.innerHTML = estimations.map(e => `
+              <li class="estimation-item" data-id="${e.id}">
+                <div class="estimation-item-info">
+                  <span class="estimation-item-title">${escapeHtml(e.title)}</span>
+                  <span class="estimation-item-meta">${e.client_name ? escapeHtml(e.client_name) + ' &middot; ' : ''}${new Date(e.updated_at).toLocaleString()}</span>
+                </div>
+                <button class="estimation-delete" data-delete-id="${e.id}" title="Delete">&times;</button>
+              </li>
+            `).join('');
+          } catch (err) {
+            listEl.innerHTML = `<li style="padding:1rem;color:#c0392b">Error: ${err.message}</li>`;
+          }
+        });
+
+        overlay.addEventListener('click', (e) => {
+          if (e.target === overlay || e.target.classList.contains('modal-close')) {
+            overlay.classList.remove('active');
+          }
+        });
+
+        listEl.addEventListener('click', async (e) => {
+          // Delete button
+          const deleteBtn = e.target.closest('[data-delete-id]');
+          if (deleteBtn) {
+            e.stopPropagation();
+            if (!confirm('Delete this estimation?')) return;
+            try {
+              await fetch(`/api/estimations/${deleteBtn.dataset.deleteId}`, { method: 'DELETE' });
+              deleteBtn.closest('.estimation-item').remove();
+            } catch { /* ignore */ }
+            return;
+          }
+
+          // Load item
+          const item = e.target.closest('.estimation-item');
+          if (!item) return;
+          try {
+            const loadRes = await fetch(`/api/estimations/${item.dataset.id}`);
+            if (!loadRes.ok) throw new Error('Failed to load');
+            const estimation = await loadRes.json();
+            importState(estimation.data);
+            overlay.classList.remove('active');
+          } catch (err) {
+            alert('Failed to load estimation: ' + err.message);
+          }
+        });
+
+      } catch { /* not authenticated, cloud features hidden */ }
+    })();
+
+    function escapeHtml(str) {
+      const div = document.createElement('div');
+      div.textContent = str;
+      return div.innerHTML;
+    }
+  </script>
+
+  <!-- Load modal -->
+  <div class="modal-overlay" id="load-modal">
+    <div class="modal">
+      <button class="modal-close">&times;</button>
+      <h3>Load Estimation</h3>
+      <ul class="estimation-list" id="estimation-list"></ul>
+    </div>
+  </div>
+</body>
+</html>

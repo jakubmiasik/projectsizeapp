@@ -1,0 +1,21 @@
+name: fabric-project-sizing
+metadata:
+  template: azd-init
+
+services:
+  web:
+    project: ./src
+    language: js
+    host: appservice
+
+hooks:
+  postprovision:
+    shell: pwsh
+    run: |
+      $rg = azd env get-value AZURE_RESOURCE_GROUP
+      $webApp = (az webapp list --resource-group $rg -o json | ConvertFrom-Json | Where-Object { $_.tags.'azd-service-name' -eq 'web' }).name
+      $sqlPassword = azd env get-value sqlAdminPassword 2>$null
+      if ($sqlPassword -and $webApp) {
+        az webapp config appsettings set --resource-group $rg --name $webApp --settings SQL_USER=sqladmin SQL_PASSWORD="$sqlPassword" --output none
+      }
+
