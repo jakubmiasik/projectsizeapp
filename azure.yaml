@@ -4,7 +4,7 @@ metadata:
 
 services:
   web:
-    project: ./src
+    project: ./
     language: js
     host: appservice
 
