@@ -21,6 +21,7 @@
     .header{position:sticky;top:0;z-index:20;background:color-mix(in srgb,var(--color-bg) 90%,transparent);backdrop-filter:blur(12px);border-bottom:1px solid var(--color-divider)}
     .header-inner{display:flex;justify-content:space-between;align-items:center;padding:1rem 0}.brand{display:flex;align-items:center;gap:.8rem;font-weight:700}.logo{width:36px;height:36px;border-radius:12px;background:linear-gradient(135deg,var(--color-primary),var(--color-primary-strong));color:#fff;display:grid;place-items:center;font-weight:800;box-shadow:0 8px 18px rgba(1,105,111,.25)} .theme-toggle{border:1px solid var(--color-border);background:var(--color-surface);color:var(--color-text);border-radius:999px;padding:.75rem 1rem;display:inline-flex;align-items:center;gap:.55rem;cursor:pointer;box-shadow:var(--shadow-sm)} .header-actions{display:flex;align-items:center;gap:.5rem} .header-btn{border:1px solid var(--color-border);background:var(--color-surface);color:var(--color-text);border-radius:999px;padding:.75rem 1rem;display:inline-flex;align-items:center;gap:.45rem;cursor:pointer;font-size:var(--text-sm);font-weight:600;box-shadow:var(--shadow-sm)} .header-btn:hover{background:var(--color-surface-offset)} .header-btn svg{flex-shrink:0}
     @media (max-width:720px){.header-actions{flex-wrap:wrap;gap:.35rem}.header-btn{padding:.55rem .7rem}}
+    .account-menu{position:relative;display:inline-flex} .account-menu-btn{border:1px solid var(--color-border);background:var(--color-surface);color:var(--color-text);border-radius:50%;width:36px;height:36px;display:grid;place-items:center;cursor:pointer;font-size:1.1rem;box-shadow:var(--shadow-sm);transition:background .2s} .account-menu-btn:hover{background:var(--color-surface-offset)} .account-dropdown{display:none;position:absolute;top:calc(100% + .5rem);right:0;min-width:160px;background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-md);box-shadow:0 8px 24px rgba(0,0,0,.12);z-index:200;padding:.5rem 0;flex-direction:column} .account-dropdown.open{display:flex} .account-dropdown-name{padding:.5rem 1rem;font-size:var(--text-sm);font-weight:600;color:var(--color-text-muted);border-bottom:1px solid var(--color-border);margin-bottom:.25rem} .account-dropdown-item{border:none;background:none;text-align:left;padding:.5rem 1rem;font-size:var(--text-sm);font-weight:600;color:var(--color-text);cursor:pointer;display:flex;align-items:center;gap:.5rem} .account-dropdown-item:hover{background:var(--color-surface-offset)}
     .hero{padding:var(--space-12) 0 var(--space-8)} .hero-grid{display:grid;grid-template-columns:1fr;gap:var(--space-8)} .app-grid{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(460px,.8fr);gap:var(--space-8);align-items:start}
     .eyebrow{display:inline-flex;align-items:center;gap:.5rem;padding:.45rem .8rem;border-radius:999px;background:var(--color-surface-offset);color:var(--color-primary);font-size:var(--text-sm);font-weight:700;margin-bottom:var(--space-4)}
     .hero h1{font-family:var(--font-display);font-size:var(--text-2xl);max-width:none;width:100%;margin-bottom:var(--space-3)} .hero p{color:var(--color-text-muted);max-width:none} .section-copy,.project-copy{color:var(--color-text-muted);max-width:70ch}
@@ -726,18 +727,22 @@
         document.getElementById('save-cloud-btn').style.display = '';
         document.getElementById('load-cloud-btn').style.display = '';
 
-        // Add user badge and logout button to header
-        const badge = document.createElement('span');
-        badge.className = 'user-badge';
-        badge.textContent = user.name;
-        document.querySelector('.header-actions').prepend(badge);
+        // Add account icon with dropdown menu to header
+        const accountMenu = document.createElement('div');
+        accountMenu.className = 'account-menu';
+        accountMenu.innerHTML = `
+          <button class="account-menu-btn" title="Account" aria-label="Account menu">&#x1F464;</button>
+          <div class="account-dropdown">
+            <div class="account-dropdown-name">${user.name}</div>
+            <button class="account-dropdown-item" id="account-logout-btn">&#x1F6AA; Sign Out</button>
+          </div>`;
+        document.querySelector('.header-actions').prepend(accountMenu);
 
-        const logoutBtn = document.createElement('button');
-        logoutBtn.className = 'header-btn';
-        logoutBtn.innerHTML = '&#x1F6AA; Sign Out';
-        logoutBtn.title = 'Sign out';
-        logoutBtn.addEventListener('click', () => { window.location.href = '/.auth/logout?post_logout_redirect_uri=/'; });
-        document.querySelector('.header-actions').prepend(logoutBtn);
+        const accountBtn = accountMenu.querySelector('.account-menu-btn');
+        const dropdown = accountMenu.querySelector('.account-dropdown');
+        accountBtn.addEventListener('click', (e) => { e.stopPropagation(); dropdown.classList.toggle('open'); });
+        document.addEventListener('click', () => { dropdown.classList.remove('open'); });
+        accountMenu.querySelector('#account-logout-btn').addEventListener('click', () => { window.location.href = '/.auth/logout?post_logout_redirect_uri=/'; });
 
         // Save to cloud
         document.getElementById('save-cloud-btn').addEventListener('click', async () => {
