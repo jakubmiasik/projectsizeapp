@@ -85,26 +85,63 @@ app.get('/api/estimations/:id', requireAuth, async (req, res) => {
   }
 });
 
+// List versions for an estimation group
+app.get('/api/estimations/:id/versions', requireAuth, async (req, res) => {
+  try {
+    const versions = await db.listEstimationVersions(req.params.id, req.user.oid);
+    res.json(versions);
+  } catch (err) {
+    console.error('Failed to list estimation versions:', err);
+    res.status(500).json({ error: 'Failed to load estimation versions' });
+  }
+});
+
 // Save a new estimation
 app.post('/api/estimations', requireAuth, async (req, res) => {
+  try {
+    const { title, data, parentId } = req.body;
+    if (!data) return res.status(400).json({ error: 'Missing estimation data' });
+
+    const clientName = data.clientName || '';
+    const estimationTitle = title || `${clientName || 'Untitled'} - ${new Date().toLocaleDateString()}`;
+
+    const estimation = await db.saveEstimation({
+      userOid: req.user.oid,
+      userName: req.user.name,
+      clientName,
+      title: estimationTitle,
+      data,
+      parentId
+    });
+    res.status(201).json(estimation);
+  } catch (err) {
+    console.error('Failed to save estimation:', err);
+    res.status(500).json({ error: 'Failed to save estimation' });
+  }
+});
+
+// Update an existing estimation
+app.put('/api/estimations/:id', requireAuth, async (req, res) => {
   try {
     const { title, data } = req.body;
     if (!data) return res.status(400).json({ error: 'Missing estimation data' });
 
     const clientName = data.clientName || '';
     const estimationTitle = title || `${clientName || 'Untitled'} - ${new Date().toLocaleDateString()}`;
-
-    const id = await db.saveEstimation({
+    const estimation = await db.updateEstimation({
+      id: req.params.id,
       userOid: req.user.oid,
       userName: req.user.name,
       clientName,
       title: estimationTitle,
       data
     });
-    res.status(201).json({ id, title: estimationTitle });
+
+    if (!estimation) return res.status(404).json({ error: 'Not found' });
+    res.json(estimation);
   } catch (err) {
-    console.error('Failed to save estimation:', err);
-    res.status(500).json({ error: 'Failed to save estimation' });
+    console.error('Failed to update estimation:', err);
+    res.status(500).json({ error: 'Failed to update estimation' });
   }
 });
 
