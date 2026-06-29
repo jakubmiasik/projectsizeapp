@@ -37,14 +37,55 @@ function getUser(req) {
   }
 }
 
+function isValidRole(role) {
+ return role === 'admin' || role === 'explorer';
+}
+
+async function resolveUserAccess(user) {
+ const configuredUserCount = await db.countAppUsers();
+ if (configuredUserCount === 0) {
+   return { role: 'explorer', configuredUserCount };
+ }
+
+ const appUser = user.email ? await db.getUserRole(user.email) : null;
+ return {
+   role: appUser?.role || null,
+   displayName: appUser?.display_name || '',
+   configuredUserCount
+ };
+}
+
 // Auth middleware
-function requireAuth(req, res, next) {
-  const user = getUser(req);
-  if (!user) {
-    return res.status(401).json({ error: 'Authentication required' });
-  }
-  req.user = user;
-  next();
+async function requireAuth(req, res, next) {
+ const user = getUser(req);
+ if (!user) {
+   return res.status(401).json({ error: 'Authentication required' });
+ }
+
+ try {
+   const access = await resolveUserAccess(user);
+   req.user = { ...user, role: access.role };
+
+   if (!access.role) {
+     return res.status(403).json({
+       ...user,
+       role: null,
+       error: 'Access denied. Contact an administrator.'
+     });
+   }
+
+   next();
+ } catch (err) {
+   console.error('Failed to validate user access:', err);
+   res.status(500).json({ error: 'Failed to validate access' });
+ }
+}
+
+function requireAdmin(req, res, next) {
+ if (req.user?.role !== 'admin') {
+   return res.status(403).json({ error: 'Admin access required' });
+ }
+ next();
 }
 
 // Health check - always return 200 so App Service doesn't kill the container
@@ -60,6 +101,82 @@ app.get('/health', async (_req, res) => {
 // Get current user info
 app.get('/api/user', requireAuth, (req, res) => {
   res.json(req.user);
+});
+
+app.get('/api/admin/users', requireAuth, requireAdmin, async (_req, res) => {
+  try {
+    const users = await db.listAppUsers();
+    res.json(users);
+  } catch (err) {
+    console.error('Failed to list app users:', err);
+    res.status(500).json({ error: 'Failed to load users' });
+  }
+});
+
+app.post('/api/admin/users', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const email = String(req.body?.email || '').trim().toLowerCase();
+    const displayName = String(req.body?.displayName || '').trim();
+    const role = String(req.body?.role || '').trim().toLowerCase();
+
+    if (!email) return res.status(400).json({ error: 'Email is required' });
+    if (!isValidRole(role)) return res.status(400).json({ error: 'Invalid role' });
+
+    const user = await db.addAppUser({ email, displayName, role });
+    res.status(201).json(user);
+  } catch (err) {
+    console.error('Failed to add app user:', err);
+    const status = err.number === 2627 || err.number === 2601 ? 409 : 500;
+    res.status(status).json({ error: status === 409 ? 'User already exists' : 'Failed to add user' });
+  }
+});
+
+app.put('/api/admin/users/:id', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const role = String(req.body?.role || '').trim().toLowerCase();
+    if (!isValidRole(role)) return res.status(400).json({ error: 'Invalid role' });
+
+    const user = await db.updateAppUserRole(req.params.id, role);
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    res.json(user);
+  } catch (err) {
+    console.error('Failed to update app user role:', err);
+    const status = err.code === 'LAST_ADMIN' ? 400 : 500;
+    res.status(status).json({ error: err.code === 'LAST_ADMIN' ? err.message : 'Failed to update user role' });
+  }
+});
+
+app.delete('/api/admin/users/:id', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const deleted = await db.deleteAppUser(req.params.id);
+    if (!deleted) return res.status(404).json({ error: 'User not found' });
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Failed to delete app user:', err);
+    const status = err.code === 'LAST_ADMIN' ? 400 : 500;
+    res.status(status).json({ error: err.code === 'LAST_ADMIN' ? err.message : 'Failed to delete user' });
+  }
+});
+
+app.get('/api/admin/estimations', requireAuth, requireAdmin, async (_req, res) => {
+  try {
+    const estimations = await db.listAllEstimations();
+    res.json(estimations);
+  } catch (err) {
+    console.error('Failed to list admin estimations:', err);
+    res.status(500).json({ error: 'Failed to load estimations' });
+  }
+});
+
+app.get('/api/admin/estimations/:id', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const estimation = await db.getEstimationForAdmin(req.params.id);
+    if (!estimation) return res.status(404).json({ error: 'Not found' });
+    res.json(estimation);
+  } catch (err) {
+    console.error('Failed to get admin estimation:', err);
+    res.status(500).json({ error: 'Failed to load estimation' });
+  }
 });
 
 // List estimations for logged-in user

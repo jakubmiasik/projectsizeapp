@@ -48,6 +48,17 @@
     .resource-team{display:grid;gap:var(--space-3)} .resource-role{display:grid;grid-template-columns:1fr 120px auto;gap:var(--space-2);align-items:center} .resource-input,.resource-percent{border:1px solid var(--color-border);background:var(--color-surface);border-radius:12px;padding:.55rem .7rem;color:var(--color-text)} .resource-actions{display:flex;justify-content:space-between;align-items:center;gap:var(--space-2)} .resource-add,.resource-remove{border:1px solid var(--color-border);background:var(--color-surface);color:var(--color-text);border-radius:12px;padding:.5rem .7rem;cursor:pointer;font-weight:700}
     @media (max-width: 980px){.app-grid,.app-grid.has-result{grid-template-columns:1fr}.result{position:sticky;top:1rem;height:auto;max-height:calc(100vh - 2rem)}.result-scroll{overflow-y:auto;padding-right:0}} @media (max-width:720px){.container{width:min(100% - 1.25rem,1180px)}.score-pair,.mini-grid{grid-template-columns:1fr}.timeline-row{grid-template-columns:1fr}.section-adjustment label,.buffer-row,.range-title,.header-inner{grid-template-columns:1fr;display:grid;justify-content:stretch}.theme-toggle{justify-content:center}}
     .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:100;place-items:center} .modal-overlay.active{display:grid} .modal{background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-xl);padding:var(--space-6);width:min(560px,calc(100% - 2rem));max-height:80vh;overflow-y:auto;box-shadow:0 24px 48px rgba(0,0,0,.15)} .modal.modal-sm{width:min(480px,calc(100% - 2rem))} .modal h3{margin-bottom:var(--space-4)} .modal-copy{color:var(--color-text-muted);margin-bottom:var(--space-4)} .modal-actions{display:flex;flex-wrap:wrap;gap:var(--space-3)} .modal-close{float:right;border:none;background:none;font-size:1.5rem;cursor:pointer;color:var(--color-text-muted)} .estimation-list,.estimation-version-list{display:grid;gap:var(--space-2);margin:0;padding:0;list-style:none} .estimation-item-wrapper{display:grid;gap:var(--space-2)} .estimation-item{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:var(--space-2);align-items:center;padding:var(--space-3) var(--space-4);border:1px solid var(--color-border);border-radius:var(--radius-md);background:var(--color-surface-2);cursor:pointer;transition:border-color .2s} .estimation-item:hover,.estimation-version-item:hover{border-color:var(--color-primary)} .estimation-item-info{display:grid;gap:.2rem;min-width:0} .estimation-item-title{font-weight:700} .estimation-item-meta{font-size:var(--text-sm);color:var(--color-text-muted)} .estimation-delete,.estimation-version-toggle{border:1px solid var(--color-border);background:var(--color-surface);color:var(--color-text-muted);border-radius:8px;padding:.4rem .6rem;cursor:pointer;font-size:var(--text-sm)} .estimation-delete:hover{color:#c0392b;border-color:#c0392b} .estimation-version-toggle:hover{color:var(--color-primary);border-color:var(--color-primary)} .version-badge{display:inline-flex;align-items:center;gap:.25rem;padding:.2rem .55rem;border-radius:999px;background:var(--color-primary-soft);color:var(--color-primary-strong);font-size:var(--text-xs);font-weight:700;margin-left:.45rem} .estimation-versions{padding-left:var(--space-4)} .estimation-version-item{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:var(--space-2);align-items:center;padding:var(--space-3);border:1px solid var(--color-border);border-radius:var(--radius-md);background:var(--color-surface);cursor:pointer;transition:border-color .2s} .estimation-version-empty{padding:var(--space-3);color:var(--color-text-muted);font-size:var(--text-sm)} .user-badge{display:inline-flex;align-items:center;gap:.4rem;padding:.45rem .8rem;border-radius:999px;background:var(--color-primary-soft);color:var(--color-primary-strong);font-size:var(--text-sm);font-weight:600}
+    .admin-tabs{display:flex;gap:var(--space-2);margin-bottom:var(--space-4);border-bottom:2px solid var(--color-border);padding-bottom:0}
+    .admin-tab{border:none;background:none;padding:.6rem 1rem;font-size:var(--text-sm);font-weight:600;color:var(--color-text-muted);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;transition:color .2s,border-color .2s}
+    .admin-tab.active{color:var(--color-primary-strong);border-bottom-color:var(--color-primary-strong)}
+    .admin-tab:hover{color:var(--color-text)}
+    .admin-user-item{display:grid;grid-template-columns:1fr 1fr auto auto;gap:var(--space-2);align-items:center;padding:var(--space-3) var(--space-4);border:1px solid var(--color-border);border-radius:var(--radius-md);background:var(--color-surface-2)}
+    .admin-user-email{font-weight:600;font-size:var(--text-sm)}
+    .admin-user-name{color:var(--color-text-muted);font-size:var(--text-sm)}
+    .role-badge{display:inline-flex;padding:.2rem .55rem;border-radius:999px;font-size:var(--text-xs);font-weight:700}
+    .role-badge.admin{background:#fde8e8;color:#c0392b}
+    .role-badge.explorer{background:var(--color-primary-soft);color:var(--color-primary-strong)}
+    .admin-only-badge{padding:.15rem .5rem;border-radius:999px;background:#fde8e8;color:#c0392b;font-size:var(--text-xs);font-weight:600;margin-left:.5rem}
     .app-footer{margin-top:var(--space-6);padding:var(--space-4) 0;border-top:1px solid var(--color-border);background:var(--color-surface-2)} .footer-inner{text-align:center} .footer-copy{margin:0;font-size:var(--text-sm);color:var(--color-text-muted)}
     .header-notice{padding:.2rem .6rem;border-radius:999px;background:var(--color-primary-soft);color:var(--color-primary-strong);font-weight:600;font-size:var(--text-xs);margin-left:.5rem}
     .landing{padding:var(--space-6) 0} .landing-card{background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-xl);padding:var(--space-6);max-width:800px;margin:0 auto;text-align:center} .landing-card h2{margin-bottom:var(--space-3)} .landing-card>p{color:var(--color-text-muted);margin-bottom:var(--space-4);line-height:1.6} .landing-features{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:var(--space-4);margin:var(--space-5) 0;text-align:left} .landing-feature{background:var(--color-surface-2);border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:var(--space-4)} .landing-feature-icon{font-size:1.8rem;display:block;margin-bottom:var(--space-2)} .landing-feature h3{font-size:var(--text-base);margin-bottom:var(--space-1)} .landing-feature p{font-size:var(--text-sm);color:var(--color-text-muted);margin:0;line-height:1.5} .landing-example{background:var(--color-surface-offset);border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:var(--space-4);margin:var(--space-4) 0} .landing-example h3{font-size:var(--text-sm);color:var(--color-text-muted);margin-bottom:var(--space-3);text-transform:uppercase;letter-spacing:.05em} .landing-example-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:var(--space-3)} .landing-example-item{display:flex;flex-direction:column;align-items:center;gap:var(--space-1)} .landing-example-label{font-size:var(--text-sm);color:var(--color-text-muted)} .landing-example-value{font-size:1.3rem;font-weight:700} .btn-primary{background:linear-gradient(135deg,var(--color-primary),var(--color-primary-strong));color:#fff;border:none;padding:.85rem 2rem;border-radius:999px;font-size:var(--text-base);font-weight:700;cursor:pointer;box-shadow:0 8px 18px rgba(1,105,111,.25);transition:transform .2s,box-shadow .2s} .btn-primary:hover{transform:translateY(-1px);box-shadow:0 12px 24px rgba(1,105,111,.3)}
@@ -224,8 +235,8 @@
                 </div>
               </div>
 
-              <div class="summary-card">
-                <h4>Estimated totals</h4>
+              <div class="summary-card" id="estimated-totals-section">
+                <h4>Estimated totals <span class="admin-only-badge" style="display:none">Admin only</span></h4>
                 <table>
                   <tbody id="hours-summary"></tbody>
                 </table>
@@ -502,6 +513,7 @@
     const addResourceRoleButton = document.getElementById('add-resource-role');
     let resourceRoleIndex = 0;
     let loadedEstimation = null; // { id, title, version, parent_id }
+    let currentUserRole = null;
 
     function addResourceRole(roleName = '', percent = 80) {
       resourceRoleIndex += 1;
@@ -798,54 +810,164 @@
 
     // Cloud save/load functionality
     (async function initCloud() {
+      const headerActions = document.querySelector('.header-actions');
+      const landingSection = document.getElementById('landing-section');
+      const appSection = document.getElementById('app-section');
+      const landingCard = landingSection.querySelector('.landing-card');
+      const landingTitle = landingCard.querySelector('h2');
+      const landingMessage = landingCard.querySelector('p');
+      const landingFeatures = landingCard.querySelector('.landing-features');
+      const landingExample = landingCard.querySelector('.landing-example');
+      const landingActionBtn = document.getElementById('landing-sign-in');
+      const estimatedTotalsSection = document.getElementById('estimated-totals-section');
+      const adminOnlyBadge = document.querySelector('.admin-only-badge');
+
+      function goToLogin() {
+        window.location.href = '/.auth/login/aad?post_login_redirect_uri=' + encodeURIComponent(window.location.pathname);
+      }
+
+      function goToLogout() {
+        window.location.href = '/.auth/logout?post_logout_redirect_uri=/';
+      }
+
+      function ensureHeaderButton(id, label, title, onClick) {
+        let button = document.getElementById(id);
+        if (!button) {
+          button = document.createElement('button');
+          button.id = id;
+          button.className = 'header-btn';
+          headerActions.prepend(button);
+        }
+        button.innerHTML = label;
+        button.title = title;
+        button.onclick = onClick;
+        button.style.display = '';
+        return button;
+      }
+
+      function removeHeaderButton(id) {
+        document.getElementById(id)?.remove();
+      }
+
+      function showUnauthenticatedLanding() {
+        removeHeaderButton('header-sign-out-btn');
+        ensureHeaderButton('header-sign-in-btn', '&#x1F512; Sign In', 'Sign in to save/load estimations', goToLogin);
+        landingSection.style.display = '';
+        appSection.style.display = 'none';
+        landingTitle.textContent = 'Welcome to Fabric Project Sizing';
+        landingMessage.textContent = 'This tool helps you estimate the scope and effort of Microsoft Fabric implementations. Sign in to access the full estimator and start sizing your projects.';
+        landingFeatures.style.display = '';
+        landingExample.style.display = '';
+        landingActionBtn.style.display = '';
+        landingActionBtn.innerHTML = '&#x1F512; Sign in to get started';
+        landingActionBtn.onclick = goToLogin;
+      }
+
+      function showAccessDeniedLanding() {
+        removeHeaderButton('header-sign-in-btn');
+        ensureHeaderButton('header-sign-out-btn', '&#x1F6AA; Sign Out', 'Sign out', goToLogout);
+        landingSection.style.display = '';
+        appSection.style.display = 'none';
+        landingTitle.textContent = 'Access Denied';
+        landingMessage.textContent = 'You are authenticated but do not have access to this application. Please contact an administrator.';
+        landingFeatures.style.display = 'none';
+        landingExample.style.display = 'none';
+        landingActionBtn.style.display = '';
+        landingActionBtn.innerHTML = '&#x1F6AA; Sign out';
+        landingActionBtn.onclick = goToLogout;
+      }
+
+      function applyRoleVisibility() {
+        if (currentUserRole !== 'admin') {
+          estimatedTotalsSection.style.display = 'none';
+        } else {
+          estimatedTotalsSection.style.display = '';
+          adminOnlyBadge.style.display = '';
+        }
+      }
+
       try {
         const res = await fetch('/api/user');
-        if (!res.ok) {
-          // Not authenticated - show landing page with sign-in
-          document.getElementById('landing-section').style.display = '';
-          document.getElementById('app-section').style.display = 'none';
-          const signInBtn = document.createElement('button');
-          signInBtn.className = 'header-btn';
-          signInBtn.innerHTML = '&#x1F512; Sign In';
-          signInBtn.title = 'Sign in to save/load estimations';
-          signInBtn.addEventListener('click', () => { window.location.href = '/.auth/login/aad?post_login_redirect_uri=' + encodeURIComponent(window.location.pathname); });
-          document.querySelector('.header-actions').prepend(signInBtn);
-          document.getElementById('landing-sign-in').addEventListener('click', () => { window.location.href = '/.auth/login/aad?post_login_redirect_uri=' + encodeURIComponent(window.location.pathname); });
+        const payload = await res.json().catch(() => null);
+
+        if (res.status === 403 && payload?.role === null) {
+          currentUserRole = null;
+          showAccessDeniedLanding();
           return;
         }
-        const user = await res.json();
 
-        // Authenticated - hide landing, show estimator
-        document.getElementById('landing-section').style.display = 'none';
-        document.getElementById('app-section').style.display = '';
+        if (!res.ok) {
+          showUnauthenticatedLanding();
+          return;
+        }
 
-        // Show cloud buttons and user badge
+        removeHeaderButton('header-sign-in-btn');
+        removeHeaderButton('header-sign-out-btn');
+
+        const user = payload;
+        currentUserRole = user.role || null;
+
+        landingSection.style.display = 'none';
+        appSection.style.display = '';
         document.getElementById('save-cloud-btn').style.display = '';
         document.getElementById('load-cloud-btn').style.display = '';
+        applyRoleVisibility();
 
-        // Add account icon with dropdown menu to header
+        const adminBtnHtml = currentUserRole === 'admin' ? '<button class="account-dropdown-item" id="account-admin-btn">⚙️ Admin Panel</button>' : '';
         const accountMenu = document.createElement('div');
         accountMenu.className = 'account-menu';
         accountMenu.innerHTML = `
           <button class="account-menu-btn" title="Account" aria-label="Account menu">&#x1F464;</button>
           <div class="account-dropdown">
-            <div class="account-dropdown-name">${user.name}</div>
+            <div class="account-dropdown-name">${escapeHtml(user.name)}</div>
+            ${adminBtnHtml}
             <button class="account-dropdown-item" id="account-logout-btn">&#x1F6AA; Sign Out</button>
           </div>`;
-        document.querySelector('.header-actions').appendChild(accountMenu);
+        headerActions.appendChild(accountMenu);
 
         const accountBtn = accountMenu.querySelector('.account-menu-btn');
         const dropdown = accountMenu.querySelector('.account-dropdown');
-        accountBtn.addEventListener('click', (e) => { e.stopPropagation(); dropdown.classList.toggle('open'); });
-        document.addEventListener('click', () => { dropdown.classList.remove('open'); });
-        accountMenu.querySelector('#account-logout-btn').addEventListener('click', () => { window.location.href = '/.auth/logout?post_logout_redirect_uri=/'; });
+        accountBtn.addEventListener('click', (event) => {
+          event.stopPropagation();
+          dropdown.classList.toggle('open');
+        });
+        document.addEventListener('click', () => {
+          dropdown.classList.remove('open');
+        });
+        accountMenu.querySelector('#account-logout-btn').addEventListener('click', goToLogout);
 
         const overlay = document.getElementById('load-modal');
         const listEl = document.getElementById('estimation-list');
         const saveChoiceModal = document.getElementById('save-choice-modal');
+        const adminModal = document.getElementById('admin-modal');
+        const adminUsersListEl = document.getElementById('admin-users-list');
+        const adminEstimationsListEl = document.getElementById('admin-estimations-list');
+        const adminEstimationModal = document.getElementById('admin-estimation-modal');
+        const adminEstimationDetails = document.getElementById('admin-estimation-details');
+        const adminNewEmail = document.getElementById('admin-new-email');
+        const adminNewName = document.getElementById('admin-new-name');
+        const adminNewRole = document.getElementById('admin-new-role');
+        const adminAddBtn = document.getElementById('admin-add-btn');
         const versionCache = new Map();
         const expandedVersionGroups = new Set();
         let estimationList = [];
+        const adminState = {
+          users: [],
+          estimations: [],
+          estimationsLoaded: false
+        };
+
+        function closeOverlay(modal) {
+          modal.classList.remove('active');
+        }
+
+        [overlay, adminModal, adminEstimationModal].forEach((modal) => {
+          modal.addEventListener('click', (event) => {
+            if (event.target === modal || event.target.classList.contains('modal-close')) {
+              closeOverlay(modal);
+            }
+          });
+        });
 
         function getDefaultTitle(clientName, fallbackTitle = '') {
           return fallbackTitle || `${clientName || 'Untitled'} - ${new Date().toLocaleDateString()}`;
@@ -859,34 +981,34 @@
           return new Date(value).toLocaleString();
         }
 
+        async function fetchJson(url, options = {}, fallbackMessage = 'Request failed') {
+          const response = await fetch(url, options);
+          const body = await response.json().catch(() => null);
+          if (!response.ok) {
+            throw new Error(body?.error || fallbackMessage);
+          }
+          return body;
+        }
+
         async function fetchVersions(groupId) {
-          const versionsRes = await fetch(`/api/estimations/${groupId}/versions`);
-          if (!versionsRes.ok) throw new Error('Failed to load versions');
-          const versions = await versionsRes.json();
+          const versions = await fetchJson(`/api/estimations/${groupId}/versions`, {}, 'Failed to load versions');
           versionCache.set(groupId, versions);
           return versions;
         }
 
         async function loadEstimationById(id) {
-          const loadRes = await fetch(`/api/estimations/${id}`);
-          if (!loadRes.ok) throw new Error('Failed to load');
-          const estimation = await loadRes.json();
+          const estimation = await fetchJson(`/api/estimations/${id}`, {}, 'Failed to load');
           importState(estimation.data);
           setLoadedEstimationState(estimation);
-          overlay.classList.remove('active');
+          closeOverlay(overlay);
         }
 
         async function saveEstimationRequest(url, method, payload, successMessage) {
-          const saveRes = await fetch(url, {
+          const estimation = await fetchJson(url, {
             method,
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
-          });
-          if (!saveRes.ok) {
-            const error = await saveRes.json().catch(() => null);
-            throw new Error(error?.error || 'Save failed');
-          }
-          const estimation = await saveRes.json();
+          }, 'Save failed');
           setLoadedEstimationState(estimation);
           alert(successMessage);
         }
@@ -907,7 +1029,6 @@
               if (!choice) return;
               close(choice);
             };
-
             const handleOverlay = (event) => {
               if (event.target === saveChoiceModal || event.target.classList.contains('modal-close')) {
                 close('cancel');
@@ -968,13 +1089,131 @@
         }
 
         async function refreshEstimationList() {
-          const listRes = await fetch('/api/estimations');
-          if (!listRes.ok) throw new Error('Failed to load');
-          estimationList = await listRes.json();
+          estimationList = await fetchJson('/api/estimations', {}, 'Failed to load');
           renderEstimationList();
         }
 
-        // Save to cloud
+        function renderAdminUsers() {
+          if (adminState.users.length === 0) {
+            adminUsersListEl.innerHTML = '<li style="padding:1rem;color:var(--color-text-muted)">No users configured.</li>';
+            return;
+          }
+
+          const adminCount = adminState.users.filter(item => item.role === 'admin').length;
+          adminUsersListEl.innerHTML = adminState.users.map((appUser) => {
+            const isLastAdmin = appUser.role === 'admin' && adminCount === 1;
+            const roleLabel = appUser.role === 'admin' ? 'Admin' : 'Explorer';
+            const deleteAttrs = isLastAdmin ? 'disabled style="opacity:.5;cursor:not-allowed"' : '';
+            const roleAttrs = isLastAdmin ? 'disabled title="At least one admin is required"' : '';
+            return `
+              <li class="admin-user-item" data-user-id="${appUser.id}">
+                <div class="admin-user-email">${escapeHtml(appUser.email)}</div>
+                <div class="admin-user-name">${escapeHtml(appUser.display_name || 'No display name')} <span class="role-badge ${appUser.role}">${roleLabel}</span></div>
+                <select data-user-role="${appUser.id}" ${roleAttrs} style="border:1px solid var(--color-border);background:var(--color-surface);border-radius:8px;padding:.5rem .7rem;color:var(--color-text)">
+                  <option value="explorer" ${appUser.role === 'explorer' ? 'selected' : ''}>Explorer</option>
+                  <option value="admin" ${appUser.role === 'admin' ? 'selected' : ''}>Admin</option>
+                </select>
+                <button class="estimation-delete" type="button" data-user-delete="${appUser.id}" title="Delete user" ${deleteAttrs}>&times;</button>
+              </li>`;
+          }).join('');
+        }
+
+        async function refreshAdminUsers() {
+          adminUsersListEl.innerHTML = '<li style="padding:1rem;color:var(--color-text-muted)">Loading users...</li>';
+          adminState.users = await fetchJson('/api/admin/users', {}, 'Failed to load users');
+          renderAdminUsers();
+        }
+
+        function renderAdminEstimations() {
+          if (adminState.estimations.length === 0) {
+            adminEstimationsListEl.innerHTML = '<li style="padding:1rem;color:var(--color-text-muted)">No saved estimations yet.</li>';
+            return;
+          }
+
+          adminEstimationsListEl.innerHTML = adminState.estimations.map((estimation) => `
+            <li class="estimation-item" data-admin-estimation-id="${estimation.id}">
+              <div class="estimation-item-info">
+                <span class="estimation-item-title">${escapeHtml(estimation.title)} <span class="version-badge">v${estimation.version || 1}</span></span>
+                <span class="estimation-item-meta">${escapeHtml(estimation.user_name || 'Unknown user')} &middot; ${estimation.client_name ? escapeHtml(estimation.client_name) + ' &middot; ' : ''}${formatDate(estimation.updated_at)}</span>
+              </div>
+              <span class="user-badge">${escapeHtml(estimation.user_name || 'Unknown')}</span>
+              <span class="estimation-item-meta">View</span>
+            </li>
+          `).join('');
+        }
+
+        async function refreshAdminEstimations() {
+          adminEstimationsListEl.innerHTML = '<li style="padding:1rem;color:var(--color-text-muted)">Loading estimations...</li>';
+          adminState.estimations = await fetchJson('/api/admin/estimations', {}, 'Failed to load estimations');
+          adminState.estimationsLoaded = true;
+          renderAdminEstimations();
+        }
+
+        function setAdminTab(tabName) {
+          adminModal.querySelectorAll('.admin-tab').forEach((button) => {
+            button.classList.toggle('active', button.dataset.tab === tabName);
+          });
+          document.getElementById('admin-tab-users').style.display = tabName === 'users' ? '' : 'none';
+          document.getElementById('admin-tab-estimations').style.display = tabName === 'estimations' ? '' : 'none';
+          if (tabName === 'estimations' && !adminState.estimationsLoaded) {
+            refreshAdminEstimations().catch((err) => {
+              adminEstimationsListEl.innerHTML = `<li style="padding:1rem;color:#c0392b">Error: ${escapeHtml(err.message)}</li>`;
+            });
+          }
+        }
+
+        function renderAdminEstimationDetails(estimation, meta) {
+          const state = estimation.data || {};
+          const selectedSections = sections.map((section) => {
+            const selectedValue = state.sections?.[section.id]?.value;
+            if (selectedValue === undefined) return null;
+            const selectedOption = section.options[Number(selectedValue)];
+            if (!selectedOption) return null;
+            return `
+              <li style="padding:.5rem 0;border-bottom:1px solid var(--color-divider)">
+                <strong>${escapeHtml(section.title)}</strong><br>
+                <span class="muted">${escapeHtml(selectedOption.label)}</span>
+              </li>`;
+          }).filter(Boolean).join('');
+
+          const resourceRoles = Array.isArray(state.resourceRoles) && state.resourceRoles.length > 0
+            ? state.resourceRoles.map((role) => `<li>${escapeHtml(role.name || 'Unnamed role')} - ${escapeHtml(String(role.percent || 0))}%</li>`).join('')
+            : '<li>No team allocation captured.</li>';
+
+          adminEstimationDetails.innerHTML = `
+            <div class="summary-stack">
+              <div class="summary-card">
+                <h4>${escapeHtml(estimation.title)}</h4>
+                <p class="muted" style="margin-top:.5rem">${escapeHtml(meta?.user_name || 'Unknown user')} &middot; ${escapeHtml(meta?.client_name || state.clientName || 'No client')} &middot; v${escapeHtml(String(estimation.version || 1))}</p>
+                <p class="muted" style="margin-top:.35rem">Updated ${formatDate(meta?.updated_at || estimation.updated_at)}</p>
+              </div>
+              <div class="summary-card">
+                <h4>Project notes</h4>
+                <div style="display:grid;gap:.75rem;margin-top:.75rem">
+                  <div><strong>Client description</strong><div class="muted">${escapeHtml(state.clientDescription || '—')}</div></div>
+                  <div><strong>Use case</strong><div class="muted">${escapeHtml(state.useCaseExplanation || '—')}</div></div>
+                  <div><strong>Additional notes</strong><div class="muted">${escapeHtml(state.additionalNotes || '—')}</div></div>
+                  <div><strong>Safety buffer</strong><div class="muted">${escapeHtml(String(state.buffer || 0))}%</div></div>
+                </div>
+              </div>
+              <div class="summary-card">
+                <h4>Selected sections</h4>
+                <ul style="list-style:none;margin:.75rem 0 0;padding:0">${selectedSections || '<li class="muted">No section data available.</li>'}</ul>
+              </div>
+              <div class="summary-card">
+                <h4>Team allocation</h4>
+                <ul style="margin:.75rem 0 0;padding-left:1.1rem">${resourceRoles}</ul>
+              </div>
+            </div>`;
+        }
+
+        async function openAdminEstimation(id) {
+          const estimation = await fetchJson(`/api/admin/estimations/${id}`, {}, 'Failed to load estimation');
+          const meta = adminState.estimations.find((item) => item.id === id) || null;
+          renderAdminEstimationDetails(estimation, meta);
+          adminEstimationModal.classList.add('active');
+        }
+
         document.getElementById('save-cloud-btn').addEventListener('click', async () => {
           const stateData = exportState();
           const clientName = stateData.clientName || '';
@@ -1015,20 +1254,14 @@
           try {
             await refreshEstimationList();
           } catch (err) {
-            listEl.innerHTML = `<li style="padding:1rem;color:#c0392b">Error: ${err.message}</li>`;
+            listEl.innerHTML = `<li style="padding:1rem;color:#c0392b">Error: ${escapeHtml(err.message)}</li>`;
           }
         });
 
-        overlay.addEventListener('click', (e) => {
-          if (e.target === overlay || e.target.classList.contains('modal-close')) {
-            overlay.classList.remove('active');
-          }
-        });
-
-        listEl.addEventListener('click', async (e) => {
-          const versionsBtn = e.target.closest('[data-versions-id]');
+        listEl.addEventListener('click', async (event) => {
+          const versionsBtn = event.target.closest('[data-versions-id]');
           if (versionsBtn) {
-            e.stopPropagation();
+            event.stopPropagation();
             const groupId = versionsBtn.dataset.versionsId;
             if (expandedVersionGroups.has(groupId)) {
               expandedVersionGroups.delete(groupId);
@@ -1048,13 +1281,12 @@
             return;
           }
 
-          const deleteBtn = e.target.closest('[data-delete-id]');
+          const deleteBtn = event.target.closest('[data-delete-id]');
           if (deleteBtn) {
-            e.stopPropagation();
+            event.stopPropagation();
             if (!confirm('Delete this estimation?')) return;
             try {
-              const deleteRes = await fetch(`/api/estimations/${deleteBtn.dataset.deleteId}`, { method: 'DELETE' });
-              if (!deleteRes.ok) throw new Error('Delete failed');
+              await fetchJson(`/api/estimations/${deleteBtn.dataset.deleteId}`, { method: 'DELETE' }, 'Delete failed');
               versionCache.delete(deleteBtn.dataset.deleteId);
               expandedVersionGroups.delete(deleteBtn.dataset.deleteId);
               estimationList = estimationList.filter(item => getGroupId(item) !== deleteBtn.dataset.deleteId);
@@ -1062,11 +1294,13 @@
                 setLoadedEstimationState(null);
               }
               renderEstimationList();
-            } catch { /* ignore */ }
+            } catch (err) {
+              alert('Failed to delete estimation: ' + err.message);
+            }
             return;
           }
 
-          const versionItem = e.target.closest('[data-version-id]');
+          const versionItem = event.target.closest('[data-version-id]');
           if (versionItem) {
             try {
               await loadEstimationById(versionItem.dataset.versionId);
@@ -1076,7 +1310,7 @@
             return;
           }
 
-          const item = e.target.closest('.estimation-item');
+          const item = event.target.closest('.estimation-item');
           if (!item) return;
           try {
             await loadEstimationById(item.dataset.id);
@@ -1085,12 +1319,97 @@
           }
         });
 
-      } catch { /* not authenticated, cloud features hidden */ }
+        if (currentUserRole === 'admin') {
+          accountMenu.querySelector('#account-admin-btn')?.addEventListener('click', async () => {
+            dropdown.classList.remove('open');
+            adminState.estimationsLoaded = false;
+            adminModal.classList.add('active');
+            setAdminTab('users');
+            try {
+              await refreshAdminUsers();
+            } catch (err) {
+              adminUsersListEl.innerHTML = `<li style="padding:1rem;color:#c0392b">Error: ${escapeHtml(err.message)}</li>`;
+            }
+          });
+
+          adminModal.querySelectorAll('.admin-tab').forEach((button) => {
+            button.addEventListener('click', () => {
+              setAdminTab(button.dataset.tab);
+            });
+          });
+
+          adminAddBtn.addEventListener('click', async () => {
+            const email = adminNewEmail.value.trim().toLowerCase();
+            const displayName = adminNewName.value.trim();
+            const role = adminNewRole.value;
+            const emailPattern = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
+
+            if (!emailPattern.test(email)) {
+              alert('Enter a valid email address.');
+              return;
+            }
+
+            try {
+              await fetchJson('/api/admin/users', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, displayName, role })
+              }, 'Failed to add user');
+              adminNewEmail.value = '';
+              adminNewName.value = '';
+              adminNewRole.value = 'explorer';
+              await refreshAdminUsers();
+            } catch (err) {
+              alert(err.message);
+            }
+          });
+
+          adminUsersListEl.addEventListener('change', async (event) => {
+            const select = event.target.closest('[data-user-role]');
+            if (!select) return;
+            try {
+              await fetchJson(`/api/admin/users/${select.dataset.userRole}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ role: select.value })
+              }, 'Failed to update user role');
+              await refreshAdminUsers();
+            } catch (err) {
+              alert(err.message);
+              await refreshAdminUsers();
+            }
+          });
+
+          adminUsersListEl.addEventListener('click', async (event) => {
+            const deleteBtn = event.target.closest('[data-user-delete]');
+            if (!deleteBtn || deleteBtn.disabled) return;
+            if (!confirm('Remove this user from the application?')) return;
+            try {
+              await fetchJson(`/api/admin/users/${deleteBtn.dataset.userDelete}`, { method: 'DELETE' }, 'Failed to delete user');
+              await refreshAdminUsers();
+            } catch (err) {
+              alert(err.message);
+            }
+          });
+
+          adminEstimationsListEl.addEventListener('click', async (event) => {
+            const item = event.target.closest('[data-admin-estimation-id]');
+            if (!item) return;
+            try {
+              await openAdminEstimation(item.dataset.adminEstimationId);
+            } catch (err) {
+              alert(err.message);
+            }
+          });
+        }
+      } catch {
+        showUnauthenticatedLanding();
+      }
     })();
 
     function escapeHtml(str) {
       const div = document.createElement('div');
-      div.textContent = str;
+      div.textContent = str ?? '';
       return div.innerHTML;
     }
   </script>
@@ -1109,6 +1428,44 @@
       <button class="modal-close">&times;</button>
       <h3>Load Estimation</h3>
       <ul class="estimation-list" id="estimation-list"></ul>
+    </div>
+  </div>
+  <div class="modal-overlay" id="admin-modal">
+    <div class="modal" style="width:min(700px,calc(100% - 2rem))">
+      <button class="modal-close">&times;</button>
+      <h3>⚙️ Admin Panel</h3>
+      <div id="admin-panel-content">
+        <div class="admin-tabs">
+          <button class="admin-tab active" data-tab="users">Users</button>
+          <button class="admin-tab" data-tab="estimations">All Estimations</button>
+        </div>
+        <div id="admin-tab-users" class="admin-tab-content">
+          <div style="margin-bottom:var(--space-3)">
+            <h4>Manage Access</h4>
+            <div class="admin-add-user" style="display:grid;grid-template-columns:1fr 1fr auto auto;gap:var(--space-2);margin-bottom:var(--space-3)">
+              <input type="email" id="admin-new-email" placeholder="user@example.com" style="border:1px solid var(--color-border);background:var(--color-surface);border-radius:8px;padding:.5rem .7rem;color:var(--color-text)" />
+              <input type="text" id="admin-new-name" placeholder="Display name" style="border:1px solid var(--color-border);background:var(--color-surface);border-radius:8px;padding:.5rem .7rem;color:var(--color-text)" />
+              <select id="admin-new-role" style="border:1px solid var(--color-border);background:var(--color-surface);border-radius:8px;padding:.5rem .7rem;color:var(--color-text)">
+                <option value="explorer">Explorer</option>
+                <option value="admin">Admin</option>
+              </select>
+              <button class="btn" id="admin-add-btn">Add</button>
+            </div>
+          </div>
+          <ul id="admin-users-list" class="estimation-list"></ul>
+        </div>
+        <div id="admin-tab-estimations" class="admin-tab-content" style="display:none">
+          <h4>All Estimations (all users)</h4>
+          <ul id="admin-estimations-list" class="estimation-list"></ul>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="modal-overlay" id="admin-estimation-modal">
+    <div class="modal" style="width:min(760px,calc(100% - 2rem))">
+      <button class="modal-close">&times;</button>
+      <h3>Read-only estimation view</h3>
+      <div id="admin-estimation-details"></div>
     </div>
   </div>
   <div class="modal-overlay" id="save-choice-modal">

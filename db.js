@@ -71,6 +71,20 @@ async function initialize() {
 
     IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_estimations_parent_id')
     CREATE INDEX IX_estimations_parent_id ON estimations(parent_id);
+
+    IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='app_users' AND xtype='U')
+    CREATE TABLE app_users (
+      id UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),
+      email NVARCHAR(255) NOT NULL UNIQUE,
+      display_name NVARCHAR(255) DEFAULT '',
+      role NVARCHAR(50) NOT NULL DEFAULT 'explorer',
+      created_at DATETIME2 DEFAULT GETUTCDATE(),
+      updated_at DATETIME2 DEFAULT GETUTCDATE()
+    );
+
+    IF NOT EXISTS (SELECT 1 FROM app_users WHERE email = 'admin@swotdempid302779.onmicrosoft.com')
+    INSERT INTO app_users (email, display_name, role)
+    VALUES ('admin@swotdempid302779.onmicrosoft.com', 'GSCD', 'admin');
   `);
   console.log('Database initialized');
 }
@@ -118,6 +132,42 @@ async function listEstimations(userOid) {
   return result.recordset;
 }
 
+async function listAllEstimations() {
+  const p = await getPool();
+  const result = await p.request().query(`
+    SELECT
+      latest.id,
+      roots.id AS group_id,
+      latest.user_oid,
+      latest.user_name,
+      latest.client_name,
+      latest.title,
+      latest.created_at,
+      latest.updated_at,
+      latest.version,
+      (
+        SELECT COUNT(*)
+        FROM estimations e2
+        WHERE e2.user_oid = roots.user_oid
+          AND (e2.id = roots.id OR e2.parent_id = roots.id)
+      ) AS version_count
+    FROM (
+      SELECT id, user_oid
+      FROM estimations
+      WHERE parent_id IS NULL
+    ) roots
+    CROSS APPLY (
+      SELECT TOP 1 id, user_oid, user_name, client_name, title, created_at, updated_at, version
+      FROM estimations latest
+      WHERE latest.user_oid = roots.user_oid
+        AND (latest.id = roots.id OR latest.parent_id = roots.id)
+      ORDER BY latest.version DESC, latest.updated_at DESC, latest.created_at DESC
+    ) latest
+    ORDER BY latest.updated_at DESC
+  `);
+  return result.recordset;
+}
+
 async function getEstimation(id, userOid) {
   const p = await getPool();
   const result = await p.request()
@@ -132,6 +182,140 @@ async function getEstimation(id, userOid) {
   if (!row) return null;
   row.data = JSON.parse(row.data);
   return row;
+}
+
+async function getEstimationForAdmin(id) {
+  const p = await getPool();
+  const result = await p.request()
+    .input('id', sql.UniqueIdentifier, id)
+    .query(`
+      SELECT id, client_name, title, data, version, parent_id, created_at, updated_at
+      FROM estimations
+      WHERE id = @id
+    `);
+  const row = result.recordset[0];
+  if (!row) return null;
+  row.data = JSON.parse(row.data);
+  return row;
+}
+
+async function countAppUsers() {
+  const p = await getPool();
+  const result = await p.request().query(`
+    SELECT COUNT(*) AS count
+    FROM app_users
+  `);
+  return result.recordset[0]?.count || 0;
+}
+
+async function getAdminCount() {
+  const p = await getPool();
+  const result = await p.request().query(`
+    SELECT COUNT(*) AS count
+    FROM app_users
+    WHERE role = 'admin'
+  `);
+  return result.recordset[0]?.count || 0;
+}
+
+async function getUserRole(email) {
+  const p = await getPool();
+  const result = await p.request()
+    .input('email', sql.NVarChar, email)
+    .query(`
+      SELECT TOP 1 role, display_name
+      FROM app_users
+      WHERE LOWER(email) = LOWER(@email)
+    `);
+  return result.recordset[0] || null;
+}
+
+async function listAppUsers() {
+  const p = await getPool();
+  const result = await p.request().query(`
+    SELECT id, email, display_name, role, created_at, updated_at
+    FROM app_users
+    ORDER BY CASE WHEN role = 'admin' THEN 0 ELSE 1 END, display_name ASC, email ASC
+  `);
+  return result.recordset;
+}
+
+async function addAppUser({ email, displayName, role }) {
+  const p = await getPool();
+  const result = await p.request()
+    .input('email', sql.NVarChar, email)
+    .input('displayName', sql.NVarChar, displayName)
+    .input('role', sql.NVarChar, role)
+    .query(`
+      INSERT INTO app_users (email, display_name, role)
+      OUTPUT INSERTED.id, INSERTED.email, INSERTED.display_name, INSERTED.role, INSERTED.created_at, INSERTED.updated_at
+      VALUES (@email, @displayName, @role)
+    `);
+  return result.recordset[0];
+}
+
+async function updateAppUserRole(id, role) {
+  const p = await getPool();
+  const currentResult = await p.request()
+    .input('id', sql.UniqueIdentifier, id)
+    .query(`
+      SELECT id, role
+      FROM app_users
+      WHERE id = @id
+    `);
+  const currentUser = currentResult.recordset[0];
+  if (!currentUser) return null;
+
+  if (currentUser.role === 'admin' && role !== 'admin') {
+    const adminCount = await getAdminCount();
+    if (adminCount <= 1) {
+      const error = new Error('Cannot remove the last admin');
+      error.code = 'LAST_ADMIN';
+      throw error;
+    }
+  }
+
+  const result = await p.request()
+    .input('id', sql.UniqueIdentifier, id)
+    .input('role', sql.NVarChar, role)
+    .query(`
+      UPDATE app_users
+      SET role = @role,
+          updated_at = GETUTCDATE()
+      OUTPUT INSERTED.id, INSERTED.email, INSERTED.display_name, INSERTED.role, INSERTED.created_at, INSERTED.updated_at
+      WHERE id = @id
+    `);
+  return result.recordset[0] || null;
+}
+
+async function deleteAppUser(id) {
+  const p = await getPool();
+  const userResult = await p.request()
+    .input('id', sql.UniqueIdentifier, id)
+    .query(`
+      SELECT id, role
+      FROM app_users
+      WHERE id = @id
+    `);
+  const user = userResult.recordset[0];
+  if (!user) return false;
+
+  if (user.role === 'admin') {
+    const adminCount = await getAdminCount();
+    if (adminCount <= 1) {
+      const error = new Error('Cannot delete the last admin');
+      error.code = 'LAST_ADMIN';
+      throw error;
+    }
+  }
+
+  const deleteResult = await p.request()
+    .input('id', sql.UniqueIdentifier, id)
+    .query(`
+      DELETE FROM app_users
+      WHERE id = @id
+    `);
+  return deleteResult.rowsAffected[0] > 0;
 }
 
 async function resolveParentId(id, userOid) {
@@ -257,8 +441,16 @@ async function deleteEstimation(id, userOid) {
 module.exports = {
   initialize,
   healthCheck,
+  countAppUsers,
+  getUserRole,
+  listAppUsers,
+  addAppUser,
+  updateAppUserRole,
+  deleteAppUser,
   listEstimations,
+  listAllEstimations,
   getEstimation,
+  getEstimationForAdmin,
   saveEstimation,
   updateEstimation,
   listEstimationVersions,
