@@ -58,9 +58,16 @@
     .admin-user-email{font-weight:600;font-size:var(--text-sm)}
     .admin-user-name{color:var(--color-text-muted);font-size:var(--text-xs)}
     .admin-user-actions{display:flex;align-items:center;gap:var(--space-2)}
-    .admin-select{appearance:none;border:1px solid var(--color-border);background:var(--color-surface);border-radius:8px;padding:.45rem 2rem .45rem .7rem;color:var(--color-text);font-size:var(--text-sm);font-weight:600;cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23999' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right .6rem center;transition:border-color .2s}
-    .admin-select:hover{border-color:var(--color-primary)}
-    .admin-select:focus{outline:none;border-color:var(--color-primary-strong);box-shadow:0 0 0 3px var(--color-primary-soft)}
+    .admin-dropdown{position:relative;display:inline-block}
+    .admin-dropdown-toggle{display:inline-flex;align-items:center;gap:.4rem;border:1px solid var(--color-border);background:var(--color-surface);border-radius:8px;padding:.45rem .75rem;color:var(--color-text);font-size:var(--text-sm);font-weight:600;cursor:pointer;transition:border-color .2s,box-shadow .2s,background .2s;white-space:nowrap}
+    .admin-dropdown-toggle:hover{border-color:var(--color-primary);background:var(--color-surface-offset)}
+    .admin-dropdown-toggle:focus{outline:none;border-color:var(--color-primary-strong);box-shadow:0 0 0 3px var(--color-primary-soft)}
+    .admin-dropdown-toggle::after{content:'';display:inline-block;width:0;height:0;margin-left:.3rem;vertical-align:.255em;border-top:.3em solid;border-right:.3em solid transparent;border-bottom:0;border-left:.3em solid transparent}
+    .admin-dropdown-menu{display:none;position:absolute;top:100%;left:0;z-index:300;min-width:100%;margin:.25rem 0 0;padding:.25rem 0;background:var(--color-surface);border:1px solid var(--color-border);border-radius:8px;box-shadow:0 6px 16px rgba(0,0,0,.12)}
+    .admin-dropdown-menu.show{display:block}
+    .admin-dropdown-item{display:block;width:100%;padding:.4rem .75rem;border:none;background:none;text-align:left;color:var(--color-text);font-size:var(--text-sm);font-weight:500;cursor:pointer;white-space:nowrap;transition:background .15s}
+    .admin-dropdown-item:hover{background:var(--color-surface-offset)}
+    .admin-dropdown-item.active{background:var(--color-primary-soft);color:var(--color-primary-strong);font-weight:600}
     .admin-delete-btn{border:1px solid var(--color-border);background:var(--color-surface);color:var(--color-text-muted);border-radius:8px;padding:.4rem .6rem;cursor:pointer;font-size:var(--text-sm);transition:color .2s,border-color .2s,background .2s}
     .admin-delete-btn:hover{color:#fff;background:#c0392b;border-color:#c0392b}
     .admin-delete-btn:disabled{opacity:.4;cursor:not-allowed;background:var(--color-surface);color:var(--color-text-muted);border-color:var(--color-border)}
@@ -960,7 +967,7 @@
         const adminEstimationDetails = document.getElementById('admin-estimation-details');
         const adminNewEmail = document.getElementById('admin-new-email');
         const adminNewName = document.getElementById('admin-new-name');
-        const adminNewRole = document.getElementById('admin-new-role');
+        const adminNewRole = document.getElementById('admin-new-role-dropdown');
         const adminAddBtn = document.getElementById('admin-add-btn');
         const versionCache = new Map();
         const expandedVersionGroups = new Set();
@@ -1125,10 +1132,13 @@
                   <div class="admin-user-email">${escapeHtml(appUser.email)}</div>
                   <div class="admin-user-name">${escapeHtml(appUser.display_name || 'No display name')} <span class="role-badge ${appUser.role}">${roleLabel}</span></div>
                 </div>
-                <select data-user-role="${appUser.id}" ${roleAttrs} class="admin-select">
-                  <option value="explorer" ${appUser.role === 'explorer' ? 'selected' : ''}>Explorer</option>
-                  <option value="admin" ${appUser.role === 'admin' ? 'selected' : ''}>Admin</option>
-                </select>
+                <div class="admin-dropdown" data-user-role="${appUser.id}">
+                  <button class="admin-dropdown-toggle" type="button" ${roleAttrs}>${roleLabel} </button>
+                  <div class="admin-dropdown-menu">
+                    <button class="admin-dropdown-item ${appUser.role === 'explorer' ? 'active' : ''}" data-value="explorer">Explorer</button>
+                    <button class="admin-dropdown-item ${appUser.role === 'admin' ? 'active' : ''}" data-value="admin">Admin</button>
+                  </div>
+                </div>
                 <button class="admin-delete-btn" type="button" data-user-delete="${appUser.id}" title="Delete user" ${deleteAttrs}>&times;</button>
               </li>`;
           }).join('');
@@ -1357,7 +1367,7 @@
           adminAddBtn.addEventListener('click', async () => {
             const email = adminNewEmail.value.trim().toLowerCase();
             const displayName = adminNewName.value.trim();
-            const role = adminNewRole.value;
+            const role = adminNewRole.dataset.selectedValue || 'explorer';
             const emailPattern = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 
             if (!emailPattern.test(email)) {
@@ -1373,26 +1383,62 @@
               }, 'Failed to add user');
               adminNewEmail.value = '';
               adminNewName.value = '';
-              adminNewRole.value = 'explorer';
+              adminNewRole.dataset.selectedValue = 'explorer';
+              adminNewRole.querySelector('.admin-dropdown-toggle').textContent = 'Explorer ';
+              adminNewRole.querySelectorAll('.admin-dropdown-item').forEach(i => i.classList.toggle('active', i.dataset.value === 'explorer'));
               await refreshAdminUsers();
             } catch (err) {
               alert(err.message);
             }
           });
 
-          adminUsersListEl.addEventListener('change', async (event) => {
-            const select = event.target.closest('[data-user-role]');
-            if (!select) return;
-            try {
-              await fetchJson(`/api/admin/users/${select.dataset.userRole}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ role: select.value })
-              }, 'Failed to update user role');
-              await refreshAdminUsers();
-            } catch (err) {
-              alert(err.message);
-              await refreshAdminUsers();
+          // Bootstrap-style dropdown toggle logic
+          document.addEventListener('click', (e) => {
+            // Close all open dropdowns when clicking outside
+            document.querySelectorAll('.admin-dropdown-menu.show').forEach(menu => {
+              if (!menu.parentElement.contains(e.target)) menu.classList.remove('show');
+            });
+            // Toggle dropdown on button click
+            const toggleBtn = e.target.closest('.admin-dropdown-toggle');
+            if (toggleBtn && !toggleBtn.disabled) {
+              const menu = toggleBtn.nextElementSibling;
+              document.querySelectorAll('.admin-dropdown-menu.show').forEach(m => { if (m !== menu) m.classList.remove('show'); });
+              menu.classList.toggle('show');
+              e.stopPropagation();
+              return;
+            }
+            // Handle dropdown item selection in user list
+            const dropdownItem = e.target.closest('.admin-dropdown-item');
+            if (dropdownItem) {
+              const dropdownEl = dropdownItem.closest('.admin-dropdown');
+              const menu = dropdownItem.closest('.admin-dropdown-menu');
+              const toggle = dropdownEl.querySelector('.admin-dropdown-toggle');
+              const value = dropdownItem.dataset.value;
+              const label = dropdownItem.textContent.trim();
+              // Update active state
+              menu.querySelectorAll('.admin-dropdown-item').forEach(i => i.classList.remove('active'));
+              dropdownItem.classList.add('active');
+              toggle.textContent = label + ' ';
+              menu.classList.remove('show');
+              // If this is a user role dropdown in the user list, trigger role update
+              if (dropdownEl.dataset.userRole) {
+                (async () => {
+                  try {
+                    await fetchJson(`/api/admin/users/${dropdownEl.dataset.userRole}`, {
+                      method: 'PUT',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ role: value })
+                    }, 'Failed to update user role');
+                    await refreshAdminUsers();
+                  } catch (err) {
+                    alert(err.message);
+                    await refreshAdminUsers();
+                  }
+                })();
+              } else {
+                // "Add new user" role dropdown — just store the selection
+                dropdownEl.dataset.selectedValue = value;
+              }
             }
           });
 
@@ -1475,10 +1521,13 @@
             <div class="admin-add-row">
               <input type="email" id="admin-new-email" placeholder="user@example.com" class="admin-input" />
               <input type="text" id="admin-new-name" placeholder="Display name" class="admin-input" />
-              <select id="admin-new-role" class="admin-select">
-                <option value="explorer">Explorer</option>
-                <option value="admin">Admin</option>
-              </select>
+              <div class="admin-dropdown" id="admin-new-role-dropdown">
+                <button class="admin-dropdown-toggle" type="button" id="admin-new-role-btn">Explorer </button>
+                <div class="admin-dropdown-menu">
+                  <button class="admin-dropdown-item active" data-value="explorer">Explorer</button>
+                  <button class="admin-dropdown-item" data-value="admin">Admin</button>
+                </div>
+              </div>
               <button class="admin-add-btn" id="admin-add-btn">+ Add</button>
             </div>
           </div>
