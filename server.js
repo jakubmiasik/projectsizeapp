@@ -179,6 +179,17 @@ app.get('/api/admin/estimations/:id', requireAuth, requireAdmin, async (req, res
   }
 });
 
+app.delete('/api/admin/estimations/:id', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const deleted = await db.deleteEstimationAsAdmin(req.params.id);
+    if (!deleted) return res.status(404).json({ error: 'Not found' });
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Failed to delete estimation as admin:', err);
+    res.status(500).json({ error: 'Failed to delete estimation' });
+  }
+});
+
 // List estimations for logged-in user
 app.get('/api/estimations', requireAuth, async (req, res) => {
   try {

@@ -438,6 +438,22 @@ async function deleteEstimation(id, userOid) {
   return result.rowsAffected[0] > 0;
 }
 
+async function deleteEstimationAsAdmin(id) {
+  const p = await getPool();
+  // Find the root parent id
+  const lookup = await p.request()
+    .input('id', sql.UniqueIdentifier, id)
+    .query(`SELECT id, parent_id FROM estimations WHERE id = @id`);
+  const row = lookup.recordset[0];
+  if (!row) return false;
+  const rootId = row.parent_id || row.id;
+
+  const result = await p.request()
+    .input('rootId', sql.UniqueIdentifier, rootId)
+    .query(`DELETE FROM estimations WHERE id = @rootId OR parent_id = @rootId`);
+  return result.rowsAffected[0] > 0;
+}
+
 module.exports = {
   initialize,
   healthCheck,
@@ -454,5 +470,6 @@ module.exports = {
   saveEstimation,
   updateEstimation,
   listEstimationVersions,
-  deleteEstimation
+  deleteEstimation,
+  deleteEstimationAsAdmin
 };
