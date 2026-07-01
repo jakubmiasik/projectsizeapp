@@ -645,9 +645,11 @@
 
       const bufferPercent = Math.max(0, Number(bufferInput.value) || 0);
       const bufferedTotalHours = multiplyHours(totalHours, 1 + bufferPercent / 100);
+      const pmHours = roundUp(bufferedTotalHours * 0.10);
+      const totalWithPM = bufferedTotalHours + pmHours;
       const resourcePlan = getResourcePlan();
-      const totalWeeks = calculateTimelineWeeks(bufferedTotalHours, resourcePlan.capacityRatio);
-      const tshirt = getTshirt(bufferedTotalHours);
+      const totalWeeks = calculateTimelineWeeks(totalWithPM, resourcePlan.capacityRatio);
+      const tshirt = getTshirt(totalWithPM);
       const tshirtRange = getTshirtRange(tshirt);
       const timelineRange = getTimelineRange(tshirt, resourcePlan.capacityRatio);
 
@@ -662,7 +664,7 @@
       badge.className = `badge ${tshirt.toLowerCase()}`;
       badge.textContent = tshirt;
 
-      updateEstimateOverview(bufferedTotalHours, tshirt, resourcePlan.capacityRatio);
+      updateEstimateOverview(totalWithPM, tshirt, resourcePlan.capacityRatio);
       renderTimeline(totalWeeks, timelineRange, resourcePlan);
 
       document.getElementById('hours-summary').innerHTML = `
@@ -672,11 +674,11 @@
         </tr>
         <tr>
           <th>Project Management (10%)</th>
-          <td>${formatWhole(roundUp(bufferedTotalHours * 0.10))}</td>
+          <td>${formatWhole(pmHours)}</td>
         </tr>
         <tr>
           <th>Total project hours (incl. PM)</th>
-          <td><strong>${formatWhole(bufferedTotalHours + roundUp(bufferedTotalHours * 0.10))}</strong></td>
+          <td><strong>${formatWhole(totalWithPM)}</strong></td>
         </tr>
         <tr>
           <th>Estimated range</th>
