@@ -137,11 +137,24 @@ const COPILOT_TOKEN_ENDPOINT = process.env.COPILOT_TOKEN_ENDPOINT ||
 
 app.post('/api/copilot-token', requireAuth, async (req, res) => {
   try {
-    const response = await fetch(COPILOT_TOKEN_ENDPOINT, { method: 'POST' });
+    // EasyAuth provides the user's Entra ID access token in this header
+    const userAccessToken = req.headers['x-ms-token-aad-access-token'];
+    if (!userAccessToken) {
+      console.error('Copilot token: no x-ms-token-aad-access-token header available');
+      return res.status(401).json({ error: 'No access token available. EasyAuth token store may need to be enabled.' });
+    }
+
+    const response = await fetch(COPILOT_TOKEN_ENDPOINT, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${userAccessToken}`,
+        'Content-Type': 'application/json'
+      }
+    });
     if (!response.ok) {
       const text = await response.text();
       console.error('Copilot token error:', response.status, text);
-      return res.status(502).json({ error: 'Failed to get Copilot token' });
+      return res.status(502).json({ error: `Copilot Studio returned ${response.status}` });
     }
     const data = await response.json();
     res.json(data);
