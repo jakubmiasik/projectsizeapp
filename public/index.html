@@ -52,6 +52,24 @@
     .admin-tab{border:none;background:none;padding:.7rem 1.2rem;font-size:var(--text-sm);font-weight:600;color:var(--color-text-muted);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;transition:color .2s,border-color .2s}
     .admin-tab.active{color:var(--color-primary-strong);border-bottom-color:var(--color-primary-strong)}
     .admin-tab:hover{color:var(--color-text)}
+    .load-tab-section{display:grid;gap:var(--space-3)}
+    .load-tab-copy,.share-section-copy,.share-search-empty,.share-empty{color:var(--color-text-muted);font-size:var(--text-sm)}
+    .estimation-share:hover{color:var(--color-primary);border-color:var(--color-primary)}
+    .share-search-panel,.share-current-panel{display:grid;gap:var(--space-2);margin-top:var(--space-4)}
+    .share-search-results,.share-current-list{display:grid;gap:var(--space-2);margin:0;padding:0;list-style:none}
+    .share-search-item,.share-current-item{display:flex;align-items:center;justify-content:space-between;gap:var(--space-3);width:100%;padding:var(--space-3) var(--space-4);border:1px solid var(--color-border);border-radius:var(--radius-md);background:var(--color-surface-2);color:var(--color-text)}
+    .share-search-item{cursor:pointer;text-align:left}
+    .share-search-item:hover{border-color:var(--color-primary);background:var(--color-surface-offset)}
+    .share-current-item{background:var(--color-surface)}
+    .share-person-info{display:flex;flex-direction:column;gap:.15rem;min-width:0}
+    .share-person-name{font-weight:700}
+    .share-person-email{font-size:var(--text-sm);color:var(--color-text-muted);overflow:hidden;text-overflow:ellipsis}
+    .share-remove-btn{border:1px solid var(--color-border);background:var(--color-surface);color:var(--color-text-muted);border-radius:8px;padding:.35rem .55rem;cursor:pointer}
+    .share-remove-btn:hover{color:#c0392b;border-color:#c0392b}
+    .modal-field{display:grid;gap:var(--space-2)}
+    .modal-input{width:100%;border:1px solid var(--color-border);background:var(--color-surface);border-radius:12px;padding:.7rem .85rem;color:var(--color-text)}
+    .modal-input:focus{outline:none;border-color:var(--color-primary-strong);box-shadow:0 0 0 3px var(--color-primary-soft)}
+    .generic-modal-message{white-space:pre-wrap}
     .admin-user-item{display:grid;grid-template-columns:1fr auto auto;gap:var(--space-3);align-items:center;padding:var(--space-3) var(--space-4);border:1px solid var(--color-border);border-radius:var(--radius-md);background:var(--color-surface);transition:border-color .2s,box-shadow .2s}
     .admin-user-item:hover{border-color:var(--color-primary);box-shadow:0 2px 8px rgba(0,0,0,.06)}
     .admin-user-info{display:flex;flex-direction:column;gap:.15rem}
@@ -533,7 +551,7 @@
     const resourceRolesRoot = document.getElementById('resource-roles');
     const addResourceRoleButton = document.getElementById('add-resource-role');
     let resourceRoleIndex = 0;
-    let loadedEstimation = null; // { id, title, version, parent_id }
+    let loadedEstimation = null; // { id, title, version, parent_id, group_id, isShared }
     let currentUserRole = null;
 
     function addResourceRole(roleName = '', percent = 80) {
@@ -561,10 +579,13 @@
         id: estimation.id,
         title: estimation.title,
         version: estimation.version || 1,
-        parent_id: estimation.parent_id || null
+        parent_id: estimation.parent_id || null,
+        group_id: estimation.group_id || estimation.parent_id || estimation.id,
+        isShared: Boolean(estimation.isShared),
+        shared_by_name: estimation.shared_by_name || ''
       } : null;
       document.getElementById('loaded-version').value = estimation
-        ? `${estimation.title} (v${estimation.version || 1})`
+        ? `${estimation.title} (v${estimation.version || 1}${estimation.isShared ? ' · shared read-only' : ''})`
         : '';
     }
 
@@ -814,6 +835,88 @@
       calculate();
     }
 
+    function showDialog({ message, title = 'Notice', mode = 'alert', defaultValue = '', confirmText = 'OK', cancelText = 'Cancel' }) {
+      return new Promise((resolve) => {
+        const overlay = document.getElementById('dialog-modal');
+        const titleEl = document.getElementById('dialog-modal-title');
+        const messageEl = document.getElementById('dialog-modal-message');
+        const inputWrap = document.getElementById('dialog-modal-input-wrap');
+        const inputEl = document.getElementById('dialog-modal-input');
+        const confirmBtn = overlay.querySelector('[data-dialog-confirm]');
+        const cancelBtn = overlay.querySelector('[data-dialog-cancel]');
+        const closeBtn = overlay.querySelector('[data-dialog-close]');
+        const cancelValue = mode === 'confirm' ? false : mode === 'prompt' ? null : undefined;
+
+        titleEl.textContent = title;
+        messageEl.textContent = message || '';
+        inputWrap.style.display = mode === 'prompt' ? '' : 'none';
+        cancelBtn.style.display = mode === 'alert' ? 'none' : '';
+        confirmBtn.textContent = confirmText;
+        cancelBtn.textContent = cancelText;
+        inputEl.value = defaultValue;
+
+        const cleanup = () => {
+          overlay.removeEventListener('click', onOverlayClick);
+          confirmBtn.removeEventListener('click', onConfirm);
+          cancelBtn.removeEventListener('click', onCancel);
+          closeBtn.removeEventListener('click', onCancel);
+          document.removeEventListener('keydown', onKeyDown);
+        };
+
+        const close = (value) => {
+          cleanup();
+          overlay.classList.remove('active');
+          resolve(value);
+        };
+
+        const onConfirm = () => close(mode === 'confirm' ? true : mode === 'prompt' ? inputEl.value : undefined);
+        const onCancel = () => close(cancelValue);
+        const onOverlayClick = (event) => {
+          if (event.target === overlay) {
+            onCancel();
+          }
+        };
+        const onKeyDown = (event) => {
+          if (event.key === 'Escape') {
+            event.preventDefault();
+            onCancel();
+          }
+          if (event.key === 'Enter' && mode === 'prompt') {
+            event.preventDefault();
+            onConfirm();
+          }
+        };
+
+        overlay.addEventListener('click', onOverlayClick);
+        confirmBtn.addEventListener('click', onConfirm);
+        cancelBtn.addEventListener('click', onCancel);
+        closeBtn.addEventListener('click', onCancel);
+        document.addEventListener('keydown', onKeyDown);
+        overlay.classList.add('active');
+
+        requestAnimationFrame(() => {
+          if (mode === 'prompt') {
+            inputEl.focus();
+            inputEl.select();
+          } else {
+            confirmBtn.focus();
+          }
+        });
+      });
+    }
+
+    function showAlert(message, title = 'Notice') {
+      return showDialog({ message, title, mode: 'alert', confirmText: 'OK' });
+    }
+
+    function showConfirm(message, title = 'Confirm') {
+      return showDialog({ message, title, mode: 'confirm', confirmText: 'Confirm', cancelText: 'Cancel' });
+    }
+
+    function showPrompt(message, defaultValue = '', title = 'Input') {
+      return showDialog({ message, title, mode: 'prompt', defaultValue, confirmText: 'OK', cancelText: 'Cancel' });
+    }
+
     (function(){
       const btn = document.querySelector('[data-theme-toggle]');
       const root = document.documentElement;
@@ -961,6 +1064,13 @@
 
         const overlay = document.getElementById('load-modal');
         const listEl = document.getElementById('estimation-list');
+        const sharedListEl = document.getElementById('shared-estimation-list');
+        const shareModal = document.getElementById('share-modal');
+        const shareModalTitle = document.getElementById('share-modal-title');
+        const shareSearchInput = document.getElementById('share-search-input');
+        const shareSearchResultsEl = document.getElementById('share-search-results');
+        const shareCurrentListEl = document.getElementById('share-current-list');
+        const shareModalCloseBtn = document.getElementById('share-modal-close-btn');
         const saveChoiceModal = document.getElementById('save-choice-modal');
         const adminModal = document.getElementById('admin-modal');
         const adminUsersListEl = document.getElementById('admin-users-list');
@@ -973,24 +1083,53 @@
         const adminAddBtn = document.getElementById('admin-add-btn');
         const versionCache = new Map();
         const expandedVersionGroups = new Set();
+        const currentUserEmail = (user.email || '').toLowerCase();
         let estimationList = [];
+        let sharedEstimationList = [];
+        let currentLoadTab = 'mine';
+        let shareSearchTimeout = null;
+        const shareState = {
+          groupId: null,
+          title: '',
+          shares: [],
+          searchResults: []
+        };
         const adminState = {
           users: [],
           estimations: [],
           estimationsLoaded: false
         };
 
-        function closeOverlay(modal) {
-          modal.classList.remove('active');
+        function resetShareModalState() {
+          if (shareSearchTimeout) {
+            clearTimeout(shareSearchTimeout);
+            shareSearchTimeout = null;
+          }
+          shareState.groupId = null;
+          shareState.title = '';
+          shareState.shares = [];
+          shareState.searchResults = [];
+          shareSearchInput.value = '';
+          shareSearchResultsEl.innerHTML = '<li class="share-search-empty">Start typing to search for users.</li>';
+          shareCurrentListEl.innerHTML = '<li class="share-empty">No users have access yet.</li>';
         }
 
-        [overlay, adminModal, adminEstimationModal].forEach((modal) => {
+        function closeOverlay(modal) {
+          modal.classList.remove('active');
+          if (modal === shareModal) {
+            resetShareModalState();
+          }
+        }
+
+        [overlay, shareModal, adminModal, adminEstimationModal].forEach((modal) => {
           modal.addEventListener('click', (event) => {
             if (event.target === modal || event.target.classList.contains('modal-close')) {
               closeOverlay(modal);
             }
           });
         });
+
+        shareModalCloseBtn.addEventListener('click', () => closeOverlay(shareModal));
 
         function getDefaultTitle(clientName, fallbackTitle = '') {
           return fallbackTitle || `${clientName || 'Untitled'} - ${new Date().toLocaleDateString()}`;
@@ -1019,8 +1158,8 @@
           return versions;
         }
 
-        async function loadEstimationById(id) {
-          const estimation = await fetchJson(`/api/estimations/${id}`, {}, 'Failed to load');
+        async function loadEstimationById(id, { shared = false } = {}) {
+          const estimation = await fetchJson(shared ? `/api/estimations/shared/${id}` : `/api/estimations/${id}`, {}, 'Failed to load');
           importState(estimation.data);
           setLoadedEstimationState(estimation);
           closeOverlay(overlay);
@@ -1033,7 +1172,7 @@
             body: JSON.stringify(payload)
           }, 'Save failed');
           setLoadedEstimationState(estimation);
-          alert(successMessage);
+          await showAlert(successMessage, 'Saved');
         }
 
         function showSaveChoiceDialog() {
@@ -1104,6 +1243,7 @@
                     <span class="estimation-item-meta">${estimation.client_name ? escapeHtml(estimation.client_name) + ' &middot; ' : ''}${formatDate(estimation.updated_at)} &middot; v${estimation.version || 1}</span>
                   </div>
                   ${hasVersions ? `<button class="estimation-version-toggle" type="button" data-versions-id="${groupId}">${expandedVersionGroups.has(groupId) ? '▴ Hide versions' : '▾ Versions'}</button>` : '<span></span>'}
+                  <button class="estimation-version-toggle estimation-share" type="button" data-share-id="${groupId}">Share</button>
                   <button class="estimation-delete" type="button" data-delete-id="${groupId}" title="Delete">&times;</button>
                 </div>
                 ${renderVersionList(groupId)}
@@ -1114,6 +1254,112 @@
         async function refreshEstimationList() {
           estimationList = await fetchJson('/api/estimations', {}, 'Failed to load');
           renderEstimationList();
+        }
+
+        function renderSharedEstimationList() {
+          if (sharedEstimationList.length === 0) {
+            sharedListEl.innerHTML = '<li style="padding:1rem;color:var(--color-text-muted)">No estimations have been shared with you yet.</li>';
+            return;
+          }
+
+          sharedListEl.innerHTML = sharedEstimationList.map((estimation) => `
+            <li class="estimation-item-wrapper">
+              <div class="estimation-item" data-shared-id="${estimation.id}">
+                <div class="estimation-item-info">
+                  <span class="estimation-item-title">${escapeHtml(estimation.title)} <span class="version-badge">v${estimation.version || 1}</span></span>
+                  <span class="estimation-item-meta">${estimation.client_name ? escapeHtml(estimation.client_name) + ' &middot; ' : ''}${formatDate(estimation.updated_at)}</span>
+                  <span class="estimation-item-meta">Shared by: ${escapeHtml(estimation.shared_by_name || 'Unknown')}</span>
+                </div>
+                <span class="user-badge">Shared</span>
+                <span class="estimation-item-meta">Load</span>
+              </div>
+            </li>
+          `).join('');
+        }
+
+        async function refreshSharedEstimationList() {
+          sharedEstimationList = await fetchJson('/api/estimations/shared-with-me', {}, 'Failed to load shared estimations');
+          renderSharedEstimationList();
+        }
+
+        function setLoadTab(tabName) {
+          currentLoadTab = tabName;
+          overlay.querySelectorAll('[data-load-tab]').forEach((button) => {
+            button.classList.toggle('active', button.dataset.loadTab === tabName);
+          });
+          document.getElementById('load-tab-mine').style.display = tabName === 'mine' ? '' : 'none';
+          document.getElementById('load-tab-shared').style.display = tabName === 'shared' ? '' : 'none';
+        }
+
+        function renderShareSearchResults() {
+          const query = shareSearchInput.value.trim();
+          const alreadyShared = new Set(shareState.shares.map((item) => (item.shared_with_email || '').toLowerCase()));
+          const visibleResults = shareState.searchResults.filter((item) => {
+            const email = (item.email || '').toLowerCase();
+            return email && email !== currentUserEmail && !alreadyShared.has(email);
+          });
+
+          if (!query) {
+            shareSearchResultsEl.innerHTML = '<li class="share-search-empty">Start typing to search for users.</li>';
+            return;
+          }
+
+          if (visibleResults.length === 0) {
+            shareSearchResultsEl.innerHTML = '<li class="share-search-empty">No matching users available to share with.</li>';
+            return;
+          }
+
+          shareSearchResultsEl.innerHTML = visibleResults.map((person) => `
+            <li>
+              <button type="button" class="share-search-item" data-share-email="${escapeHtml(person.email)}">
+                <span class="share-person-info">
+                  <span class="share-person-name">${escapeHtml(person.display_name || person.email)}</span>
+                  <span class="share-person-email">${escapeHtml(person.email)}</span>
+                </span>
+                <span class="user-badge">Share</span>
+              </button>
+            </li>
+          `).join('');
+        }
+
+        function renderShareList() {
+          if (shareState.shares.length === 0) {
+            shareCurrentListEl.innerHTML = '<li class="share-empty">No users have access yet.</li>';
+            return;
+          }
+
+          shareCurrentListEl.innerHTML = shareState.shares.map((item) => `
+            <li class="share-current-item">
+              <span class="share-person-info">
+                <span class="share-person-name">${escapeHtml(item.display_name || item.shared_with_email)}</span>
+                <span class="share-person-email">${escapeHtml(item.shared_with_email)}</span>
+              </span>
+              <button type="button" class="share-remove-btn" data-share-remove-email="${escapeHtml(item.shared_with_email)}" title="Remove share">&times;</button>
+            </li>
+          `).join('');
+        }
+
+        async function refreshShareList() {
+          if (!shareState.groupId) return;
+          shareState.shares = await fetchJson(`/api/estimations/${shareState.groupId}/shares`, {}, 'Failed to load share list');
+          renderShareList();
+          renderShareSearchResults();
+        }
+
+        async function openShareModal(groupId) {
+          const estimation = estimationList.find((item) => getGroupId(item) === groupId);
+          if (!estimation) return;
+
+          shareState.groupId = groupId;
+          shareState.title = estimation.title;
+          shareState.shares = [];
+          shareState.searchResults = [];
+          shareModalTitle.textContent = `Share: ${estimation.title}`;
+          shareSearchInput.value = '';
+          shareSearchResultsEl.innerHTML = '<li class="share-search-empty">Start typing to search for users.</li>';
+          shareCurrentListEl.innerHTML = '<li class="share-empty">Loading shares...</li>';
+          shareModal.classList.add('active');
+          await refreshShareList();
         }
 
         function renderAdminUsers() {
@@ -1248,9 +1494,16 @@
 
           try {
             if (!loadedEstimation) {
-              const title = prompt('Name this estimation:', getDefaultTitle(clientName));
-              if (!title) return;
-              await saveEstimationRequest('/api/estimations', 'POST', { title, data: stateData }, 'Estimation saved successfully!');
+              const title = await showPrompt('Name this estimation:', getDefaultTitle(clientName), 'Save Estimation');
+              if (!title?.trim()) return;
+              await saveEstimationRequest('/api/estimations', 'POST', { title: title.trim(), data: stateData }, 'Estimation saved successfully!');
+              return;
+            }
+
+            if (loadedEstimation.isShared) {
+              const title = await showPrompt('Name your copy of this shared estimation:', getDefaultTitle(clientName, loadedEstimation.title), 'Save Shared Estimation');
+              if (!title?.trim()) return;
+              await saveEstimationRequest('/api/estimations', 'POST', { title: title.trim(), data: stateData }, 'Shared estimation saved as your own copy!');
               return;
             }
 
@@ -1258,31 +1511,102 @@
             if (choice === 'cancel') return;
 
             const titlePrompt = choice === 'update' ? 'Update estimation title:' : 'Name this new version:';
-            const title = prompt(titlePrompt, getDefaultTitle(clientName, loadedEstimation.title));
-            if (!title) return;
+            const title = await showPrompt(titlePrompt, getDefaultTitle(clientName, loadedEstimation.title), 'Save Estimation');
+            if (!title?.trim()) return;
 
             if (choice === 'update') {
-              await saveEstimationRequest(`/api/estimations/${loadedEstimation.id}`, 'PUT', { title, data: stateData }, 'Estimation updated successfully!');
+              await saveEstimationRequest(`/api/estimations/${loadedEstimation.id}`, 'PUT', { title: title.trim(), data: stateData }, 'Estimation updated successfully!');
             } else {
               await saveEstimationRequest('/api/estimations', 'POST', {
-                title,
+                title: title.trim(),
                 data: stateData,
                 parentId: loadedEstimation.parent_id || loadedEstimation.id
               }, 'New estimation version saved successfully!');
             }
           } catch (err) {
-            alert('Failed to save estimation: ' + err.message);
+            await showAlert('Failed to save estimation: ' + err.message, 'Save failed');
+          }
+        });
+
+        overlay.querySelectorAll('[data-load-tab]').forEach((button) => {
+          button.addEventListener('click', () => setLoadTab(button.dataset.loadTab));
+        });
+
+        shareSearchInput.addEventListener('input', () => {
+          const query = shareSearchInput.value.trim();
+          shareState.searchResults = [];
+          if (shareSearchTimeout) {
+            clearTimeout(shareSearchTimeout);
+            shareSearchTimeout = null;
+          }
+
+          if (!query) {
+            renderShareSearchResults();
+            return;
+          }
+
+          shareSearchResultsEl.innerHTML = '<li class="share-search-empty">Searching...</li>';
+          shareSearchTimeout = setTimeout(async () => {
+            try {
+              shareState.searchResults = await fetchJson(`/api/users/search?q=${encodeURIComponent(query)}`, {}, 'Failed to search users');
+              if (shareSearchInput.value.trim() !== query) return;
+              renderShareSearchResults();
+            } catch (err) {
+              shareSearchResultsEl.innerHTML = `<li class="share-search-empty">${escapeHtml(err.message)}</li>`;
+            }
+          }, 250);
+        });
+
+        shareSearchResultsEl.addEventListener('click', async (event) => {
+          const button = event.target.closest('[data-share-email]');
+          if (!button || !shareState.groupId) return;
+
+          try {
+            await fetchJson(`/api/estimations/${shareState.groupId}/share`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ email: button.dataset.shareEmail })
+            }, 'Failed to share estimation');
+            shareSearchInput.value = '';
+            shareState.searchResults = [];
+            renderShareSearchResults();
+            await refreshShareList();
+          } catch (err) {
+            await showAlert(err.message, 'Share failed');
+          }
+        });
+
+        shareCurrentListEl.addEventListener('click', async (event) => {
+          const removeBtn = event.target.closest('[data-share-remove-email]');
+          if (!removeBtn || !shareState.groupId) return;
+
+          const email = removeBtn.dataset.shareRemoveEmail;
+          if (!await showConfirm(`Remove access for ${email}?`, 'Remove share')) return;
+
+          try {
+            await fetchJson(`/api/estimations/${shareState.groupId}/share/${encodeURIComponent(email)}`, { method: 'DELETE' }, 'Failed to remove share');
+            await refreshShareList();
+          } catch (err) {
+            await showAlert(err.message, 'Remove share failed');
           }
         });
 
         document.getElementById('load-cloud-btn').addEventListener('click', async () => {
+          setLoadTab('mine');
           listEl.innerHTML = '<li style="padding:1rem;color:var(--color-text-muted)">Loading...</li>';
+          sharedListEl.innerHTML = '<li style="padding:1rem;color:var(--color-text-muted)">Loading...</li>';
           overlay.classList.add('active');
 
-          try {
-            await refreshEstimationList();
-          } catch (err) {
-            listEl.innerHTML = `<li style="padding:1rem;color:#c0392b">Error: ${escapeHtml(err.message)}</li>`;
+          const [mineResult, sharedResult] = await Promise.allSettled([
+            refreshEstimationList(),
+            refreshSharedEstimationList()
+          ]);
+
+          if (mineResult.status === 'rejected') {
+            listEl.innerHTML = `<li style="padding:1rem;color:#c0392b">Error: ${escapeHtml(mineResult.reason.message)}</li>`;
+          }
+          if (sharedResult.status === 'rejected') {
+            sharedListEl.innerHTML = `<li style="padding:1rem;color:#c0392b">Error: ${escapeHtml(sharedResult.reason.message)}</li>`;
           }
         });
 
@@ -1303,27 +1627,38 @@
               await fetchVersions(groupId);
             } catch (err) {
               expandedVersionGroups.delete(groupId);
-              alert('Failed to load versions: ' + err.message);
+              await showAlert('Failed to load versions: ' + err.message, 'Load failed');
             }
             renderEstimationList();
+            return;
+          }
+
+          const shareBtn = event.target.closest('[data-share-id]');
+          if (shareBtn) {
+            event.stopPropagation();
+            try {
+              await openShareModal(shareBtn.dataset.shareId);
+            } catch (err) {
+              await showAlert('Failed to open sharing: ' + err.message, 'Share failed');
+            }
             return;
           }
 
           const deleteBtn = event.target.closest('[data-delete-id]');
           if (deleteBtn) {
             event.stopPropagation();
-            if (!confirm('Delete this estimation?')) return;
+            if (!await showConfirm('Delete this estimation?', 'Delete estimation')) return;
             try {
               await fetchJson(`/api/estimations/${deleteBtn.dataset.deleteId}`, { method: 'DELETE' }, 'Delete failed');
               versionCache.delete(deleteBtn.dataset.deleteId);
               expandedVersionGroups.delete(deleteBtn.dataset.deleteId);
               estimationList = estimationList.filter(item => getGroupId(item) !== deleteBtn.dataset.deleteId);
-              if (loadedEstimation && (loadedEstimation.parent_id || loadedEstimation.id) === deleteBtn.dataset.deleteId) {
+              if (loadedEstimation && loadedEstimation.group_id === deleteBtn.dataset.deleteId) {
                 setLoadedEstimationState(null);
               }
               renderEstimationList();
             } catch (err) {
-              alert('Failed to delete estimation: ' + err.message);
+              await showAlert('Failed to delete estimation: ' + err.message, 'Delete failed');
             }
             return;
           }
@@ -1333,7 +1668,7 @@
             try {
               await loadEstimationById(versionItem.dataset.versionId);
             } catch (err) {
-              alert('Failed to load estimation: ' + err.message);
+              await showAlert('Failed to load estimation: ' + err.message, 'Load failed');
             }
             return;
           }
@@ -1343,7 +1678,17 @@
           try {
             await loadEstimationById(item.dataset.id);
           } catch (err) {
-            alert('Failed to load estimation: ' + err.message);
+            await showAlert('Failed to load estimation: ' + err.message, 'Load failed');
+          }
+        });
+
+        sharedListEl.addEventListener('click', async (event) => {
+          const item = event.target.closest('[data-shared-id]');
+          if (!item) return;
+          try {
+            await loadEstimationById(item.dataset.sharedId, { shared: true });
+          } catch (err) {
+            await showAlert('Failed to load shared estimation: ' + err.message, 'Load failed');
           }
         });
 
@@ -1373,7 +1718,7 @@
             const emailPattern = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 
             if (!emailPattern.test(email)) {
-              alert('Enter a valid email address.');
+              await showAlert('Enter a valid email address.', 'Validation');
               return;
             }
 
@@ -1390,7 +1735,7 @@
               adminNewRole.querySelectorAll('.admin-dropdown-item').forEach(i => i.classList.toggle('active', i.dataset.value === 'explorer'));
               await refreshAdminUsers();
             } catch (err) {
-              alert(err.message);
+              await showAlert(err.message, 'Request failed');
             }
           });
 
@@ -1433,7 +1778,7 @@
                     }, 'Failed to update user role');
                     await refreshAdminUsers();
                   } catch (err) {
-                    alert(err.message);
+                    await showAlert(err.message, 'Update failed');
                     await refreshAdminUsers();
                   }
                 })();
@@ -1447,12 +1792,12 @@
           adminUsersListEl.addEventListener('click', async (event) => {
             const deleteBtn = event.target.closest('[data-user-delete]');
             if (!deleteBtn || deleteBtn.disabled) return;
-            if (!confirm('Remove this user from the application?')) return;
+            if (!await showConfirm('Remove this user from the application?', 'Remove user')) return;
             try {
               await fetchJson(`/api/admin/users/${deleteBtn.dataset.userDelete}`, { method: 'DELETE' }, 'Failed to delete user');
               await refreshAdminUsers();
             } catch (err) {
-              alert(err.message);
+              await showAlert(err.message, 'Request failed');
             }
           });
 
@@ -1461,12 +1806,12 @@
             const deleteBtn = event.target.closest('[data-admin-delete-estimation]');
             if (deleteBtn) {
               event.stopPropagation();
-              if (!confirm('Delete this estimation and all its versions? This cannot be undone.')) return;
+              if (!await showConfirm('Delete this estimation and all its versions? This cannot be undone.', 'Delete estimation')) return;
               try {
                 await fetchJson(`/api/admin/estimations/${deleteBtn.dataset.adminDeleteEstimation}`, { method: 'DELETE' }, 'Failed to delete estimation');
                 await refreshAdminEstimations();
               } catch (err) {
-                alert(err.message);
+                await showAlert(err.message, 'Request failed');
               }
               return;
             }
@@ -1476,7 +1821,7 @@
             try {
               await openAdminEstimation(item.dataset.adminEstimationId);
             } catch (err) {
-              alert(err.message);
+              await showAlert(err.message, 'Request failed');
             }
           });
         }
@@ -1502,10 +1847,46 @@
 
   <!-- Load modal -->
   <div class="modal-overlay" id="load-modal">
-    <div class="modal">
+    <div class="modal" style="width:min(760px,calc(100% - 2rem))">
       <button class="modal-close">&times;</button>
       <h3>Load Estimation</h3>
-      <ul class="estimation-list" id="estimation-list"></ul>
+      <div class="admin-tabs">
+        <button class="admin-tab active" data-load-tab="mine">My Estimations</button>
+        <button class="admin-tab" data-load-tab="shared">Shared with me</button>
+      </div>
+      <div id="load-tab-mine" class="load-tab-section">
+        <p class="load-tab-copy">Your saved estimations can be loaded, versioned, deleted, or shared.</p>
+        <ul class="estimation-list" id="estimation-list"></ul>
+      </div>
+      <div id="load-tab-shared" class="load-tab-section" style="display:none">
+        <p class="load-tab-copy">Shared estimations are read-only. Saving creates your own copy.</p>
+        <ul class="estimation-list" id="shared-estimation-list"></ul>
+      </div>
+    </div>
+  </div>
+  <div class="modal-overlay" id="share-modal">
+    <div class="modal modal-sm">
+      <button class="modal-close">&times;</button>
+      <h3 id="share-modal-title">Share estimation</h3>
+      <div class="modal-field">
+        <label for="share-search-input">Search people</label>
+        <input type="text" id="share-search-input" class="modal-input" placeholder="Type a name or email" autocomplete="off" />
+      </div>
+      <div class="share-search-panel">
+        <div class="share-section-copy">Select a user to share this estimation with.</div>
+        <ul class="share-search-results" id="share-search-results">
+          <li class="share-search-empty">Start typing to search for users.</li>
+        </ul>
+      </div>
+      <div class="share-current-panel">
+        <h4>Currently shared with</h4>
+        <ul class="share-current-list" id="share-current-list">
+          <li class="share-empty">No users have access yet.</li>
+        </ul>
+      </div>
+      <div class="modal-actions" style="margin-top:var(--space-4)">
+        <button type="button" class="btn" id="share-modal-close-btn">Close</button>
+      </div>
     </div>
   </div>
   <div class="modal-overlay" id="admin-modal">
@@ -1558,6 +1939,20 @@
         <button type="button" class="btn btn-primary" data-save-choice="update">Update existing</button>
         <button type="button" class="btn" data-save-choice="new-version">Save as new version</button>
         <button type="button" class="btn" data-save-choice="cancel">Cancel</button>
+      </div>
+    </div>
+  </div>
+  <div class="modal-overlay" id="dialog-modal">
+    <div class="modal modal-sm">
+      <button class="modal-close" data-dialog-close>&times;</button>
+      <h3 id="dialog-modal-title">Notice</h3>
+      <p class="modal-copy generic-modal-message" id="dialog-modal-message"></p>
+      <div class="modal-field" id="dialog-modal-input-wrap" style="display:none">
+        <input type="text" id="dialog-modal-input" class="modal-input" />
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn" data-dialog-cancel style="display:none">Cancel</button>
+        <button type="button" class="btn btn-primary" data-dialog-confirm>OK</button>
       </div>
     </div>
   </div>

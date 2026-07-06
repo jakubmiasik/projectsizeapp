@@ -82,6 +82,52 @@ async function initialize() {
       updated_at DATETIME2 DEFAULT GETUTCDATE()
     );
 
+    IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='estimation_shares' AND xtype='U')
+    CREATE TABLE estimation_shares (
+      id UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),
+      estimation_group_id UNIQUEIDENTIFIER NOT NULL,
+      shared_by_oid NVARCHAR(255) NOT NULL,
+      shared_by_name NVARCHAR(255) NOT NULL,
+      shared_with_email NVARCHAR(255) NOT NULL,
+      shared_at DATETIME2 DEFAULT GETUTCDATE()
+    );
+
+    IF NOT EXISTS (
+      SELECT 1
+      FROM sys.columns
+      WHERE object_id = OBJECT_ID('estimation_shares')
+      AND name = 'shared_by_name'
+    )
+    ALTER TABLE estimation_shares ADD shared_by_name NVARCHAR(255) NOT NULL CONSTRAINT DF_estimation_shares_shared_by_name DEFAULT '' WITH VALUES;
+
+    IF NOT EXISTS (
+      SELECT 1
+      FROM sys.columns
+      WHERE object_id = OBJECT_ID('estimation_shares')
+      AND name = 'shared_with_email'
+    )
+    ALTER TABLE estimation_shares ADD shared_with_email NVARCHAR(255) NULL;
+
+    IF EXISTS (
+      SELECT 1
+      FROM sys.columns
+      WHERE object_id = OBJECT_ID('estimation_shares')
+      AND name = 'shared_with_email'
+      AND is_nullable = 1
+    )
+    BEGIN
+      UPDATE estimation_shares
+      SET shared_with_email = ISNULL(shared_with_email, '')
+      WHERE shared_with_email IS NULL;
+      ALTER TABLE estimation_shares ALTER COLUMN shared_with_email NVARCHAR(255) NOT NULL;
+    END;
+
+    IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_estimation_shares_shared_with_email')
+    CREATE INDEX IX_estimation_shares_shared_with_email ON estimation_shares(shared_with_email);
+
+    IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_estimation_shares_group_id')
+    CREATE INDEX IX_estimation_shares_group_id ON estimation_shares(estimation_group_id);
+
     IF NOT EXISTS (SELECT 1 FROM app_users WHERE email = 'admin@swotdempid302779.onmicrosoft.com')
     INSERT INTO app_users (email, display_name, role)
     VALUES ('admin@swotdempid302779.onmicrosoft.com', 'GSCD', 'admin');
@@ -125,6 +171,45 @@ async function listEstimations(userOid) {
         FROM estimations latest
         WHERE latest.user_oid = @userOid
           AND (latest.id = roots.id OR latest.parent_id = roots.id)
+        ORDER BY latest.version DESC, latest.updated_at DESC, latest.created_at DESC
+      ) latest
+      ORDER BY latest.updated_at DESC
+    `);
+  return result.recordset;
+}
+
+async function listSharedWithMe(userEmail) {
+  const p = await getPool();
+  const result = await p.request()
+    .input('userEmail', sql.NVarChar, userEmail)
+    .query(`
+      WITH shared_groups AS (
+        SELECT DISTINCT estimation_group_id, shared_at, shared_by_name
+        FROM estimation_shares
+        WHERE LOWER(shared_with_email) = LOWER(@userEmail)
+      )
+      SELECT
+        latest.id,
+        roots.id AS group_id,
+        latest.parent_id,
+        latest.client_name,
+        latest.title,
+        latest.created_at,
+        latest.updated_at,
+        latest.version,
+        shared_groups.shared_at,
+        shared_groups.shared_by_name,
+        (
+          SELECT COUNT(*)
+          FROM estimations e2
+          WHERE e2.id = roots.id OR e2.parent_id = roots.id
+        ) AS version_count
+      FROM shared_groups
+      JOIN estimations roots ON roots.id = shared_groups.estimation_group_id AND roots.parent_id IS NULL
+      CROSS APPLY (
+        SELECT TOP 1 id, parent_id, client_name, title, created_at, updated_at, version
+        FROM estimations latest
+        WHERE latest.id = roots.id OR latest.parent_id = roots.id
         ORDER BY latest.version DESC, latest.updated_at DESC, latest.created_at DESC
       ) latest
       ORDER BY latest.updated_at DESC
@@ -184,6 +269,37 @@ async function getEstimation(id, userOid) {
   return row;
 }
 
+async function getSharedEstimation(id, userEmail) {
+  const p = await getPool();
+  const result = await p.request()
+    .input('id', sql.UniqueIdentifier, id)
+    .input('userEmail', sql.NVarChar, userEmail)
+    .query(`
+      SELECT TOP 1
+        e.id,
+        e.client_name,
+        e.title,
+        e.data,
+        e.version,
+        e.parent_id,
+        e.created_at,
+        e.updated_at,
+        s.estimation_group_id AS group_id,
+        s.shared_by_name,
+        s.shared_at
+      FROM estimations e
+      INNER JOIN estimation_shares s
+        ON (e.id = s.estimation_group_id OR e.parent_id = s.estimation_group_id)
+      WHERE e.id = @id
+        AND LOWER(s.shared_with_email) = LOWER(@userEmail)
+    `);
+  const row = result.recordset[0];
+  if (!row) return null;
+  row.data = JSON.parse(row.data);
+  row.isShared = true;
+  return row;
+}
+
 async function getEstimationForAdmin(id) {
   const p = await getPool();
   const result = await p.request()
@@ -230,6 +346,18 @@ async function getUserRole(email) {
   return result.recordset[0] || null;
 }
 
+async function getAppUserByEmail(email) {
+  const p = await getPool();
+  const result = await p.request()
+    .input('email', sql.NVarChar, email)
+    .query(`
+      SELECT TOP 1 id, email, display_name, role, created_at, updated_at
+      FROM app_users
+      WHERE LOWER(email) = LOWER(@email)
+    `);
+  return result.recordset[0] || null;
+}
+
 async function listAppUsers() {
   const p = await getPool();
   const result = await p.request().query(`
@@ -237,6 +365,21 @@ async function listAppUsers() {
     FROM app_users
     ORDER BY CASE WHEN role = 'admin' THEN 0 ELSE 1 END, display_name ASC, email ASC
   `);
+  return result.recordset;
+}
+
+async function searchUsers(query) {
+  const p = await getPool();
+  const pattern = `%${query}%`;
+  const result = await p.request()
+    .input('pattern', sql.NVarChar, pattern)
+    .query(`
+      SELECT TOP 10 id, email, display_name
+      FROM app_users
+      WHERE LOWER(email) LIKE LOWER(@pattern)
+         OR LOWER(display_name) LIKE LOWER(@pattern)
+      ORDER BY CASE WHEN display_name = '' THEN 1 ELSE 0 END, display_name ASC, email ASC
+    `);
   return result.recordset;
 }
 
@@ -422,11 +565,81 @@ async function listEstimationVersions(parentId, userOid) {
   return result.recordset;
 }
 
+async function shareEstimation(groupId, sharedByOid, sharedByName, sharedWithEmail) {
+  const p = await getPool();
+  const result = await p.request()
+    .input('groupId', sql.UniqueIdentifier, groupId)
+    .input('sharedByOid', sql.NVarChar, sharedByOid)
+    .input('sharedByName', sql.NVarChar, sharedByName)
+    .input('sharedWithEmail', sql.NVarChar, sharedWithEmail)
+    .query(`
+      IF NOT EXISTS (
+        SELECT 1
+        FROM estimation_shares
+        WHERE estimation_group_id = @groupId
+          AND LOWER(shared_with_email) = LOWER(@sharedWithEmail)
+      )
+      BEGIN
+        INSERT INTO estimation_shares (estimation_group_id, shared_by_oid, shared_by_name, shared_with_email)
+        VALUES (@groupId, @sharedByOid, @sharedByName, @sharedWithEmail)
+      END;
+
+      SELECT TOP 1 id, estimation_group_id, shared_by_oid, shared_by_name, shared_with_email, shared_at
+      FROM estimation_shares
+      WHERE estimation_group_id = @groupId
+        AND LOWER(shared_with_email) = LOWER(@sharedWithEmail)
+    `);
+  return result.recordset[0] || null;
+}
+
+async function unshareEstimation(groupId, sharedWithEmail) {
+  const p = await getPool();
+  const result = await p.request()
+    .input('groupId', sql.UniqueIdentifier, groupId)
+    .input('sharedWithEmail', sql.NVarChar, sharedWithEmail)
+    .query(`
+      DELETE FROM estimation_shares
+      WHERE estimation_group_id = @groupId
+        AND LOWER(shared_with_email) = LOWER(@sharedWithEmail)
+    `);
+  return result.rowsAffected[0] > 0;
+}
+
+async function listSharesForEstimation(groupId) {
+  const p = await getPool();
+  const result = await p.request()
+    .input('groupId', sql.UniqueIdentifier, groupId)
+    .query(`
+      SELECT
+        s.id,
+        s.estimation_group_id,
+        s.shared_by_oid,
+        s.shared_by_name,
+        s.shared_with_email,
+        s.shared_at,
+        u.display_name
+      FROM estimation_shares s
+      LEFT JOIN app_users u ON LOWER(u.email) = LOWER(s.shared_with_email)
+      WHERE s.estimation_group_id = @groupId
+      ORDER BY CASE WHEN ISNULL(u.display_name, '') = '' THEN 1 ELSE 0 END,
+               u.display_name ASC,
+               s.shared_with_email ASC
+    `);
+  return result.recordset;
+}
+
 async function deleteEstimation(id, userOid) {
   const parentId = await resolveParentId(id, userOid);
   if (!parentId) return false;
 
   const p = await getPool();
+  await p.request()
+    .input('groupId', sql.UniqueIdentifier, parentId)
+    .query(`
+      DELETE FROM estimation_shares
+      WHERE estimation_group_id = @groupId
+    `);
+
   const result = await p.request()
     .input('id', sql.UniqueIdentifier, parentId)
     .input('userOid', sql.NVarChar, userOid)
@@ -440,17 +653,23 @@ async function deleteEstimation(id, userOid) {
 
 async function deleteEstimationAsAdmin(id) {
   const p = await getPool();
-  // Find the root parent id
   const lookup = await p.request()
     .input('id', sql.UniqueIdentifier, id)
-    .query(`SELECT id, parent_id FROM estimations WHERE id = @id`);
+    .query('SELECT id, parent_id FROM estimations WHERE id = @id');
   const row = lookup.recordset[0];
   if (!row) return false;
   const rootId = row.parent_id || row.id;
 
+  await p.request()
+    .input('groupId', sql.UniqueIdentifier, rootId)
+    .query(`
+      DELETE FROM estimation_shares
+      WHERE estimation_group_id = @groupId
+    `);
+
   const result = await p.request()
     .input('rootId', sql.UniqueIdentifier, rootId)
-    .query(`DELETE FROM estimations WHERE id = @rootId OR parent_id = @rootId`);
+    .query('DELETE FROM estimations WHERE id = @rootId OR parent_id = @rootId');
   return result.rowsAffected[0] > 0;
 }
 
@@ -459,17 +678,24 @@ module.exports = {
   healthCheck,
   countAppUsers,
   getUserRole,
+  getAppUserByEmail,
   listAppUsers,
+  searchUsers,
   addAppUser,
   updateAppUserRole,
   deleteAppUser,
   listEstimations,
+  listSharedWithMe,
+  listSharesForEstimation,
   listAllEstimations,
   getEstimation,
+  getSharedEstimation,
   getEstimationForAdmin,
   saveEstimation,
   updateEstimation,
   listEstimationVersions,
+  shareEstimation,
+  unshareEstimation,
   deleteEstimation,
   deleteEstimationAsAdmin
 };
