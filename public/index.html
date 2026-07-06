@@ -2082,33 +2082,28 @@
       <button class="copilot-panel-close" id="copilot-panel-close" aria-label="Close">&times;</button>
     </div>
     <div class="copilot-panel-body" id="copilot-panel-body">
-      <div class="copilot-placeholder" id="copilot-loading">
-        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2">
+      <div class="copilot-placeholder">
+        <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2">
           <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
           <circle cx="9" cy="10" r="1" fill="currentColor" stroke="none"/>
           <circle cx="15" cy="10" r="1" fill="currentColor" stroke="none"/>
         </svg>
-        <p>Connecting to Copilot&hellip;</p>
+        <p><strong>Copilot Assistant</strong></p>
+        <p>Chat integration coming soon. The Copilot Studio bot needs to be configured for cross-tenant access.</p>
       </div>
     </div>
   </div>
 
-  <script src="https://cdn.botframework.com/botframework-webchat/latest/webchat.js"></script>
   <script>
-    // Copilot chat panel toggle & Web Chat initialization
+    // Copilot chat panel toggle
     (function() {
       const fab = document.getElementById('copilot-fab');
       const panel = document.getElementById('copilot-panel');
       const closeBtn = document.getElementById('copilot-panel-close');
-      let chatInitialized = false;
 
       fab.addEventListener('click', () => {
         panel.classList.add('open');
         fab.style.display = 'none';
-        if (!chatInitialized) {
-          chatInitialized = true;
-          initCopilotChat();
-        }
       });
 
       closeBtn.addEventListener('click', () => {
@@ -2124,59 +2119,6 @@
         }
       });
       observer.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['style'] });
-
-      async function initCopilotChat() {
-        const body = document.getElementById('copilot-panel-body');
-        const loading = document.getElementById('copilot-loading');
-        try {
-          const res = await fetch('/api/copilot-token', { method: 'POST' });
-          const data = await res.json();
-          if (!res.ok) throw new Error(data.error || `Token request failed (${res.status})`);
-
-          const token = data.token;
-          if (!token) throw new Error('No token in response: ' + JSON.stringify(Object.keys(data)));
-          const directLine = window.WebChat.createDirectLine({ token });
-
-          if (loading) loading.remove();
-
-          const chatContainer = document.createElement('div');
-          chatContainer.style.cssText = 'flex:1;overflow:hidden';
-          body.appendChild(chatContainer);
-
-          window.WebChat.renderWebChat(
-            {
-              directLine,
-              styleOptions: {
-                rootHeight: '100%',
-                rootWidth: '100%',
-                backgroundColor: 'transparent',
-                bubbleBackground: 'var(--color-surface-offset, #f0f4f5)',
-                bubbleBorderRadius: 12,
-                bubbleFromUserBackground: 'var(--color-primary, #01696f)',
-                bubbleFromUserTextColor: '#fff',
-                bubbleFromUserBorderRadius: 12,
-                sendBoxBackground: 'var(--color-surface, #fff)',
-                sendBoxBorderTop: '1px solid var(--color-border, #d0d7de)',
-                hideUploadButton: true,
-                fontSizeSmall: '13px',
-                primaryFont: 'var(--font-family, Inter, system-ui, sans-serif)',
-              }
-            },
-            chatContainer
-          );
-        } catch (err) {
-          console.error('Copilot chat init failed:', err);
-          if (loading) {
-            loading.innerHTML = `
-              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2">
-                <circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/>
-              </svg>
-              <p><strong>Could not connect</strong></p>
-              <p style="font-size:12px;color:#888">${err.message}</p>
-              <button class="btn btn-sm" onclick="chatInitialized=false;initCopilotChat()" style="margin-top:8px">Retry</button>`;
-          }
-        }
-      }
     })();
   </script>
 
