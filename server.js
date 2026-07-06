@@ -105,6 +105,32 @@ function requireAdmin(req, res, next) {
  next();
 }
 
+// Track active users (email → { name, lastSeen })
+const activeUsers = new Map();
+const ACTIVE_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
+
+function trackActiveUser(req) {
+  if (req.user?.email) {
+    activeUsers.set(req.user.email.toLowerCase(), {
+      name: req.user.name,
+      lastSeen: Date.now()
+    });
+  }
+}
+
+function getActiveEmails() {
+  const now = Date.now();
+  const active = [];
+  for (const [email, data] of activeUsers) {
+    if (now - data.lastSeen <= ACTIVE_TIMEOUT_MS) {
+      active.push(email);
+    } else {
+      activeUsers.delete(email);
+    }
+  }
+  return active;
+}
+
 // Health check - always return 200 so App Service doesn't kill the container
 app.get('/health', async (_req, res) => {
   try {
@@ -117,7 +143,12 @@ app.get('/health', async (_req, res) => {
 
 // Get current user info
 app.get('/api/user', requireAuth, (req, res) => {
+  trackActiveUser(req);
   res.json(req.user);
+});
+
+app.get('/api/admin/active-users', requireAuth, requireAdmin, (_req, res) => {
+  res.json(getActiveEmails());
 });
 
 app.get('/api/admin/users', requireAuth, requireAdmin, async (_req, res) => {
