@@ -155,7 +155,7 @@ async function exchangeTokenForPowerPlatform(idToken) {
     client_id: clientId,
     client_secret: clientSecret,
     assertion: idToken,
-    scope: 'https://api.powerplatform.com/.default',
+    scope: 'https://api.powerplatform.com/CopilotStudio.Copilots.Invoke',
     requested_token_use: 'on_behalf_of'
   });
 
