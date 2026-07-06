@@ -521,10 +521,6 @@ async function saveEstimation({ userOid, userName, clientName, title, data, pare
 
 async function updateEstimation({ id, userOid, userName, clientName, title, data }) {
   const p = await getPool();
-  const parentId = await resolveParentId(id, userOid);
-  if (!parentId) return null;
-
-  const nextVersion = await getNextVersion(parentId, userOid);
   const result = await p.request()
     .input('id', sql.UniqueIdentifier, id)
     .input('userOid', sql.NVarChar, userOid)
@@ -532,14 +528,12 @@ async function updateEstimation({ id, userOid, userName, clientName, title, data
     .input('clientName', sql.NVarChar, clientName)
     .input('title', sql.NVarChar, title)
     .input('data', sql.NVarChar, JSON.stringify(data))
-    .input('version', sql.Int, nextVersion)
     .query(`
       UPDATE estimations
       SET user_name = @userName,
           client_name = @clientName,
           title = @title,
           data = @data,
-          version = @version,
           updated_at = GETUTCDATE()
       OUTPUT INSERTED.id, INSERTED.title, INSERTED.client_name, INSERTED.version, INSERTED.parent_id, INSERTED.created_at, INSERTED.updated_at
       WHERE id = @id AND user_oid = @userOid
