@@ -2130,10 +2130,11 @@
         const loading = document.getElementById('copilot-loading');
         try {
           const res = await fetch('/api/copilot-token', { method: 'POST' });
-          if (!res.ok) throw new Error('Token request failed');
           const data = await res.json();
+          if (!res.ok) throw new Error(data.error || `Token request failed (${res.status})`);
 
           const token = data.token;
+          if (!token) throw new Error('No token in response: ' + JSON.stringify(Object.keys(data)));
           const directLine = window.WebChat.createDirectLine({ token });
 
           if (loading) loading.remove();
@@ -2171,8 +2172,8 @@
                 <circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/>
               </svg>
               <p><strong>Could not connect</strong></p>
-              <p>Unable to reach Copilot Studio. Please try again later.</p>
-              <button class="btn btn-sm" onclick="location.reload()" style="margin-top:8px">Retry</button>`;
+              <p style="font-size:12px;color:#888">${err.message}</p>
+              <button class="btn btn-sm" onclick="chatInitialized=false;initCopilotChat()" style="margin-top:8px">Retry</button>`;
           }
         }
       }
