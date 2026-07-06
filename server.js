@@ -131,36 +131,81 @@ function getActiveEmails() {
   return active;
 }
 
-// Copilot Studio token proxy (avoids CORS, keeps endpoint server-side)
+// Copilot Studio token proxy with OBO (On-Behalf-Of) token exchange
 const COPILOT_TOKEN_ENDPOINT = process.env.COPILOT_TOKEN_ENDPOINT ||
   'https://default1dc9b339fadb432e86df423c38a0fc.b8.environment.api.powerplatform.com/copilotstudio/dataverse-backed/authenticated/bots/cre2f_Offeringsv2/conversations?api-version=2022-03-01-preview';
 
+// Exchange id_token for a Power Platform access token via OBO flow
+async function exchangeTokenForPowerPlatform(idToken) {
+  const clientId = process.env.AZURE_CLIENT_ID;
+  const clientSecret = process.env.AZURE_CLIENT_SECRET;
+  const tenantId = process.env.AZURE_TENANT_ID;
+
+  if (!clientId || !clientSecret || !tenantId) {
+    const missing = [];
+    if (!clientId) missing.push('AZURE_CLIENT_ID');
+    if (!clientSecret) missing.push('AZURE_CLIENT_SECRET');
+    if (!tenantId) missing.push('AZURE_TENANT_ID');
+    throw new Error('Missing env vars for OBO flow: ' + missing.join(', '));
+  }
+
+  const tokenUrl = 'https://login.microsoftonline.com/' + tenantId + '/oauth2/v2.0/token';
+  const params = new URLSearchParams({
+    grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer',
+    client_id: clientId,
+    client_secret: clientSecret,
+    assertion: idToken,
+    scope: 'https://api.powerplatform.com/.default',
+    requested_token_use: 'on_behalf_of'
+  });
+
+  const resp = await fetch(tokenUrl, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: params.toString()
+  });
+
+  const data = await resp.json();
+  if (!resp.ok) {
+    console.error('OBO token exchange failed:', data);
+    throw new Error('OBO exchange failed: ' + (data.error_description || data.error || resp.status));
+  }
+  return data.access_token;
+}
+
 app.post('/api/copilot-token', requireAuth, async (req, res) => {
   try {
-    const accessToken = req.headers['x-ms-token-aad-access-token'];
     const idToken = req.headers['x-ms-token-aad-id-token'];
-    const tokenToUse = accessToken || idToken;
+    const existingAccessToken = req.headers['x-ms-token-aad-access-token'];
 
-    console.log('Copilot token request - has access_token:', !!accessToken,
+    console.log('Copilot token request - has access_token:', !!existingAccessToken,
       ', has id_token:', !!idToken);
 
-    const fetchHeaders = { 'Content-Type': 'application/json' };
-    if (tokenToUse) {
-      fetchHeaders['Authorization'] = 'Bearer ' + tokenToUse;
+    let bearerToken;
+    if (existingAccessToken) {
+      bearerToken = existingAccessToken;
+    } else if (idToken) {
+      bearerToken = await exchangeTokenForPowerPlatform(idToken);
+    } else {
+      return res.status(401).json({
+        error: 'No EasyAuth token available. Enable Token Store in App Service Authentication settings.'
+      });
     }
 
     const response = await fetch(COPILOT_TOKEN_ENDPOINT, {
       method: 'POST',
-      headers: fetchHeaders
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + bearerToken
+      }
     });
 
     const text = await response.text();
     if (!response.ok) {
       console.error('Copilot token error:', response.status, text);
-      const detail = tokenToUse
-        ? 'Copilot Studio returned ' + response.status + '. The token may lack the required Power Platform scope.'
-        : 'No EasyAuth token available. Enable Token Store in App Service Authentication settings.';
-      return res.status(502).json({ error: detail });
+      return res.status(502).json({
+        error: 'Copilot Studio returned ' + response.status + ': ' + text.substring(0, 200)
+      });
     }
 
     let data;
@@ -168,7 +213,7 @@ app.post('/api/copilot-token', requireAuth, async (req, res) => {
     res.json(data);
   } catch (err) {
     console.error('Copilot token fetch failed:', err);
-    res.status(502).json({ error: 'Failed to connect to Copilot Studio: ' + err.message });
+    res.status(502).json({ error: err.message });
   }
 });
 
