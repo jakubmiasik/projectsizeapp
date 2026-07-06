@@ -127,6 +127,10 @@
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 15v4c0 1.1.9 2 2 2h14a2 2 0 0 0 2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
           Load
         </button>
+        <button class="header-btn" id="share-cloud-btn" aria-label="Share estimation" style="display:none">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+          Share
+        </button>
         <button class="theme-toggle" data-theme-toggle aria-label="Switch theme"></button>
       </div>
     </div>
@@ -640,6 +644,10 @@
       document.getElementById('loaded-version').value = estimation
         ? `${estimation.title} (v${estimation.version || 1}${estimation.isShared ? ' · shared read-only' : ''})`
         : '';
+      const shareBtn = document.getElementById('share-cloud-btn');
+      if (shareBtn) {
+        shareBtn.style.display = (loadedEstimation && !loadedEstimation.isShared) ? '' : 'none';
+      }
     }
 
     function getResourcePlan() {
@@ -1257,10 +1265,6 @@
         }
 
         function showSaveChoiceDialog() {
-          // Show/hide share button based on whether estimation is owned (saved & not shared)
-          const shareBtn = document.getElementById('save-choice-share-btn');
-          shareBtn.style.display = (loadedEstimation && !loadedEstimation.isShared) ? '' : 'none';
-
           return new Promise((resolve) => {
             const cleanup = () => {
               saveChoiceModal.removeEventListener('click', handleClick);
@@ -1602,12 +1606,6 @@
             const choice = await showSaveChoiceDialog();
             if (choice === 'cancel') return;
 
-            if (choice === 'share') {
-              const groupId = loadedEstimation.parent_id || loadedEstimation.id;
-              await openShareModal(groupId);
-              return;
-            }
-
             const titlePrompt = choice === 'update' ? 'Update estimation title:' : 'Name this new version:';
             const title = await showPrompt(titlePrompt, getDefaultTitle(clientName, loadedEstimation.title), 'Save Estimation');
             if (!title?.trim()) return;
@@ -1623,6 +1621,16 @@
             }
           } catch (err) {
             await showAlert('Failed to save estimation: ' + err.message, 'Save failed');
+          }
+        });
+
+        document.getElementById('share-cloud-btn').addEventListener('click', async () => {
+          if (!loadedEstimation || loadedEstimation.isShared) return;
+          const groupId = loadedEstimation.parent_id || loadedEstimation.id;
+          try {
+            await openShareModal(groupId);
+          } catch (err) {
+            await showAlert('Failed to open sharing: ' + err.message, 'Share failed');
           }
         });
 
@@ -2021,12 +2029,10 @@
     <div class="modal modal-sm">
       <button class="modal-close">&times;</button>
       <h3>Save Estimation</h3>
-      <p class="modal-copy">Update the loaded estimation, save as a new version, or share it with others.</p>
+      <p class="modal-copy">Update the loaded estimation or save your current work as a new version.</p>
       <div class="modal-actions">
         <button type="button" class="btn btn-primary" data-save-choice="update">Update existing</button>
         <button type="button" class="btn" data-save-choice="new-version">Save as new version</button>
-        <button type="button" class="btn" data-save-choice="share" id="save-choice-share-btn">Share</button>
-        <button type="button" class="btn" data-save-choice="cancel">Cancel</button>
       </div>
     </div>
   </div>
