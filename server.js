@@ -41,6 +41,10 @@ function isValidRole(role) {
  return role === 'admin' || role === 'explorer';
 }
 
+function normalizeEmail(value) {
+  return String(value || '').trim().toLowerCase();
+}
+
 async function resolveUserAccess(user) {
  const configuredUserCount = await db.countAppUsers();
  if (configuredUserCount === 0) {
@@ -53,6 +57,19 @@ async function resolveUserAccess(user) {
    displayName: appUser?.display_name || '',
    configuredUserCount
  };
+}
+
+async function userOwnsEstimationGroup(groupId, userOid) {
+  const versions = await db.listEstimationVersions(groupId, userOid);
+  return versions.length > 0;
+}
+
+function requireUserEmail(req, res) {
+  if (!req.user?.email) {
+    res.status(400).json({ error: 'Signed-in user email is required' });
+    return false;
+  }
+  return true;
 }
 
 // Auth middleware
@@ -115,7 +132,7 @@ app.get('/api/admin/users', requireAuth, requireAdmin, async (_req, res) => {
 
 app.post('/api/admin/users', requireAuth, requireAdmin, async (req, res) => {
   try {
-    const email = String(req.body?.email || '').trim().toLowerCase();
+    const email = normalizeEmail(req.body?.email);
     const displayName = String(req.body?.displayName || '').trim();
     const role = String(req.body?.role || '').trim().toLowerCase();
 
@@ -190,6 +207,22 @@ app.delete('/api/admin/estimations/:id', requireAuth, requireAdmin, async (req, 
   }
 });
 
+app.get('/api/users/search', requireAuth, async (req, res) => {
+  try {
+    const query = String(req.query?.q || '').trim();
+    if (query.length < 2) {
+      return res.json([]);
+    }
+
+    const users = await db.searchUsers(query);
+    const currentUserEmail = normalizeEmail(req.user.email);
+    res.json(users.filter((user) => normalizeEmail(user.email) !== currentUserEmail));
+  } catch (err) {
+    console.error('Failed to search users:', err);
+    res.status(500).json({ error: 'Failed to search users' });
+  }
+});
+
 // List estimations for logged-in user
 app.get('/api/estimations', requireAuth, async (req, res) => {
   try {
@@ -198,6 +231,90 @@ app.get('/api/estimations', requireAuth, async (req, res) => {
   } catch (err) {
     console.error('Failed to list estimations:', err);
     res.status(500).json({ error: 'Failed to load estimations' });
+  }
+});
+
+app.get('/api/estimations/shared-with-me', requireAuth, async (req, res) => {
+  if (!requireUserEmail(req, res)) return;
+
+  try {
+    const estimations = await db.listSharedWithMe(req.user.email);
+    res.json(estimations);
+  } catch (err) {
+    console.error('Failed to list shared estimations:', err);
+    res.status(500).json({ error: 'Failed to load shared estimations' });
+  }
+});
+
+app.get('/api/estimations/shared/:id', requireAuth, async (req, res) => {
+  if (!requireUserEmail(req, res)) return;
+
+  try {
+    const estimation = await db.getSharedEstimation(req.params.id, req.user.email);
+    if (!estimation) return res.status(404).json({ error: 'Not found' });
+    res.json(estimation);
+  } catch (err) {
+    console.error('Failed to get shared estimation:', err);
+    res.status(500).json({ error: 'Failed to load shared estimation' });
+  }
+});
+
+app.get('/api/estimations/:groupId/shares', requireAuth, async (req, res) => {
+  try {
+    const ownsGroup = await userOwnsEstimationGroup(req.params.groupId, req.user.oid);
+    if (!ownsGroup) return res.status(404).json({ error: 'Not found' });
+
+    const shares = await db.listSharesForEstimation(req.params.groupId);
+    res.json(shares);
+  } catch (err) {
+    console.error('Failed to list estimation shares:', err);
+    res.status(500).json({ error: 'Failed to load estimation shares' });
+  }
+});
+
+app.post('/api/estimations/:groupId/share', requireAuth, async (req, res) => {
+  try {
+    const ownsGroup = await userOwnsEstimationGroup(req.params.groupId, req.user.oid);
+    if (!ownsGroup) return res.status(404).json({ error: 'Not found' });
+
+    const email = normalizeEmail(req.body?.email);
+    if (!email) return res.status(400).json({ error: 'Email is required' });
+    if (email === normalizeEmail(req.user.email)) {
+      return res.status(400).json({ error: 'You cannot share an estimation with yourself' });
+    }
+
+    const targetUser = await db.getAppUserByEmail(email);
+    if (!targetUser) return res.status(404).json({ error: 'User not found' });
+
+    const share = await db.shareEstimation(req.params.groupId, req.user.oid, req.user.name, targetUser.email);
+    res.status(201).json(share);
+  } catch (err) {
+    console.error('Failed to share estimation:', err);
+    res.status(500).json({ error: 'Failed to share estimation' });
+  }
+});
+
+app.delete('/api/estimations/:groupId/share/:email', requireAuth, async (req, res) => {
+  try {
+    const ownsGroup = await userOwnsEstimationGroup(req.params.groupId, req.user.oid);
+    if (!ownsGroup) return res.status(404).json({ error: 'Not found' });
+
+    await db.unshareEstimation(req.params.groupId, normalizeEmail(req.params.email));
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Failed to unshare estimation:', err);
+    res.status(500).json({ error: 'Failed to remove share' });
+  }
+});
+
+// List versions for an estimation group
+app.get('/api/estimations/:id/versions', requireAuth, async (req, res) => {
+  try {
+    const versions = await db.listEstimationVersions(req.params.id, req.user.oid);
+    res.json(versions);
+  } catch (err) {
+    console.error('Failed to list estimation versions:', err);
+    res.status(500).json({ error: 'Failed to load estimation versions' });
   }
 });
 
@@ -210,17 +327,6 @@ app.get('/api/estimations/:id', requireAuth, async (req, res) => {
   } catch (err) {
     console.error('Failed to get estimation:', err);
     res.status(500).json({ error: 'Failed to load estimation' });
-  }
-});
-
-// List versions for an estimation group
-app.get('/api/estimations/:id/versions', requireAuth, async (req, res) => {
-  try {
-    const versions = await db.listEstimationVersions(req.params.id, req.user.oid);
-    res.json(versions);
-  } catch (err) {
-    console.error('Failed to list estimation versions:', err);
-    res.status(500).json({ error: 'Failed to load estimation versions' });
   }
 });
 
