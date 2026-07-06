@@ -131,6 +131,26 @@ function getActiveEmails() {
   return active;
 }
 
+// Copilot Studio token proxy (avoids CORS, keeps endpoint server-side)
+const COPILOT_TOKEN_ENDPOINT = process.env.COPILOT_TOKEN_ENDPOINT ||
+  'https://default1dc9b339fadb432e86df423c38a0fc.b8.environment.api.powerplatform.com/copilotstudio/dataverse-backed/authenticated/bots/cre2f_Offeringsv2/conversations?api-version=2022-03-01-preview';
+
+app.post('/api/copilot-token', requireAuth, async (req, res) => {
+  try {
+    const response = await fetch(COPILOT_TOKEN_ENDPOINT, { method: 'POST' });
+    if (!response.ok) {
+      const text = await response.text();
+      console.error('Copilot token error:', response.status, text);
+      return res.status(502).json({ error: 'Failed to get Copilot token' });
+    }
+    const data = await response.json();
+    res.json(data);
+  } catch (err) {
+    console.error('Copilot token fetch failed:', err);
+    res.status(502).json({ error: 'Failed to connect to Copilot Studio' });
+  }
+});
+
 // Health check - always return 200 so App Service doesn't kill the container
 app.get('/health', async (_req, res) => {
   try {
