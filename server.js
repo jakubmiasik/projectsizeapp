@@ -131,44 +131,6 @@ function getActiveEmails() {
   return active;
 }
 
-// Copilot Studio token proxy (cross-tenant, unauthenticated endpoint)
-const COPILOT_TOKEN_ENDPOINT = process.env.COPILOT_TOKEN_ENDPOINT ||
-  'https://default1dc9b339fadb432e86df423c38a0fc.b8.environment.api.powerplatform.com/copilotstudio/dataverse-backed/bots/cre2f_Offeringsv2/conversations?api-version=2022-03-01-preview';
-
-app.post('/api/copilot-token', requireAuth, async (req, res) => {
-  try {
-    const response = await fetch(COPILOT_TOKEN_ENDPOINT, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' }
-    });
-
-    const text = await response.text();
-    if (!response.ok) {
-      console.error('Copilot token error:', response.status, text);
-      return res.status(502).json({
-        error: 'Copilot Studio returned ' + response.status + ': ' + text.substring(0, 300)
-      });
-    }
-
-    let data;
-    try { data = JSON.parse(text); } catch (e) { data = { raw: text }; }
-    res.json(data);
-  } catch (err) {
-    console.error('Copilot token fetch failed:', err);
-    res.status(502).json({ error: 'Failed to connect to Copilot Studio: ' + err.message });
-  }
-});
-
-// Diagnostic: check what EasyAuth tokens are available (admin only)
-app.get('/api/admin/token-debug', requireAuth, requireAdmin, (req, res) => {
-  res.json({
-    hasAccessToken: !!req.headers['x-ms-token-aad-access-token'],
-    hasIdToken: !!req.headers['x-ms-token-aad-id-token'],
-    hasRefreshToken: !!req.headers['x-ms-token-aad-refresh-token'],
-    authHeaders: Object.keys(req.headers).filter(h => h.startsWith('x-ms-'))
-  });
-});
-
 // Health check - always return 200 so App Service doesn't kill the container
 app.get('/health', async (_req, res) => {
   try {
