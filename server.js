@@ -137,31 +137,49 @@ const COPILOT_TOKEN_ENDPOINT = process.env.COPILOT_TOKEN_ENDPOINT ||
 
 app.post('/api/copilot-token', requireAuth, async (req, res) => {
   try {
-    // EasyAuth provides the user's Entra ID access token in this header
-    const userAccessToken = req.headers['x-ms-token-aad-access-token'];
-    if (!userAccessToken) {
-      console.error('Copilot token: no x-ms-token-aad-access-token header available');
-      return res.status(401).json({ error: 'No access token available. EasyAuth token store may need to be enabled.' });
+    const accessToken = req.headers['x-ms-token-aad-access-token'];
+    const idToken = req.headers['x-ms-token-aad-id-token'];
+    const tokenToUse = accessToken || idToken;
+
+    console.log('Copilot token request - has access_token:', !!accessToken,
+      ', has id_token:', !!idToken);
+
+    const fetchHeaders = { 'Content-Type': 'application/json' };
+    if (tokenToUse) {
+      fetchHeaders['Authorization'] = 'Bearer ' + tokenToUse;
     }
 
     const response = await fetch(COPILOT_TOKEN_ENDPOINT, {
       method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${userAccessToken}`,
-        'Content-Type': 'application/json'
-      }
+      headers: fetchHeaders
     });
+
+    const text = await response.text();
     if (!response.ok) {
-      const text = await response.text();
       console.error('Copilot token error:', response.status, text);
-      return res.status(502).json({ error: `Copilot Studio returned ${response.status}` });
+      const detail = tokenToUse
+        ? 'Copilot Studio returned ' + response.status + '. The token may lack the required Power Platform scope.'
+        : 'No EasyAuth token available. Enable Token Store in App Service Authentication settings.';
+      return res.status(502).json({ error: detail });
     }
-    const data = await response.json();
+
+    let data;
+    try { data = JSON.parse(text); } catch (e) { data = { raw: text }; }
     res.json(data);
   } catch (err) {
     console.error('Copilot token fetch failed:', err);
-    res.status(502).json({ error: 'Failed to connect to Copilot Studio' });
+    res.status(502).json({ error: 'Failed to connect to Copilot Studio: ' + err.message });
   }
+});
+
+// Diagnostic: check what EasyAuth tokens are available (admin only)
+app.get('/api/admin/token-debug', requireAuth, requireAdmin, (req, res) => {
+  res.json({
+    hasAccessToken: !!req.headers['x-ms-token-aad-access-token'],
+    hasIdToken: !!req.headers['x-ms-token-aad-id-token'],
+    hasRefreshToken: !!req.headers['x-ms-token-aad-refresh-token'],
+    authHeaders: Object.keys(req.headers).filter(h => h.startsWith('x-ms-'))
+  });
 });
 
 // Health check - always return 200 so App Service doesn't kill the container
