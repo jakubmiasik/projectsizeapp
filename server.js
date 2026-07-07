@@ -164,7 +164,7 @@ app.post('/api/copilot-token', requireAuth, async (req, res) => {
 app.get('/health', async (_req, res) => {
   try {
     await db.healthCheck();
-    res.json({ status: 'healthy', db: 'connected' });
+    res.json({ status: 'healthy', db: 'connected', routes: app._router.stack.filter(r => r.route).map(r => r.route.path) });
   } catch (err) {
     res.json({ status: 'healthy', db: 'disconnected', dbError: err.message });
   }
