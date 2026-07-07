@@ -130,41 +130,12 @@ function getActiveEmails() {
   }
   return active;
 }
-
-// Copilot Direct Line token exchange (secret stays server-side)
-app.post('/api/copilot-token', requireAuth, async (req, res) => {
-  try {
-    const secret = process.env.COPILOT_DIRECTLINE_SECRET;
-    if (!secret) {
-      return res.status(500).json({ error: 'COPILOT_DIRECTLINE_SECRET not configured' });
-    }
-
-    const response = await fetch('https://directline.botframework.com/v3/directline/tokens/generate', {
-      method: 'POST',
-      headers: {
-        'Authorization': 'Bearer ' + secret,
-        'Content-Type': 'application/json'
-      }
-    });
-
-    const text = await response.text();
-    if (!response.ok) {
-      console.error('Direct Line token error:', response.status, text);
-      return res.status(502).json({ error: 'Direct Line returned ' + response.status });
-    }
-
-    res.json(JSON.parse(text));
-  } catch (err) {
-    console.error('Direct Line token fetch failed:', err);
-    res.status(502).json({ error: 'Failed to get Direct Line token' });
-  }
-});
 
 // Health check - always return 200 so App Service doesn't kill the container
 app.get('/health', async (_req, res) => {
   try {
     await db.healthCheck();
-    res.json({ status: 'healthy', db: 'connected', routes: app._router.stack.filter(r => r.route).map(r => r.route.path) });
+    res.json({ status: 'healthy', db: 'connected' });
   } catch (err) {
     res.json({ status: 'healthy', db: 'disconnected', dbError: err.message });
   }
