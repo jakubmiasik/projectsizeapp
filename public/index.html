@@ -111,9 +111,27 @@
     .admin-only-badge{padding:.15rem .5rem;border-radius:999px;background:#fde8e8;color:#c0392b;font-size:var(--text-xs);font-weight:600;margin-left:.5rem}
     .app-footer{margin-top:var(--space-6);padding:var(--space-4) 0;border-top:1px solid var(--color-border);background:var(--color-surface-2)} .footer-inner{text-align:center} .footer-copy{margin:0;font-size:var(--text-sm);color:var(--color-text-muted)}
     .header-notice{padding:.2rem .6rem;border-radius:999px;background:var(--color-primary-soft);color:var(--color-primary-strong);font-weight:600;font-size:var(--text-xs);margin-left:.5rem}
-    .landing{padding:var(--space-6) 0} .landing-card{background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-xl);padding:var(--space-6);max-width:800px;margin:0 auto;text-align:center} .landing-card h2{margin-bottom:var(--space-3)} .landing-card>p{color:var(--color-text-muted);margin-bottom:var(--space-4);line-height:1.6} .landing-features{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:var(--space-4);margin:var(--space-5) 0;text-align:left} .landing-feature{background:var(--color-surface-2);border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:var(--space-4)} .landing-feature-icon{font-size:1.8rem;display:block;margin-bottom:var(--space-2)} .landing-feature h3{font-size:var(--text-base);margin-bottom:var(--space-1)} .landing-feature p{font-size:var(--text-sm);color:var(--color-text-muted);margin:0;line-height:1.5} .landing-example{background:var(--color-surface-offset);border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:var(--space-4);margin:var(--space-4) 0} .landing-example h3{font-size:var(--text-sm);color:var(--color-text-muted);margin-bottom:var(--space-3);text-transform:uppercase;letter-spacing:.05em} .landing-example-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:var(--space-3)} .landing-example-item{display:flex;flex-direction:column;align-items:center;gap:var(--space-1)} .landing-example-label{font-size:var(--text-sm);color:var(--color-text-muted)} .landing-example-value{font-size:1.3rem;font-weight:700} .btn-primary{background:linear-gradient(135deg,var(--color-primary),var(--color-primary-strong));color:#fff;border:none;padding:.85rem 2rem;border-radius:999px;font-size:var(--text-base);font-weight:700;cursor:pointer;box-shadow:0 8px 18px rgba(1,105,111,.25);transition:transform .2s,box-shadow .2s} .btn-primary:hover{transform:translateY(-1px);box-shadow:0 12px 24px rgba(1,105,111,.3)}
+    .landing{padding:var(--space-6) 0;min-height:calc(100vh - 120px);display:flex;align-items:center}
+    .landing-hero{max-width:720px;margin:0 auto;text-align:center;padding:var(--space-6)}
+    .landing-hero-badge{display:inline-flex;align-items:center;gap:.4rem;padding:.38rem .75rem;border-radius:999px;background:rgba(1,105,111,.08);color:var(--color-primary-strong);font-size:var(--text-xs);font-weight:900;letter-spacing:.06em;text-transform:uppercase;margin-bottom:var(--space-4)}
+    .landing-hero-title{font-size:clamp(2.2rem,5vw,3.8rem);line-height:1.05;letter-spacing:-.04em;margin:0 0 var(--space-3) 0;color:var(--color-text)}
+    .landing-hero-desc{max-width:600px;margin:0 auto var(--space-5) auto;color:var(--color-text-muted);font-size:var(--text-base);line-height:1.7}
+    .landing-nav-pills{display:flex;flex-wrap:wrap;justify-content:center;gap:.5rem;margin-bottom:var(--space-5)}
+    .landing-pill{display:inline-flex;align-items:center;gap:.3rem;padding:.4rem .75rem;border-radius:999px;background:var(--color-surface);border:1px solid var(--color-border);font-size:var(--text-xs);font-weight:600;color:var(--color-text-muted);white-space:nowrap}
+    .landing-sign-in-btn{padding:.85rem 2.5rem;font-size:var(--text-base)}
+    .landing-auth-note{margin-top:var(--space-3);font-size:var(--text-xs);color:var(--color-text-muted)}
+    .btn-primary{background:linear-gradient(135deg,var(--color-primary),var(--color-primary-strong));color:#fff;border:none;padding:.85rem 2rem;border-radius:999px;font-size:var(--text-base);font-weight:700;cursor:pointer;box-shadow:0 8px 18px rgba(1,105,111,.25);transition:transform .2s,box-shadow .2s} .btn-primary:hover{transform:translateY(-1px);box-shadow:0 12px 24px rgba(1,105,111,.3)}
     .badge-row{display:flex;align-items:center;gap:var(--space-3);flex-wrap:wrap}
-    .btn-detailed-estimation{background:linear-gradient(135deg,#2563eb,#1d4ed8);color:#fff;border:none;padding:.55rem 1.1rem;border-radius:999px;font-size:var(--text-sm);font-weight:700;cursor:pointer;transition:transform .15s,box-shadow .15s;white-space:nowrap}
+    .btn-detailed-estimation,.btn-requirements{background:linear-gradient(135deg,#2563eb,#1d4ed8);color:#fff;border:none;padding:.55rem 1.1rem;border-radius:999px;font-size:var(--text-sm);font-weight:700;cursor:pointer;transition:transform .15s,box-shadow .15s;white-space:nowrap}
+    .btn-detailed-estimation:hover,.btn-requirements:hover{transform:translateY(-1px);box-shadow:0 6px 16px rgba(37,99,235,.3)}
+    .btn-requirements{background:linear-gradient(135deg,#7c3aed,#5b21b6)}
+    .btn-requirements:hover{transform:translateY(-1px);box-shadow:0 6px 16px rgba(124,58,237,.3)}
+    .requirements-view .de-section{background:var(--color-surface-2);border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:var(--space-3)}
+    .req-item{display:flex;gap:var(--space-2);align-items:flex-start;margin-bottom:var(--space-2);padding:var(--space-2);background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-md)}
+    .req-item input,.req-item select,.req-item textarea{flex:1;padding:.4rem .6rem;border:1px solid var(--color-border);border-radius:var(--radius-sm);font-size:var(--text-xs);background:var(--color-surface);color:var(--color-text)}
+    .req-item textarea{min-height:60px;resize:vertical}
+    .req-remove-btn{background:none;border:none;color:#c0392b;cursor:pointer;font-size:1.1rem;padding:.2rem .4rem;border-radius:var(--radius-sm)}
+    .req-remove-btn:hover{background:rgba(192,57,43,.1)}
     .btn-detailed-estimation:hover{transform:translateY(-1px);box-shadow:0 6px 16px rgba(37,99,235,.3)}
     /* Detailed Estimation View */
     .detailed-estimation-view{display:none;padding:var(--space-4) 0}
@@ -185,35 +203,19 @@
 
     <!-- Landing page for unauthenticated users -->
     <section class="landing container" id="landing-section">
-      <div class="landing-card">
-        <h2>Welcome to Fabric Project Sizing</h2>
-        <p>This tool helps you estimate the scope and effort of Microsoft Fabric implementations. Sign in to access the full estimator and start sizing your projects.</p>
-        <div class="landing-features">
-          <div class="landing-feature">
-            <span class="landing-feature-icon">📊</span>
-            <h3>Estimate project size</h3>
-            <p>Answer questions about source systems, data volume, transformations, and more to get an hours-based T-shirt size estimate (XS to XL).</p>
-          </div>
-          <div class="landing-feature">
-            <span class="landing-feature-icon">💾</span>
-            <h3>Save &amp; version estimations</h3>
-            <p>Save your estimations to the cloud, update them over time, and keep multiple versions to track how scope evolves.</p>
-          </div>
-          <div class="landing-feature">
-            <span class="landing-feature-icon">⚙️</span>
-            <h3>Fine-tune with multipliers</h3>
-            <p>Adjust section multipliers and safety buffers to reflect real-world project risk, uncertainty, or known complexity factors.</p>
-          </div>
+      <div class="landing-hero">
+        <div class="landing-hero-badge">✨ Microsoft Fabric</div>
+        <h1 class="landing-hero-title">Fabric Project Sizing</h1>
+        <p class="landing-hero-desc">Investigate project scope, estimate effort, and produce delivery-ready requirements for Microsoft Fabric implementations across your organisation.</p>
+        <div class="landing-nav-pills">
+          <span class="landing-pill">📊 T-Shirt Sizing</span>
+          <span class="landing-pill">⚙️ Detailed Estimation</span>
+          <span class="landing-pill">📋 Requirements</span>
+          <span class="landing-pill">💾 Version Control</span>
+          <span class="landing-pill">👥 Sharing</span>
         </div>
-        <div class="landing-example">
-          <h3>Example output</h3>
-          <div class="landing-example-grid">
-            <div class="landing-example-item"><span class="landing-example-label">T-shirt size</span><span class="landing-example-value badge m">M</span></div>
-            <div class="landing-example-item"><span class="landing-example-label">Estimated hours</span><span class="landing-example-value">420 hrs</span></div>
-            <div class="landing-example-item"><span class="landing-example-label">Timeline</span><span class="landing-example-value">11 weeks</span></div>
-          </div>
-        </div>
-        <button class="btn btn-primary" id="landing-sign-in">&#x1F512; Sign in to get started</button>
+        <button class="btn btn-primary landing-sign-in-btn" id="landing-sign-in">Sign in with Microsoft</button>
+        <p class="landing-auth-note">Protected by Microsoft Entra ID</p>
       </div>
     </section>
 
@@ -296,7 +298,8 @@
           <div class="result-scroll">
             <div class="badge-row">
               <div id="badge" class="badge s">S</div>
-              <button type="button" class="btn-detailed-estimation" id="btn-detailed-estimation" title="Open Detailed Estimation">Detailed Estimation</button>
+              <button type="button" class="btn-detailed-estimation" id="btn-detailed-estimation" title="Open Detailed Estimation" style="display:none">Detailed Estimation</button>
+              <button type="button" class="btn-requirements" id="btn-requirements" title="Open Requirements" style="display:none">Requirements</button>
             </div>
 
             <div class="score-pair">
@@ -517,6 +520,94 @@
         </div>
       </div>
     </section>
+
+    <!-- ==================== REQUIREMENTS VIEW ==================== -->
+    <section class="requirements-view container" id="requirements-view" style="display:none">
+      <div style="display:flex;align-items:center;gap:var(--space-3);margin-bottom:var(--space-4)">
+        <button id="req-back-btn" class="btn-secondary" style="padding:.4rem .8rem;font-size:var(--text-sm)">← Back</button>
+        <h2 style="margin:0;font-size:var(--text-lg)">📋 Requirements</h2>
+        <span id="req-version-label" style="font-size:var(--text-xs);color:var(--color-text-muted);margin-left:auto"></span>
+      </div>
+
+      <!-- Project Details -->
+      <div class="de-section" style="margin-bottom:var(--space-3)">
+        <h3 style="font-size:var(--text-md);margin-bottom:var(--space-2)">Project Details</h3>
+        <div class="de-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-2)">
+          <div><label class="de-label">Project Name</label><input id="req-project-name" class="de-input" placeholder="Project name"></div>
+          <div><label class="de-label">Client</label><input id="req-client" class="de-input" placeholder="Client name"></div>
+          <div><label class="de-label">Author</label><input id="req-author" class="de-input" placeholder="Author"></div>
+          <div><label class="de-label">Date</label><input id="req-date" class="de-input" type="date"></div>
+          <div style="grid-column:span 2"><label class="de-label">Description</label><textarea id="req-description" class="de-input" rows="3" placeholder="Project description"></textarea></div>
+        </div>
+      </div>
+
+      <!-- Work Packages -->
+      <div class="de-section" style="margin-bottom:var(--space-3)">
+        <div style="display:flex;align-items:center;justify-content:space-between">
+          <h3 style="font-size:var(--text-md);margin-bottom:var(--space-2)">Work Packages</h3>
+          <button id="req-add-wp" class="btn-secondary" style="font-size:var(--text-xs);padding:.3rem .6rem">+ Add Work Package</button>
+        </div>
+        <div id="req-workpackages"></div>
+      </div>
+
+      <!-- Requirements / Inclusions -->
+      <div class="de-section" style="margin-bottom:var(--space-3)">
+        <div style="display:flex;align-items:center;justify-content:space-between">
+          <h3 style="font-size:var(--text-md);margin-bottom:var(--space-2)">Requirements</h3>
+          <button id="req-add-requirement" class="btn-secondary" style="font-size:var(--text-xs);padding:.3rem .6rem">+ Add Requirement</button>
+        </div>
+        <div id="req-requirements-list"></div>
+      </div>
+
+      <!-- Constraints & Dependencies -->
+      <div class="de-section" style="margin-bottom:var(--space-3)">
+        <div style="display:flex;align-items:center;justify-content:space-between">
+          <h3 style="font-size:var(--text-md);margin-bottom:var(--space-2)">Constraints & Dependencies</h3>
+          <button id="req-add-constraint" class="btn-secondary" style="font-size:var(--text-xs);padding:.3rem .6rem">+ Add</button>
+        </div>
+        <div id="req-constraints-list"></div>
+      </div>
+
+      <!-- Assumptions -->
+      <div class="de-section" style="margin-bottom:var(--space-3)">
+        <div style="display:flex;align-items:center;justify-content:space-between">
+          <h3 style="font-size:var(--text-md);margin-bottom:var(--space-2)">Assumptions</h3>
+          <button id="req-add-assumption" class="btn-secondary" style="font-size:var(--text-xs);padding:.3rem .6rem">+ Add</button>
+        </div>
+        <div id="req-assumptions-list"></div>
+      </div>
+
+      <!-- Out of Scope -->
+      <div class="de-section" style="margin-bottom:var(--space-3)">
+        <div style="display:flex;align-items:center;justify-content:space-between">
+          <h3 style="font-size:var(--text-md);margin-bottom:var(--space-2)">Out of Scope</h3>
+          <button id="req-add-outofscope" class="btn-secondary" style="font-size:var(--text-xs);padding:.3rem .6rem">+ Add</button>
+        </div>
+        <div id="req-outofscope-list"></div>
+      </div>
+
+      <!-- Deliverables -->
+      <div class="de-section" style="margin-bottom:var(--space-3)">
+        <div style="display:flex;align-items:center;justify-content:space-between">
+          <h3 style="font-size:var(--text-md);margin-bottom:var(--space-2)">Deliverables</h3>
+          <button id="req-add-deliverable" class="btn-secondary" style="font-size:var(--text-xs);padding:.3rem .6rem">+ Add</button>
+        </div>
+        <div id="req-deliverables-list"></div>
+      </div>
+
+      <!-- Notes -->
+      <div class="de-section" style="margin-bottom:var(--space-3)">
+        <h3 style="font-size:var(--text-md);margin-bottom:var(--space-2)">Notes</h3>
+        <textarea id="req-notes" class="de-input" rows="4" placeholder="Additional notes..."></textarea>
+      </div>
+
+      <!-- Action Buttons -->
+      <div style="display:flex;gap:var(--space-2);flex-wrap:wrap;margin-top:var(--space-4)">
+        <button id="req-save-btn" class="btn-primary" style="padding:.55rem 1.2rem">💾 Save Requirements</button>
+        <button id="req-preview-btn" class="btn-secondary" style="padding:.55rem 1.2rem">👁️ Preview & Print PDF</button>
+      </div>
+    </section>
+
   </main>
 
   <script>
@@ -1269,12 +1360,18 @@
       }
 
       function applyRoleVisibility() {
-        if (currentUserRole !== 'admin') {
+        const isAdmin = currentUserRole === 'admin';
+        if (!isAdmin) {
           estimatedTotalsSection.style.display = 'none';
         } else {
           estimatedTotalsSection.style.display = '';
           adminOnlyBadge.style.display = '';
         }
+        // Admin-only buttons
+        const deBtn = document.getElementById('btn-detailed-estimation');
+        const reqBtn = document.getElementById('btn-requirements');
+        if (deBtn) deBtn.style.display = isAdmin ? '' : 'none';
+        if (reqBtn) reqBtn.style.display = isAdmin ? '' : 'none';
       }
 
       try {
@@ -1684,6 +1781,7 @@
                 <span class="estimation-item-meta">${escapeHtml(estimation.user_name || 'Unknown user')} &middot; ${estimation.client_name ? escapeHtml(estimation.client_name) + ' &middot; ' : ''}${formatDate(estimation.updated_at)}</span>
               </div>
               <span class="user-badge">${escapeHtml(estimation.user_name || 'Unknown')}</span>
+              <button class="admin-load-btn" type="button" data-admin-load-estimation="${estimation.id}" title="Load into form" style="background:var(--color-primary-soft);color:var(--color-primary-strong);border:1px solid var(--color-primary-soft);border-radius:999px;padding:.3rem .7rem;font-size:var(--text-xs);font-weight:700;cursor:pointer">Load</button>
               <button class="admin-delete-btn" type="button" data-admin-delete-estimation="${estimation.id}" title="Delete estimation">&times;</button>
             </li>
           `).join('');
@@ -2074,6 +2172,22 @@
           });
 
           adminEstimationsListEl.addEventListener('click', async (event) => {
+            // Load button — load estimation into form
+            const loadBtn = event.target.closest('[data-admin-load-estimation]');
+            if (loadBtn) {
+              event.stopPropagation();
+              try {
+                const est = await fetchJson(`/api/admin/estimations/${loadBtn.dataset.adminLoadEstimation}`, {}, 'Failed to load estimation');
+                if (est && est.data) {
+                  importState(est.data);
+                  setLoadedEstimationState(est);
+                  adminModal.style.display = 'none';
+                }
+              } catch (err) {
+                await showAlert(err.message, 'Request failed');
+              }
+              return;
+            }
             // Delete button
             const deleteBtn = event.target.closest('[data-admin-delete-estimation]');
             if (deleteBtn) {
@@ -2548,6 +2662,286 @@
       deCalculate();
     })();
     // ==================== END DETAILED ESTIMATION ====================
+
+    // ==================== REQUIREMENTS ====================
+    (function initRequirements() {
+      const reqView = document.getElementById('requirements-view');
+      const appSection = document.getElementById('app-section');
+      const heroSection = document.querySelector('.hero.container');
+      const btnOpen = document.getElementById('btn-requirements');
+      const btnBack = document.getElementById('req-back-btn');
+      const versionLabel = document.getElementById('req-version-label');
+
+      let reqEstimationId = null;
+      let reqVersion = null;
+
+      function showReqView() {
+        if (!loadedEstimation) {
+          showAlert('Please save or load an estimation first before opening Requirements.', 'No estimation loaded');
+          return;
+        }
+        reqEstimationId = loadedEstimation.id;
+        reqVersion = loadedEstimation.version || 1;
+        versionLabel.textContent = `${loadedEstimation.title} · v${reqVersion}`;
+        appSection.style.display = 'none';
+        if (heroSection) heroSection.style.display = 'none';
+        reqView.style.display = '';
+        loadRequirements();
+      }
+
+      function hideReqView() {
+        reqView.style.display = 'none';
+        appSection.style.display = '';
+      }
+
+      btnOpen.addEventListener('click', showReqView);
+      btnBack.addEventListener('click', hideReqView);
+
+      // Expose for external use
+      window.reqShowView = showReqView;
+      window.reqHideView = hideReqView;
+
+      // --- List management helpers ---
+      function createListItem(container, fields, data) {
+        const div = document.createElement('div');
+        div.className = 'req-item';
+        fields.forEach(f => {
+          if (f.type === 'textarea') {
+            const ta = document.createElement('textarea');
+            ta.placeholder = f.placeholder || '';
+            ta.value = data?.[f.key] || '';
+            ta.dataset.key = f.key;
+            div.appendChild(ta);
+          } else if (f.type === 'select') {
+            const sel = document.createElement('select');
+            sel.dataset.key = f.key;
+            f.options.forEach(o => {
+              const opt = document.createElement('option');
+              opt.value = o;
+              opt.textContent = o;
+              sel.appendChild(opt);
+            });
+            sel.value = data?.[f.key] || f.options[0];
+            sel.style.flex = '0 0 130px';
+            div.appendChild(sel);
+          } else {
+            const inp = document.createElement('input');
+            inp.type = f.type || 'text';
+            inp.placeholder = f.placeholder || '';
+            inp.value = data?.[f.key] || '';
+            inp.dataset.key = f.key;
+            if (f.flex) inp.style.flex = f.flex;
+            div.appendChild(inp);
+          }
+        });
+        const removeBtn = document.createElement('button');
+        removeBtn.className = 'req-remove-btn';
+        removeBtn.textContent = '×';
+        removeBtn.title = 'Remove';
+        removeBtn.addEventListener('click', () => div.remove());
+        div.appendChild(removeBtn);
+        container.appendChild(div);
+      }
+
+      function getListData(container, fields) {
+        return Array.from(container.querySelectorAll('.req-item')).map(item => {
+          const obj = {};
+          fields.forEach(f => {
+            const el = item.querySelector(`[data-key="${f.key}"]`);
+            if (el) obj[f.key] = el.value;
+          });
+          return obj;
+        });
+      }
+
+      // Work packages
+      const wpFields = [
+        { key: 'name', placeholder: 'Work package name', type: 'text', flex: '2' },
+        { key: 'description', placeholder: 'Description', type: 'textarea' }
+      ];
+      const wpContainer = document.getElementById('req-workpackages');
+      document.getElementById('req-add-wp').addEventListener('click', () => createListItem(wpContainer, wpFields));
+
+      // Requirements
+      const reqFields = [
+        { key: 'type', type: 'select', options: ['Functional', 'Non-Functional', 'Technical', 'Business'] },
+        { key: 'workpackage', placeholder: 'Work Package', type: 'text' },
+        { key: 'description', placeholder: 'Requirement description', type: 'textarea' },
+        { key: 'estimate', placeholder: 'Estimate (days)', type: 'number' }
+      ];
+      const reqContainer = document.getElementById('req-requirements-list');
+      document.getElementById('req-add-requirement').addEventListener('click', () => createListItem(reqContainer, reqFields));
+
+      // Constraints
+      const constraintFields = [{ key: 'description', placeholder: 'Constraint or dependency', type: 'textarea' }];
+      const constraintContainer = document.getElementById('req-constraints-list');
+      document.getElementById('req-add-constraint').addEventListener('click', () => createListItem(constraintContainer, constraintFields));
+
+      // Assumptions
+      const assumptionFields = [{ key: 'description', placeholder: 'Assumption', type: 'textarea' }];
+      const assumptionContainer = document.getElementById('req-assumptions-list');
+      document.getElementById('req-add-assumption').addEventListener('click', () => createListItem(assumptionContainer, assumptionFields));
+
+      // Out of scope
+      const oosFields = [{ key: 'description', placeholder: 'Out of scope item', type: 'textarea' }];
+      const oosContainer = document.getElementById('req-outofscope-list');
+      document.getElementById('req-add-outofscope').addEventListener('click', () => createListItem(oosContainer, oosFields));
+
+      // Deliverables
+      const deliverableFields = [
+        { key: 'name', placeholder: 'Deliverable', type: 'text', flex: '1' },
+        { key: 'description', placeholder: 'Description', type: 'textarea' }
+      ];
+      const deliverableContainer = document.getElementById('req-deliverables-list');
+      document.getElementById('req-add-deliverable').addEventListener('click', () => createListItem(deliverableContainer, deliverableFields));
+
+      // --- Build/Apply data ---
+      function buildData() {
+        return {
+          projectName: document.getElementById('req-project-name').value,
+          client: document.getElementById('req-client').value,
+          author: document.getElementById('req-author').value,
+          date: document.getElementById('req-date').value,
+          description: document.getElementById('req-description').value,
+          workpackages: getListData(wpContainer, wpFields),
+          requirements: getListData(reqContainer, reqFields),
+          constraints: getListData(constraintContainer, constraintFields),
+          assumptions: getListData(assumptionContainer, assumptionFields),
+          outOfScope: getListData(oosContainer, oosFields),
+          deliverables: getListData(deliverableContainer, deliverableFields),
+          notes: document.getElementById('req-notes').value
+        };
+      }
+
+      function applyData(data) {
+        if (!data) return;
+        document.getElementById('req-project-name').value = data.projectName || '';
+        document.getElementById('req-client').value = data.client || '';
+        document.getElementById('req-author').value = data.author || '';
+        document.getElementById('req-date').value = data.date || '';
+        document.getElementById('req-description').value = data.description || '';
+        document.getElementById('req-notes').value = data.notes || '';
+
+        wpContainer.innerHTML = '';
+        (data.workpackages || []).forEach(wp => createListItem(wpContainer, wpFields, wp));
+
+        reqContainer.innerHTML = '';
+        (data.requirements || []).forEach(r => createListItem(reqContainer, reqFields, r));
+
+        constraintContainer.innerHTML = '';
+        (data.constraints || []).forEach(c => createListItem(constraintContainer, constraintFields, c));
+
+        assumptionContainer.innerHTML = '';
+        (data.assumptions || []).forEach(a => createListItem(assumptionContainer, assumptionFields, a));
+
+        oosContainer.innerHTML = '';
+        (data.outOfScope || []).forEach(o => createListItem(oosContainer, oosFields, o));
+
+        deliverableContainer.innerHTML = '';
+        (data.deliverables || []).forEach(d => createListItem(deliverableContainer, deliverableFields, d));
+      }
+
+      // --- Load & Save ---
+      async function loadRequirements() {
+        if (!reqEstimationId) return;
+        try {
+          const res = await fetch(`/api/requirements/${reqEstimationId}/${reqVersion}`);
+          if (res.ok) {
+            const result = await res.json();
+            if (result && result.data) {
+              applyData(result.data);
+            } else {
+              applyData(null);
+            }
+          }
+        } catch (err) {
+          console.error('Failed to load requirements:', err);
+        }
+      }
+
+      document.getElementById('req-save-btn').addEventListener('click', async () => {
+        if (!reqEstimationId) {
+          await showAlert('No estimation loaded. Save your estimation first.', 'Cannot save');
+          return;
+        }
+        const data = buildData();
+        try {
+          const res = await fetch(`/api/requirements/${reqEstimationId}/${reqVersion}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ data })
+          });
+          if (!res.ok) throw new Error('Server returned ' + res.status);
+          await showAlert('Requirements saved successfully!', 'Saved');
+        } catch (err) {
+          await showAlert('Failed to save requirements: ' + err.message, 'Error');
+        }
+      });
+
+      // --- Preview & PDF (print) ---
+      document.getElementById('req-preview-btn').addEventListener('click', () => {
+        const data = buildData();
+        const html = generatePreviewHTML(data);
+        const win = window.open('', '_blank');
+        win.document.write(html);
+        win.document.close();
+        setTimeout(() => win.print(), 500);
+      });
+
+      function generatePreviewHTML(data) {
+        const listSection = (title, items, key) => {
+          if (!items || items.length === 0) return '';
+          const rows = items.map((item, i) => {
+            const desc = key ? item[key] : Object.values(item).join(' — ');
+            return `<tr><td>${i + 1}</td><td>${escapeHtml(desc)}</td></tr>`;
+          }).join('');
+          return `<h3>${title}</h3><table class="table table-bordered"><thead><tr><th>#</th><th>Description</th></tr></thead><tbody>${rows}</tbody></table>`;
+        };
+
+        const reqRows = (data.requirements || []).map((r, i) =>
+          `<tr><td>${i + 1}</td><td>${escapeHtml(r.type || '')}</td><td>${escapeHtml(r.workpackage || '')}</td><td>${escapeHtml(r.description || '')}</td><td>${escapeHtml(r.estimate || '')}</td></tr>`
+        ).join('');
+
+        const wpRows = (data.workpackages || []).map((wp, i) =>
+          `<tr><td>${i + 1}</td><td>${escapeHtml(wp.name || '')}</td><td>${escapeHtml(wp.description || '')}</td></tr>`
+        ).join('');
+
+        const delRows = (data.deliverables || []).map((d, i) =>
+          `<tr><td>${i + 1}</td><td>${escapeHtml(d.name || '')}</td><td>${escapeHtml(d.description || '')}</td></tr>`
+        ).join('');
+
+        return `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Requirements - ${escapeHtml(data.projectName || 'Project')}</title>
+<style>
+body{font-family:Segoe UI,sans-serif;padding:2rem;max-width:900px;margin:auto;color:#1a1a2e}
+h1{color:#2563eb;border-bottom:2px solid #2563eb;padding-bottom:.5rem}
+h3{margin-top:1.5rem;color:#1e293b}
+table{width:100%;border-collapse:collapse;margin-top:.5rem;font-size:.85rem}
+th,td{border:1px solid #dee2e6;padding:.5rem .75rem;text-align:left}
+th{background:#f1f5f9;font-weight:600}
+.meta{color:#64748b;font-size:.9rem;margin-bottom:1.5rem}
+@media print{body{padding:0}}
+</style></head><body>
+<h1>📋 ${escapeHtml(data.projectName || 'Project Requirements')}</h1>
+<div class="meta">
+  <p><strong>Client:</strong> ${escapeHtml(data.client || 'N/A')} &nbsp;|&nbsp; <strong>Author:</strong> ${escapeHtml(data.author || 'N/A')} &nbsp;|&nbsp; <strong>Date:</strong> ${escapeHtml(data.date || 'N/A')}</p>
+  ${data.description ? `<p><strong>Description:</strong> ${escapeHtml(data.description)}</p>` : ''}
+</div>
+
+${wpRows ? `<h3>Work Packages</h3><table><thead><tr><th>#</th><th>Name</th><th>Description</th></tr></thead><tbody>${wpRows}</tbody></table>` : ''}
+
+${reqRows ? `<h3>Requirements</h3><table><thead><tr><th>#</th><th>Type</th><th>Work Package</th><th>Description</th><th>Estimate</th></tr></thead><tbody>${reqRows}</tbody></table>` : ''}
+
+${listSection('Constraints & Dependencies', data.constraints, 'description')}
+${listSection('Assumptions', data.assumptions, 'description')}
+${listSection('Out of Scope', data.outOfScope, 'description')}
+
+${delRows ? `<h3>Deliverables</h3><table><thead><tr><th>#</th><th>Name</th><th>Description</th></tr></thead><tbody>${delRows}</tbody></table>` : ''}
+
+${data.notes ? `<h3>Notes</h3><p>${escapeHtml(data.notes)}</p>` : ''}
+</body></html>`;
+      }
+    })();
+    // ==================== END REQUIREMENTS ====================
   </script>
 
   </div>
@@ -2603,7 +2997,7 @@
     </div>
   </div>
   <div class="modal-overlay" id="admin-modal">
-    <div class="modal" style="width:min(700px,calc(100% - 2rem))">
+    <div class="modal" style="width:min(1000px,calc(100% - 2rem))">
       <button class="modal-close">&times;</button>
       <h3>⚙️ Admin Panel</h3>
       <div id="admin-panel-content">
