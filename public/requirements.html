@@ -180,7 +180,6 @@
       line-height: 1.08;
       font-weight: 900;
       margin-bottom: 0.8rem;
-      max-width: 12ch;
     }
 
     .hero-copy {
@@ -543,6 +542,9 @@
   <div class="app-shell pb-5">
     <nav class="navbar navbar-expand-lg sticky-top app-navbar py-3">
       <div class="app-container d-flex flex-wrap align-items-center gap-3">
+        <button type="button" class="btn btn-outline-secondary btn-sm px-2 py-1" id="backBtn" title="Back to Sizing">
+          <i class="bi bi-arrow-left"></i>
+        </button>
         <a href="/" class="brand-wrap">
           <span class="brand-mark">R</span>
           <span class="brand-copy">
@@ -555,27 +557,9 @@
             <i class="bi bi-diagram-3"></i>
             <span id="navbarEstimationText">Not linked yet</span>
           </span>
-          <button type="button" class="btn btn-outline-secondary" id="backBtn">
-            <i class="bi bi-arrow-left"></i> Back to Sizing
-          </button>
           <button type="button" class="btn btn-save" id="saveBtn">
             <i class="bi bi-check2-circle"></i> Save
           </button>
-          <button type="button" class="btn btn-outline-secondary" id="resetBtn">
-            <i class="bi bi-arrow-counterclockwise"></i> Reset
-          </button>
-          <div class="dropdown">
-            <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-              <i class="bi bi-share"></i> Share
-            </button>
-            <ul class="dropdown-menu dropdown-menu-end">
-              <li>
-                <button class="dropdown-item" type="button" id="exportDocxBtn">
-                  <i class="bi bi-file-earmark-word"></i> Export DOCX
-                </button>
-              </li>
-            </ul>
-          </div>
           <button type="button" class="btn btn-gradient" id="previewBtn">
             <i class="bi bi-eye"></i> Preview
           </button>
@@ -1787,13 +1771,14 @@
     }
 
     function openPreview() {
-      const previewWindow = window.open('', '_blank', 'noopener,noreferrer');
+      const previewWindow = window.open('', '_blank');
       if (!previewWindow) {
-        showToast('Preview blocked by the browser.', 'danger');
+        showToast('Preview blocked by the browser. Please allow popups for this site.', 'danger');
         return;
       }
+      const html = buildPreviewHtml(buildFullData());
       previewWindow.document.open();
-      previewWindow.document.write(buildPreviewHtml(buildFullData()));
+      previewWindow.document.write(html);
       previewWindow.document.close();
     }
 
@@ -1970,11 +1955,11 @@
     }
 
     function attachEvents() {
-      document.getElementById('backBtn').addEventListener('click', () => { window.location.href = '/'; });
+      document.getElementById('backBtn').addEventListener('click', () => {
+        if (window.history.length > 1) { window.history.back(); } else { window.location.href = '/'; }
+      });
       document.getElementById('saveBtn').addEventListener('click', saveToApi);
-      document.getElementById('resetBtn').addEventListener('click', resetForm);
       document.getElementById('previewBtn').addEventListener('click', openPreview);
-      document.getElementById('exportDocxBtn').addEventListener('click', exportDocx);
       document.getElementById('addWorkpackageBtn').addEventListener('click', () => {
         createWorkpackageCard({ id: `WP-${String(getWorkpackageCards().length + 1).padStart(2, '0')}`, name: '' });
         scheduleDraftSave();
