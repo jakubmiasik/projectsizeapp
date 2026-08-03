@@ -131,6 +131,20 @@ async function initialize() {
     IF NOT EXISTS (SELECT 1 FROM app_users WHERE email = 'admin@swotdempid302779.onmicrosoft.com')
     INSERT INTO app_users (email, display_name, role)
     VALUES ('admin@swotdempid302779.onmicrosoft.com', 'GSCD', 'admin');
+
+    IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='requirements' AND xtype='U')
+    CREATE TABLE requirements (
+      id UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),
+      estimation_id UNIQUEIDENTIFIER NOT NULL,
+      version INT NOT NULL DEFAULT 1,
+      data NVARCHAR(MAX) NOT NULL,
+      created_at DATETIME2 DEFAULT GETUTCDATE(),
+      updated_at DATETIME2 DEFAULT GETUTCDATE(),
+      CONSTRAINT FK_requirements_estimation FOREIGN KEY (estimation_id) REFERENCES estimations(id) ON DELETE CASCADE
+    );
+
+    IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_requirements_estimation_id')
+    CREATE INDEX IX_requirements_estimation_id ON requirements(estimation_id, version);
   `);
   console.log('Database initialized');
 }
@@ -667,6 +681,45 @@ async function deleteEstimationAsAdmin(id) {
   return result.rowsAffected[0] > 0;
 }
 
+// ==================== REQUIREMENTS ====================
+
+async function getRequirements(estimationId, version) {
+  const p = await getPool();
+  const result = await p.request()
+    .input('estimationId', sql.UniqueIdentifier, estimationId)
+    .input('version', sql.Int, version)
+    .query('SELECT * FROM requirements WHERE estimation_id = @estimationId AND version = @version');
+  return result.recordset[0] || null;
+}
+
+async function saveRequirements(estimationId, version, data) {
+  const p = await getPool();
+  // Upsert: update if exists, insert if not
+  const existing = await getRequirements(estimationId, version);
+  if (existing) {
+    await p.request()
+      .input('id', sql.UniqueIdentifier, existing.id)
+      .input('data', sql.NVarChar(sql.MAX), JSON.stringify(data))
+      .query('UPDATE requirements SET data = @data, updated_at = GETUTCDATE() WHERE id = @id');
+    return existing.id;
+  } else {
+    const result = await p.request()
+      .input('estimationId', sql.UniqueIdentifier, estimationId)
+      .input('version', sql.Int, version)
+      .input('data', sql.NVarChar(sql.MAX), JSON.stringify(data))
+      .query('INSERT INTO requirements (estimation_id, version, data) OUTPUT INSERTED.id VALUES (@estimationId, @version, @data)');
+    return result.recordset[0].id;
+  }
+}
+
+async function deleteRequirements(estimationId, version) {
+  const p = await getPool();
+  await p.request()
+    .input('estimationId', sql.UniqueIdentifier, estimationId)
+    .input('version', sql.Int, version)
+    .query('DELETE FROM requirements WHERE estimation_id = @estimationId AND version = @version');
+}
+
 module.exports = {
   initialize,
   healthCheck,
@@ -691,5 +744,8 @@ module.exports = {
   shareEstimation,
   unshareEstimation,
   deleteEstimation,
-  deleteEstimationAsAdmin
+  deleteEstimationAsAdmin,
+  getRequirements,
+  saveRequirements,
+  deleteRequirements
 };

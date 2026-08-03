@@ -238,6 +238,31 @@ app.delete('/api/admin/estimations/:id', requireAuth, requireAdmin, async (req, 
   }
 });
 
+// ==================== REQUIREMENTS API ====================
+
+app.get('/api/requirements/:estimationId/:version', requireAuth, async (req, res) => {
+  try {
+    const requirements = await db.getRequirements(req.params.estimationId, parseInt(req.params.version, 10));
+    if (!requirements) return res.json(null);
+    res.json({ ...requirements, data: JSON.parse(requirements.data) });
+  } catch (err) {
+    console.error('Failed to get requirements:', err);
+    res.status(500).json({ error: 'Failed to load requirements' });
+  }
+});
+
+app.put('/api/requirements/:estimationId/:version', requireAuth, async (req, res) => {
+  try {
+    const { data } = req.body;
+    if (!data) return res.status(400).json({ error: 'Missing data' });
+    const id = await db.saveRequirements(req.params.estimationId, parseInt(req.params.version, 10), data);
+    res.json({ id, success: true });
+  } catch (err) {
+    console.error('Failed to save requirements:', err);
+    res.status(500).json({ error: 'Failed to save requirements' });
+  }
+});
+
 app.get('/api/users/search', requireAuth, async (req, res) => {
   try {
     const query = String(req.query?.q || '').trim();
