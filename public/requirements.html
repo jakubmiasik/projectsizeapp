@@ -523,83 +523,9 @@
       padding-right: 22rem;
     }
 
-    .completion-checklist {
-      position: fixed;
-      top: 6.25rem;
-      right: 1rem;
-      width: min(21rem, calc(100vw - 2rem));
-      max-height: calc(100vh - 7.25rem);
-      padding: 1rem;
-      display: flex;
-      flex-direction: column;
-      gap: 0.9rem;
-      background: linear-gradient(180deg, rgba(255, 255, 255, 0.82), var(--app-surface));
-      border: 1px solid var(--app-border);
-      backdrop-filter: blur(18px);
-      -webkit-backdrop-filter: blur(18px);
-      box-shadow: var(--app-shadow);
-      overflow: hidden;
-    }
-
-    .completion-checklist-header {
-      display: flex;
-      align-items: flex-start;
-      justify-content: space-between;
-      gap: 0.8rem;
-    }
-
-    .completion-checklist-kicker {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.4rem;
-      padding: 0.35rem 0.7rem;
-      border-radius: 999px;
-      background: rgba(91, 95, 199, 0.08);
-      color: var(--app-purple);
-      font-size: 0.74rem;
-      font-weight: 800;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-    }
-
-    .completion-checklist-copy h2 {
-      margin: 0.7rem 0 0.25rem;
-      font-size: 1rem;
-      font-weight: 800;
-    }
-
-    .completion-checklist-copy p {
-      margin: 0;
-      color: var(--app-muted);
-      font-size: 0.88rem;
-    }
-
-    .completion-checklist-toggle {
-      width: 2.2rem;
-      height: 2.2rem;
-      border: 1px solid rgba(23, 32, 51, 0.1);
-      border-radius: 0.8rem;
-      display: inline-grid;
-      place-items: center;
-      background: rgba(255, 255, 255, 0.78);
-      color: var(--app-purple);
-      flex-shrink: 0;
-    }
-
-    .completion-checklist-toggle i {
-      transition: transform 0.2s ease;
-    }
-
-    .completion-checklist-body {
-      display: grid;
-      gap: 1rem;
-      overflow: auto;
-      padding-right: 0.15rem;
-    }
-
     .completion-checklist-group-title {
-      margin-bottom: 0.65rem;
-      font-size: 0.76rem;
+      margin-bottom: 0.5rem;
+      font-size: 0.74rem;
       font-weight: 800;
       letter-spacing: 0.08em;
       text-transform: uppercase;
@@ -611,16 +537,16 @@
       margin: 0;
       padding: 0;
       display: grid;
-      gap: 0.55rem;
+      gap: 0.4rem;
     }
 
     .completion-checklist-item {
       display: flex;
-      align-items: flex-start;
-      gap: 0.55rem;
+      align-items: center;
+      gap: 0.5rem;
       color: var(--app-muted);
-      font-size: 0.92rem;
-      line-height: 1.35;
+      font-size: 0.88rem;
+      line-height: 1.3;
     }
 
     .completion-checklist-item.is-done {
@@ -628,11 +554,12 @@
     }
 
     .completion-checklist-icon {
-      width: 1.1rem;
-      flex: 0 0 1.1rem;
+      width: 1rem;
+      flex: 0 0 1rem;
       color: #98a2b3;
       font-weight: 800;
       text-align: center;
+      font-size: 0.85rem;
     }
 
     .completion-checklist-item.is-done .completion-checklist-icon {
@@ -641,11 +568,11 @@
 
     .completion-checklist-workpackages {
       display: grid;
-      gap: 0.85rem;
+      gap: 0.7rem;
     }
 
     .completion-checklist-workpackage {
-      padding-top: 0.85rem;
+      padding-top: 0.7rem;
       border-top: 1px solid rgba(23, 32, 51, 0.08);
     }
 
@@ -658,54 +585,25 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 0.75rem;
-      margin-bottom: 0.65rem;
+      gap: 0.5rem;
+      margin-bottom: 0.5rem;
     }
 
     .completion-checklist-workpackage-head strong {
-      font-size: 0.93rem;
+      font-size: 0.88rem;
       font-weight: 800;
     }
 
     .completion-checklist-progress {
       color: var(--app-muted);
-      font-size: 0.78rem;
+      font-size: 0.75rem;
       white-space: nowrap;
     }
 
     .completion-checklist-empty {
       margin: 0;
       color: var(--app-muted);
-      font-size: 0.88rem;
-    }
-
-    .completion-checklist.is-collapsed {
-      width: auto;
-      max-height: none;
-    }
-
-    .completion-checklist.is-collapsed .completion-checklist-copy p,
-    .completion-checklist.is-collapsed .completion-checklist-body {
-      display: none;
-    }
-
-    .completion-checklist.is-collapsed .completion-checklist-toggle i {
-      transform: rotate(180deg);
-    }
-
-    @media (max-width: 1199.98px) {
-      .app-shell > .app-container {
-        padding-right: 0;
-      }
-
-      .completion-checklist {
-        top: auto;
-        right: 1rem;
-        bottom: 1rem;
-        left: 1rem;
-        width: auto;
-        max-height: min(28rem, 60vh);
-      }
+      font-size: 0.85rem;
     }
 
     @media (max-width: 767.98px) {
@@ -723,12 +621,6 @@
         left: 0.9rem;
         justify-content: center;
         display: flex;
-      }
-
-      .completion-checklist {
-        right: 0.5rem;
-        bottom: 0.5rem;
-        left: 0.5rem;
       }
     }
   </style>
@@ -752,6 +644,26 @@
             <i class="bi bi-diagram-3"></i>
             <span id="navbarEstimationText">Not linked yet</span>
           </span>
+          <div class="dropdown" id="completionDropdown">
+            <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" id="completionBtn">
+              <i class="bi bi-check2-square"></i> <span id="completionBtnLabel">Completion: 0%</span>
+            </button>
+            <div class="dropdown-menu dropdown-menu-end p-3" style="min-width:20rem;max-height:70vh;overflow-y:auto" id="completionDropdownMenu">
+              <div class="mb-2">
+                <strong>Section completion</strong>
+                <p class="text-muted small mb-0" id="completionChecklistSummary">0 / 0 items complete</p>
+              </div>
+              <hr class="my-2"/>
+              <div class="completion-checklist-group mb-2">
+                <div class="completion-checklist-group-title">Top-level sections</div>
+                <ul class="completion-checklist-list" id="completionChecklistSections"></ul>
+              </div>
+              <div class="completion-checklist-group">
+                <div class="completion-checklist-group-title">Workpackages</div>
+                <div class="completion-checklist-workpackages" id="completionChecklistWorkpackages"></div>
+              </div>
+            </div>
+          </div>
           <button type="button" class="btn btn-save" id="saveBtn">
             <i class="bi bi-check2-circle"></i> Save
           </button>
@@ -1022,29 +934,6 @@
         </div>
       </section>
     </main>
-
-    <aside class="completion-checklist glass-panel" id="completionChecklist">
-      <div class="completion-checklist-header">
-        <div class="completion-checklist-copy">
-          <span class="completion-checklist-kicker">Checklist</span>
-          <h2>Section completion</h2>
-          <p id="completionChecklistSummary">0 / 0 items complete</p>
-        </div>
-        <button type="button" class="completion-checklist-toggle" id="completionChecklistToggle" aria-expanded="true" aria-label="Collapse checklist">
-          <i class="bi bi-chevron-right"></i>
-        </button>
-      </div>
-      <div class="completion-checklist-body" id="completionChecklistBody">
-        <div class="completion-checklist-group">
-          <div class="completion-checklist-group-title">Top-level sections</div>
-          <ul class="completion-checklist-list" id="completionChecklistSections"></ul>
-        </div>
-        <div class="completion-checklist-group">
-          <div class="completion-checklist-group-title">Workpackages</div>
-          <div class="completion-checklist-workpackages" id="completionChecklistWorkpackages"></div>
-        </div>
-      </div>
-    </aside>
   </div>
 
   <button type="button" class="btn fab-add" id="fabAddRequirement">
@@ -2246,12 +2135,7 @@
       { label: 'Architecture', editorId: editorIds.architectureDesc },
       { label: 'Timeline', editorId: editorIds.timeline },
       { label: 'Cost', editorId: editorIds.cost },
-      { label: 'Stakeholders', editorId: editorIds.stakeholders },
       { label: 'Goals', editorId: editorIds.goals },
-      { label: 'Dependencies', editorId: editorIds.constraints },
-      { label: 'Assumptions', editorId: editorIds.assumptions },
-      { label: 'Out of Scope', editorId: editorIds.outOfScope },
-      { label: 'Deliverables', editorId: editorIds.deliverables },
       { label: 'Notes', editorId: editorIds.notes }
     ];
 
@@ -2296,6 +2180,7 @@
       const sectionsHost = document.getElementById('completionChecklistSections');
       const workpackagesHost = document.getElementById('completionChecklistWorkpackages');
       const summaryHost = document.getElementById('completionChecklistSummary');
+      const btnLabel = document.getElementById('completionBtnLabel');
       if (!sectionsHost || !workpackagesHost || !summaryHost) return;
 
       const sectionStatuses = checklistSections.map((section) => ({
@@ -2334,7 +2219,7 @@
             <section class="completion-checklist-workpackage">
               <div class="completion-checklist-workpackage-head">
                 <strong>${escapeHtml(wp.label)}</strong>
-                <span class="completion-checklist-progress">${completed}/${items.length} complete</span>
+                <span class="completion-checklist-progress">${completed}/${items.length}</span>
               </div>
               <ul class="completion-checklist-list">
                 ${items.map((item) => buildChecklistItemMarkup(item.label, item.done)).join('')}
@@ -2344,7 +2229,9 @@
         }).join('');
       }
 
+      const pct = totalItems > 0 ? Math.round((completedItems / totalItems) * 100) : 0;
       summaryHost.textContent = `${completedItems} / ${totalItems} items complete`;
+      if (btnLabel) btnLabel.textContent = `Completion: ${pct}%`;
     }
 
     function scheduleCompletionChecklistRender() {
@@ -2356,17 +2243,8 @@
     }
 
     function initCompletionChecklist() {
-      const root = document.getElementById('completionChecklist');
-      const toggle = document.getElementById('completionChecklistToggle');
       const main = document.querySelector('.app-shell > main');
-      if (!root || !toggle || !main || root.dataset.initialized === 'true') return;
-      root.dataset.initialized = 'true';
-
-      toggle.addEventListener('click', () => {
-        const collapsed = root.classList.toggle('is-collapsed');
-        toggle.setAttribute('aria-expanded', String(!collapsed));
-        toggle.setAttribute('aria-label', collapsed ? 'Expand checklist' : 'Collapse checklist');
-      });
+      if (!main) return;
 
       document.addEventListener('input', (event) => {
         if (event.target.matches('input, select, .rte-editor')) {

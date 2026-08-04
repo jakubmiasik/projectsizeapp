@@ -341,7 +341,7 @@
             </div>
 
             <div class="summary-stack">
-              <div class="summary-card" id="sizing-reference-card" style="display:none">
+              <div class="summary-card" id="sizing-reference-card">
                 <h4>Sizing reference</h4>
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem">
                   <div><span class="muted" style="font-size:.75rem;text-transform:uppercase;letter-spacing:.05em">T-Shirt Size</span><div id="ref-tshirt-size" style="font-size:1.4rem;font-weight:800;margin-top:.2rem">—</div></div>
@@ -914,7 +914,6 @@
       // Update sizing reference card
       const refCard = document.getElementById('sizing-reference-card');
       if (refCard) {
-        refCard.style.display = '';
         document.getElementById('ref-tshirt-size').textContent = tshirt;
         const deHours = window.deGetPayload ? (() => { try { const p = window.deGetPayload(); return p && p.grandTotal ? Math.round(p.grandTotal) : '—'; } catch(e) { return '—'; } })() : '—';
         document.getElementById('ref-de-hours').textContent = deHours;
