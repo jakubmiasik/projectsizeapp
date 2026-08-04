@@ -519,6 +519,195 @@
       }
     }
 
+    .app-shell > .app-container {
+      padding-right: 22rem;
+    }
+
+    .completion-checklist {
+      position: fixed;
+      top: 6.25rem;
+      right: 1rem;
+      width: min(21rem, calc(100vw - 2rem));
+      max-height: calc(100vh - 7.25rem);
+      padding: 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.9rem;
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.82), var(--app-surface));
+      border: 1px solid var(--app-border);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+      box-shadow: var(--app-shadow);
+      overflow: hidden;
+    }
+
+    .completion-checklist-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 0.8rem;
+    }
+
+    .completion-checklist-kicker {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.35rem 0.7rem;
+      border-radius: 999px;
+      background: rgba(91, 95, 199, 0.08);
+      color: var(--app-purple);
+      font-size: 0.74rem;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .completion-checklist-copy h2 {
+      margin: 0.7rem 0 0.25rem;
+      font-size: 1rem;
+      font-weight: 800;
+    }
+
+    .completion-checklist-copy p {
+      margin: 0;
+      color: var(--app-muted);
+      font-size: 0.88rem;
+    }
+
+    .completion-checklist-toggle {
+      width: 2.2rem;
+      height: 2.2rem;
+      border: 1px solid rgba(23, 32, 51, 0.1);
+      border-radius: 0.8rem;
+      display: inline-grid;
+      place-items: center;
+      background: rgba(255, 255, 255, 0.78);
+      color: var(--app-purple);
+      flex-shrink: 0;
+    }
+
+    .completion-checklist-toggle i {
+      transition: transform 0.2s ease;
+    }
+
+    .completion-checklist-body {
+      display: grid;
+      gap: 1rem;
+      overflow: auto;
+      padding-right: 0.15rem;
+    }
+
+    .completion-checklist-group-title {
+      margin-bottom: 0.65rem;
+      font-size: 0.76rem;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--app-muted);
+    }
+
+    .completion-checklist-list {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: grid;
+      gap: 0.55rem;
+    }
+
+    .completion-checklist-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.55rem;
+      color: var(--app-muted);
+      font-size: 0.92rem;
+      line-height: 1.35;
+    }
+
+    .completion-checklist-item.is-done {
+      color: var(--app-ink);
+    }
+
+    .completion-checklist-icon {
+      width: 1.1rem;
+      flex: 0 0 1.1rem;
+      color: #98a2b3;
+      font-weight: 800;
+      text-align: center;
+    }
+
+    .completion-checklist-item.is-done .completion-checklist-icon {
+      color: #1f9f63;
+    }
+
+    .completion-checklist-workpackages {
+      display: grid;
+      gap: 0.85rem;
+    }
+
+    .completion-checklist-workpackage {
+      padding-top: 0.85rem;
+      border-top: 1px solid rgba(23, 32, 51, 0.08);
+    }
+
+    .completion-checklist-workpackage:first-child {
+      padding-top: 0;
+      border-top: 0;
+    }
+
+    .completion-checklist-workpackage-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+      margin-bottom: 0.65rem;
+    }
+
+    .completion-checklist-workpackage-head strong {
+      font-size: 0.93rem;
+      font-weight: 800;
+    }
+
+    .completion-checklist-progress {
+      color: var(--app-muted);
+      font-size: 0.78rem;
+      white-space: nowrap;
+    }
+
+    .completion-checklist-empty {
+      margin: 0;
+      color: var(--app-muted);
+      font-size: 0.88rem;
+    }
+
+    .completion-checklist.is-collapsed {
+      width: auto;
+      max-height: none;
+    }
+
+    .completion-checklist.is-collapsed .completion-checklist-copy p,
+    .completion-checklist.is-collapsed .completion-checklist-body {
+      display: none;
+    }
+
+    .completion-checklist.is-collapsed .completion-checklist-toggle i {
+      transform: rotate(180deg);
+    }
+
+    @media (max-width: 1199.98px) {
+      .app-shell > .app-container {
+        padding-right: 0;
+      }
+
+      .completion-checklist {
+        top: auto;
+        right: 1rem;
+        bottom: 1rem;
+        left: 1rem;
+        width: auto;
+        max-height: min(28rem, 60vh);
+      }
+    }
+
     @media (max-width: 767.98px) {
       .app-container {
         width: min(100% - 1rem, 1280px);
@@ -534,6 +723,12 @@
         left: 0.9rem;
         justify-content: center;
         display: flex;
+      }
+
+      .completion-checklist {
+        right: 0.5rem;
+        bottom: 0.5rem;
+        left: 0.5rem;
       }
     }
   </style>
@@ -827,6 +1022,29 @@
         </div>
       </section>
     </main>
+
+    <aside class="completion-checklist glass-panel" id="completionChecklist">
+      <div class="completion-checklist-header">
+        <div class="completion-checklist-copy">
+          <span class="completion-checklist-kicker">Checklist</span>
+          <h2>Section completion</h2>
+          <p id="completionChecklistSummary">0 / 0 items complete</p>
+        </div>
+        <button type="button" class="completion-checklist-toggle" id="completionChecklistToggle" aria-expanded="true" aria-label="Collapse checklist">
+          <i class="bi bi-chevron-right"></i>
+        </button>
+      </div>
+      <div class="completion-checklist-body" id="completionChecklistBody">
+        <div class="completion-checklist-group">
+          <div class="completion-checklist-group-title">Top-level sections</div>
+          <ul class="completion-checklist-list" id="completionChecklistSections"></ul>
+        </div>
+        <div class="completion-checklist-group">
+          <div class="completion-checklist-group-title">Workpackages</div>
+          <div class="completion-checklist-workpackages" id="completionChecklistWorkpackages"></div>
+        </div>
+      </div>
+    </aside>
   </div>
 
   <button type="button" class="btn fab-add" id="fabAddRequirement">
@@ -1738,26 +1956,6 @@
       ${htmlToParagraphsHtml(data.architectureDesc)}
     </section>
 
-    <section class="preview-card">
-      <h2>Global Dependencies</h2>
-      ${htmlToParagraphsHtml(data.constraints)}
-    </section>
-
-    <section class="preview-card">
-      <h2>Global Assumptions</h2>
-      ${htmlToParagraphsHtml(data.assumptions)}
-    </section>
-
-    <section class="preview-card">
-      <h2>Global Out of Scope</h2>
-      ${htmlToParagraphsHtml(data.outOfScope)}
-    </section>
-
-    <section class="preview-card">
-      <h2>Global Deliverables</h2>
-      ${htmlToParagraphsHtml(data.deliverables)}
-    </section>
-
     ${wpSections}
     ${unassignedHtml}
 
@@ -2041,6 +2239,156 @@
     attachEvents();
     applyMetaToPage();
     loadRemoteData();
+
+    const checklistSections = [
+      { label: 'Company Description', editorId: editorIds.companyDesc },
+      { label: 'Current Landscape', editorId: editorIds.currentLandscape },
+      { label: 'Architecture', editorId: editorIds.architectureDesc },
+      { label: 'Timeline', editorId: editorIds.timeline },
+      { label: 'Cost', editorId: editorIds.cost },
+      { label: 'Stakeholders', editorId: editorIds.stakeholders },
+      { label: 'Goals', editorId: editorIds.goals },
+      { label: 'Dependencies', editorId: editorIds.constraints },
+      { label: 'Assumptions', editorId: editorIds.assumptions },
+      { label: 'Out of Scope', editorId: editorIds.outOfScope },
+      { label: 'Deliverables', editorId: editorIds.deliverables },
+      { label: 'Notes', editorId: editorIds.notes }
+    ];
+
+    const checklistWorkpackageSections = [
+      { key: 'stakeholders', label: 'Stakeholders' },
+      { key: 'requirements', label: 'Requirements' },
+      { key: 'outOfScope', label: 'Out of Scope' },
+      { key: 'assumptions', label: 'Assumptions' },
+      { key: 'constraints', label: 'Dependencies' },
+      { key: 'deliverables', label: 'Deliverables' }
+    ];
+
+    let completionChecklistFrame = 0;
+
+    function hasMeaningfulHtml(html) {
+      const temp = document.createElement('div');
+      temp.innerHTML = String(html || '').replace(/&nbsp;/gi, ' ');
+      return (temp.textContent || '').replace(/ /g, ' ').trim().length > 0;
+    }
+
+    function buildChecklistItemMarkup(label, isDone) {
+      return `
+        <li class="completion-checklist-item ${isDone ? 'is-done' : ''}">
+          <span class="completion-checklist-icon" aria-hidden="true">${isDone ? '✓' : '○'}</span>
+          <span>${escapeHtml(label)}</span>
+        </li>
+      `;
+    }
+
+    function getChecklistRequirementCompletion() {
+      const result = new Map();
+      getRequirementCards().forEach((card) => {
+        const wpUid = card.querySelector('.requirement-workpackage-select')?.value || '';
+        if (!wpUid) return;
+        const hasContent = hasMeaningfulHtml(getEditorHtml(card.dataset.editorId));
+        result.set(wpUid, Boolean(result.get(wpUid)) || hasContent);
+      });
+      return result;
+    }
+
+    function renderCompletionChecklist() {
+      const sectionsHost = document.getElementById('completionChecklistSections');
+      const workpackagesHost = document.getElementById('completionChecklistWorkpackages');
+      const summaryHost = document.getElementById('completionChecklistSummary');
+      if (!sectionsHost || !workpackagesHost || !summaryHost) return;
+
+      const sectionStatuses = checklistSections.map((section) => ({
+        label: section.label,
+        done: hasMeaningfulHtml(getEditorHtml(section.editorId))
+      }));
+      sectionsHost.innerHTML = sectionStatuses.map((section) => buildChecklistItemMarkup(section.label, section.done)).join('');
+
+      const workpackages = getWorkpackageMeta();
+      const assignmentMaps = {
+        stakeholders: getAssignmentsForSection('stakeholders'),
+        constraints: getAssignmentsForSection('constraints'),
+        assumptions: getAssignmentsForSection('assumptions'),
+        outOfScope: getAssignmentsForSection('outOfScope'),
+        deliverables: getAssignmentsForSection('deliverables')
+      };
+      const requirementCompletion = getChecklistRequirementCompletion();
+
+      let totalItems = sectionStatuses.length;
+      let completedItems = sectionStatuses.filter((section) => section.done).length;
+
+      if (!workpackages.length) {
+        workpackagesHost.innerHTML = '<p class="completion-checklist-empty">No workpackages yet.</p>';
+      } else {
+        workpackagesHost.innerHTML = workpackages.map((wp) => {
+          const items = checklistWorkpackageSections.map((section) => {
+            const done = section.key === 'requirements'
+              ? Boolean(requirementCompletion.get(wp.uid))
+              : hasMeaningfulHtml(assignmentMaps[section.key]?.get(wp.uid) || '');
+            return { ...section, done };
+          });
+          const completed = items.filter((item) => item.done).length;
+          totalItems += items.length;
+          completedItems += completed;
+          return `
+            <section class="completion-checklist-workpackage">
+              <div class="completion-checklist-workpackage-head">
+                <strong>${escapeHtml(wp.label)}</strong>
+                <span class="completion-checklist-progress">${completed}/${items.length} complete</span>
+              </div>
+              <ul class="completion-checklist-list">
+                ${items.map((item) => buildChecklistItemMarkup(item.label, item.done)).join('')}
+              </ul>
+            </section>
+          `;
+        }).join('');
+      }
+
+      summaryHost.textContent = `${completedItems} / ${totalItems} items complete`;
+    }
+
+    function scheduleCompletionChecklistRender() {
+      if (completionChecklistFrame) return;
+      completionChecklistFrame = window.requestAnimationFrame(() => {
+        completionChecklistFrame = 0;
+        renderCompletionChecklist();
+      });
+    }
+
+    function initCompletionChecklist() {
+      const root = document.getElementById('completionChecklist');
+      const toggle = document.getElementById('completionChecklistToggle');
+      const main = document.querySelector('.app-shell > main');
+      if (!root || !toggle || !main || root.dataset.initialized === 'true') return;
+      root.dataset.initialized = 'true';
+
+      toggle.addEventListener('click', () => {
+        const collapsed = root.classList.toggle('is-collapsed');
+        toggle.setAttribute('aria-expanded', String(!collapsed));
+        toggle.setAttribute('aria-label', collapsed ? 'Expand checklist' : 'Collapse checklist');
+      });
+
+      document.addEventListener('input', (event) => {
+        if (event.target.matches('input, select, .rte-editor')) {
+          scheduleCompletionChecklistRender();
+        }
+      });
+
+      document.addEventListener('change', (event) => {
+        if (event.target.matches('input, select, .rte-editor')) {
+          scheduleCompletionChecklistRender();
+        }
+      });
+
+      const observer = new MutationObserver(() => {
+        scheduleCompletionChecklistRender();
+      });
+      observer.observe(main, { childList: true, subtree: true, characterData: true });
+
+      scheduleCompletionChecklistRender();
+    }
+
+    initCompletionChecklist();
   </script>
 </body>
 </html>
