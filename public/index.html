@@ -36,7 +36,7 @@
     .section-adjustment{display:grid;gap:var(--space-2);padding:var(--space-4);border:1px solid var(--color-divider);border-radius:var(--radius-lg);background:var(--color-surface-offset)} .section-adjustment label{display:flex;align-items:center;justify-content:space-between;gap:var(--space-4)} .multiplier-field{display:inline-flex;align-items:center;gap:.6rem} .multiplier-input,.buffer-input{width:88px;border:1px solid var(--color-border);background:var(--color-surface);border-radius:12px;padding:.55rem .7rem;color:var(--color-text)} .section-adjustment-help,.buffer-note{color:var(--color-text-muted);font-size:var(--text-sm)}
     .actions{position:sticky;bottom:0;display:flex;gap:var(--space-3);flex-wrap:wrap;padding-top:var(--space-4);padding-bottom:var(--space-2);background:linear-gradient(180deg,rgba(249,248,245,0),var(--color-surface) 28%)} .btn{border:1px solid var(--color-border);background:var(--color-surface-offset);color:var(--color-text);padding:.9rem 1.1rem;border-radius:14px;cursor:pointer;font-weight:700} .btn-primary{background:linear-gradient(135deg,var(--color-primary),var(--color-primary-strong));color:#fff;border-color:transparent}
     .badge{display:inline-flex;align-items:center;gap:.45rem;padding:.45rem .85rem;border-radius:999px;font-weight:700;font-size:var(--text-sm)} .xs,.s,.m,.l,.xl{background:var(--color-primary-soft);color:var(--color-primary-strong)}
-    .score-pair{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--space-3)} .score-card{padding:var(--space-4);border-radius:var(--radius-lg);background:var(--color-surface-offset)} .score-card span{color:var(--color-text-muted);display:block;margin-bottom:.35rem} .score{font-size:var(--text-base);font-weight:800;word-break:break-word}
+    .score-pair{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--space-3)} .score-pair:has(:nth-child(3)){grid-template-columns:repeat(3,minmax(0,1fr))} .score-card{padding:var(--space-4);border-radius:var(--radius-lg);background:var(--color-surface-offset)} .score-card span{color:var(--color-text-muted);display:block;margin-bottom:.35rem} .score{font-size:var(--text-base);font-weight:800;word-break:break-word}
     .buffer-box{display:grid;gap:var(--space-3);padding:var(--space-4);border-radius:var(--radius-lg);background:var(--color-surface-offset)} .buffer-row{display:grid;grid-template-columns:1fr auto;align-items:center;gap:var(--space-3)}
     .muted{color:var(--color-text-muted)} .range-wrap{display:grid;gap:var(--space-2)} .range-scale{position:relative;padding-top:1.1rem}.range-title{display:flex;justify-content:space-between;align-items:center;gap:var(--space-4)} .range{position:relative;height:14px;border-radius:999px;background:var(--color-surface-offset);overflow:hidden} #bar{height:100%;border-radius:999px;background:linear-gradient(90deg,var(--color-primary),var(--color-accent))} .tier-marker{position:absolute;top:1.1rem;width:2px;height:14px;background:var(--color-accent)} .tier-label{display:flex;justify-content:space-between;color:var(--color-text-muted);font-size:var(--text-sm)} .tier-label-top{position:absolute;top:0;transform:translateX(-50%);font-size:var(--text-xs);color:var(--color-text-muted);white-space:nowrap;font-weight:700}
     .mini-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:var(--space-2)} .mini{padding:var(--space-4);border-radius:var(--radius-lg);background:linear-gradient(135deg,color-mix(in srgb,var(--color-primary) 10%,var(--color-surface-offset)),var(--color-surface-offset))} .mini-head{display:flex;align-items:center;gap:.5rem;color:var(--color-text-muted);margin-bottom:.4rem}
@@ -290,19 +290,12 @@
 
             <div class="score-pair">
               <div class="score-card">
-                <span>Estimated range</span>
+                <span>T-Shirt Size</span>
                 <div id="score-range" class="score">XS</div>
               </div>
               <div class="score-card">
                 <span>Estimated timeline</span>
                 <div id="score-weeks" class="score">0 weeks</div>
-              </div>
-            </div>
-
-            <div class="score-pair" id="sizing-reference-card">
-              <div class="score-card">
-                <span>T-Shirt Size</span>
-                <div id="ref-tshirt-size" class="score">—</div>
               </div>
               <div class="score-card">
                 <span>DE Total Hours</span>
@@ -918,12 +911,11 @@
       badge.className = `badge ${tshirt.toLowerCase()}`;
       badge.textContent = tshirt;
 
-      // Update sizing reference card
-      const refCard = document.getElementById('sizing-reference-card');
-      if (refCard) {
-        document.getElementById('ref-tshirt-size').textContent = tshirt;
-        const deHours = window.deGetPayload ? (() => { try { const p = window.deGetPayload(); return p && p.grandTotal ? Math.round(p.grandTotal) : '—'; } catch(e) { return '—'; } })() : '—';
-        document.getElementById('ref-de-hours').textContent = deHours;
+      // Update DE hours reference
+      const deHoursEl = document.getElementById('ref-de-hours');
+      if (deHoursEl) {
+        const deHours = window.deGetPayload ? (() => { try { const p = window.deGetPayload(); return p && p.grandTotal ? Math.round(p.grandTotal) + 'h' : '—'; } catch(e) { return '—'; } })() : '—';
+        deHoursEl.textContent = deHours;
       }
 
       updateEstimateOverview(totalWithPM, tshirt, resourcePlan.capacityRatio);
@@ -2595,7 +2587,7 @@
           version: loadedEstimation.version || 1,
           title: loadedEstimation.title || 'Estimation'
         });
-        window.location.href = '/requirements.html?' + params.toString();
+        window.open('/requirements.html?' + params.toString(), '_blank');
       });
     })();
     // ==================== END REQUIREMENTS ====================
