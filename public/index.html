@@ -121,11 +121,15 @@
     .landing-auth-note{margin-top:var(--space-3);font-size:var(--text-xs);color:var(--color-text-muted)}
     .btn-primary{background:linear-gradient(135deg,var(--color-primary),var(--color-primary-strong));color:#fff;border:none;padding:.85rem 2rem;border-radius:999px;font-size:var(--text-base);font-weight:700;cursor:pointer;box-shadow:0 8px 18px rgba(1,105,111,.25);transition:transform .2s,box-shadow .2s} .btn-primary:hover{transform:translateY(-1px);box-shadow:0 12px 24px rgba(1,105,111,.3)}
     .badge-row{display:flex;align-items:center;gap:var(--space-3);flex-wrap:wrap}
-    .btn-detailed-estimation,.btn-requirements{background:linear-gradient(135deg,#2563eb,#1d4ed8);color:#fff;border:none;width:2.2rem;height:2.2rem;border-radius:50%;font-size:1rem;cursor:pointer;transition:transform .15s,box-shadow .15s;display:inline-flex;align-items:center;justify-content:center}
-    .btn-detailed-estimation:hover,.btn-requirements:hover{transform:translateY(-1px);box-shadow:0 6px 16px rgba(37,99,235,.3)}
+    .btn-detailed-estimation,.btn-requirements{color:#fff;border:none;width:2.4rem;height:2.4rem;border-radius:50%;cursor:pointer;transition:transform .15s,box-shadow .15s;display:inline-flex;align-items:center;justify-content:center;position:relative}
+    .btn-detailed-estimation{background:linear-gradient(135deg,#2563eb,#1d4ed8)}
+    .btn-detailed-estimation:hover{transform:translateY(-1px);box-shadow:0 6px 16px rgba(37,99,235,.3)}
     .btn-requirements{background:linear-gradient(135deg,#7c3aed,#5b21b6)}
     .btn-requirements:hover{transform:translateY(-1px);box-shadow:0 6px 16px rgba(124,58,237,.3)}
-    .btn-detailed-estimation:hover{transform:translateY(-1px);box-shadow:0 6px 16px rgba(37,99,235,.3)}
+    .btn-detailed-estimation svg,.btn-requirements svg{width:1.15rem;height:1.15rem;fill:currentColor}
+    [data-tooltip]{position:relative}
+    [data-tooltip]::after{content:attr(data-tooltip);position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%);padding:.35rem .65rem;border-radius:.5rem;background:rgba(23,32,51,.92);color:#fff;font-size:.72rem;font-weight:600;white-space:nowrap;pointer-events:none;opacity:0;transition:opacity .15s;z-index:10}
+    [data-tooltip]:hover::after{opacity:1}
     /* Detailed Estimation View */
     .detailed-estimation-view{display:none;padding:var(--space-4) 0}
     .detailed-estimation-view.active{display:block}
@@ -280,8 +284,8 @@
           <div class="result-scroll">
             <div class="badge-row">
               <div id="badge" class="badge s">S</div>
-              <button type="button" class="btn-detailed-estimation" id="btn-detailed-estimation" title="Detailed Estimation" style="display:none">⚙️</button>
-              <button type="button" class="btn-requirements" id="btn-requirements" title="Requirements" style="display:none">📋</button>
+              <button type="button" class="btn-detailed-estimation" id="btn-detailed-estimation" data-tooltip="Detailed Estimation" style="display:none"><svg viewBox="0 0 24 24"><path d="M19 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2zm-7 14H7v-2h5v2zm5-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg></button>
+              <button type="button" class="btn-requirements" id="btn-requirements" data-tooltip="Requirements" style="display:none"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm-1 2 5 5h-5V4zM8 17v-1h8v1H8zm0-3v-1h8v1H8zm0-3v-1h5v1H8z"/></svg></button>
             </div>
 
             <div class="score-pair">
@@ -292,6 +296,17 @@
               <div class="score-card">
                 <span>Estimated timeline</span>
                 <div id="score-weeks" class="score">0 weeks</div>
+              </div>
+            </div>
+
+            <div class="score-pair" id="sizing-reference-card">
+              <div class="score-card">
+                <span>T-Shirt Size</span>
+                <div id="ref-tshirt-size" class="score">—</div>
+              </div>
+              <div class="score-card">
+                <span>DE Total Hours</span>
+                <div id="ref-de-hours" class="score">—</div>
               </div>
             </div>
 
@@ -341,14 +356,6 @@
             </div>
 
             <div class="summary-stack">
-              <div class="summary-card" id="sizing-reference-card">
-                <h4>Sizing reference</h4>
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem">
-                  <div><span class="muted" style="font-size:.75rem;text-transform:uppercase;letter-spacing:.05em">T-Shirt Size</span><div id="ref-tshirt-size" style="font-size:1.4rem;font-weight:800;margin-top:.2rem">—</div></div>
-                  <div><span class="muted" style="font-size:.75rem;text-transform:uppercase;letter-spacing:.05em">DE Total Hours</span><div id="ref-de-hours" style="font-size:1.4rem;font-weight:800;margin-top:.2rem">—</div></div>
-                </div>
-              </div>
-
               <div class="summary-card">
                 <h4>Team allocation (FTE)</h4>
                 <div class="resource-team">
