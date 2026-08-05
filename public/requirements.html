@@ -1383,6 +1383,7 @@
 
     function updateWorkpackageSummaries() {
       const totals = new Map();
+      let grandTotal = 0;
       getRequirementCards().forEach((card) => {
         const wpUid = card.querySelector('.requirement-workpackage-select')?.value || '';
         const hours = parseFloat(card.querySelector('.requirement-hours-input')?.value || '0') || 0;
@@ -1392,6 +1393,7 @@
         const entry = totals.get(wpUid);
         entry.hours += hours;
         entry.count += 1;
+        grandTotal += hours;
       });
       getWorkpackageCards().forEach((card) => {
         const summary = totals.get(card.dataset.uid) || { hours: 0, count: 0 };
@@ -1400,6 +1402,13 @@
         if (hoursEl) hoursEl.textContent = summary.hours % 1 === 0 ? String(summary.hours) : summary.hours.toFixed(1);
         if (countEl) countEl.textContent = String(summary.count);
       });
+      // Update hero card with total hours from all requirements
+      const heroDE = document.getElementById('heroDetailedEstimation');
+      if (heroDE) {
+        heroDE.textContent = grandTotal > 0
+          ? (grandTotal % 1 === 0 ? grandTotal + ' hours' : grandTotal.toFixed(1) + ' hours')
+          : '0 hours';
+      }
       if (!dom.workpackagesList.children.length) {
         dom.workpackagesList.innerHTML = '<div class="empty-state">No workpackages yet. Add one to start structuring scope.</div>';
       }
@@ -2216,14 +2225,6 @@
           if (!size && totalWithPM > 0 && totalWithPM < 49) size = 'XS';
         }
         document.getElementById('heroProjectSize').textContent = size || '—';
-
-        // Detailed estimation hours
-        const de = data.detailedEstimation;
-        if (de && de.grandTotal) {
-          document.getElementById('heroDetailedEstimation').textContent = Math.round(de.grandTotal) + ' hours';
-        } else {
-          document.getElementById('heroDetailedEstimation').textContent = 'Not estimated';
-        }
       } catch (e) {
         console.warn('Could not load estimation summary:', e);
       }
