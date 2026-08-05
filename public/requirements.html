@@ -192,7 +192,7 @@
 
     .hero-stats {
       display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
       gap: 1rem;
       margin-top: 1.5rem;
     }
@@ -702,6 +702,16 @@
             <div class="stat-icon"><i class="bi bi-file-earmark-richtext"></i></div>
             <strong>Export ready</strong>
             <div class="text-muted-app mt-1">Preview a print-friendly document and generate a DOCX on demand.</div>
+          </div>
+          <div class="stat-card glass-soft">
+            <div class="stat-icon"><i class="bi bi-rulers"></i></div>
+            <strong>Project size</strong>
+            <div class="text-muted-app mt-1" id="heroProjectSize">—</div>
+          </div>
+          <div class="stat-card glass-soft">
+            <div class="stat-icon"><i class="bi bi-calculator"></i></div>
+            <strong>Detailed estimation</strong>
+            <div class="text-muted-app mt-1" id="heroDetailedEstimation">—</div>
           </div>
         </div>
       </section>
@@ -2124,6 +2134,30 @@
     attachEvents();
     applyMetaToPage();
     loadRemoteData();
+    fetchEstimationSummary();
+
+    async function fetchEstimationSummary() {
+      if (!appMeta.estimationId) return;
+      try {
+        const resp = await fetch(`/api/estimations/${encodeURIComponent(appMeta.estimationId)}`);
+        if (!resp.ok) return;
+        const estimation = await resp.json();
+        const data = typeof estimation.data === 'string' ? JSON.parse(estimation.data) : estimation.data;
+        if (!data) return;
+        // T-shirt size
+        const size = data.tshirtSize || '—';
+        document.getElementById('heroProjectSize').textContent = size;
+        // Detailed estimation hours
+        const de = data.detailedEstimation;
+        if (de && de.grandTotal) {
+          document.getElementById('heroDetailedEstimation').textContent = Math.round(de.grandTotal) + ' hours';
+        } else {
+          document.getElementById('heroDetailedEstimation').textContent = 'Not estimated';
+        }
+      } catch (e) {
+        console.warn('Could not load estimation summary:', e);
+      }
+    }
 
     const checklistSections = [
       { label: 'Company Description', editorId: editorIds.companyDesc },
