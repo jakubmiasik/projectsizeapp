@@ -357,15 +357,26 @@
     .requirement-code {
       display: inline-flex;
       align-items: center;
-      padding: 0.3rem 0.7rem;
+      justify-content: center;
+      flex: 0 0 auto;
+      white-space: nowrap;
+      padding: 0.35rem 0.85rem;
       border-radius: 0.7rem;
       background: linear-gradient(135deg, rgba(91,95,199,0.14), rgba(124,58,237,0.18));
       color: var(--app-purple);
       font-weight: 800;
-      font-size: 0.85rem;
+      font-size: 0.95rem;
       letter-spacing: 0.02em;
       font-variant-numeric: tabular-nums;
     }
+
+    .requirement-name-input {
+      font-weight: 700;
+      font-size: 0.95rem;
+      min-width: 0;
+    }
+
+    .min-w-0 { min-width: 0; }
 
     .assignment-toolbar {
       display: grid;
@@ -1468,7 +1479,7 @@
       card.dataset.editorId = editorId;
       card.innerHTML = `
         <div class="d-flex align-items-center justify-content-between gap-2 mb-2">
-          <div class="d-flex align-items-center gap-2 flex-grow-1">
+          <div class="d-flex align-items-center gap-2 flex-grow-1 min-w-0">
             <span class="requirement-code"></span>
             <input class="form-control form-control-sm requirement-name-input" type="text" placeholder="Requirement name (e.g. Discovery)" value="${escapeHtml(data.name || '')}" />
           </div>
