@@ -521,6 +521,11 @@
       text-overflow: ellipsis;
     }
 
+    .floating-toolbar .ft-wp-indicator.is-toplevel {
+      background: rgba(23, 32, 51, 0.07);
+      color: var(--app-muted);
+    }
+
     .floating-toolbar .ft-divider {
       width: 1px;
       height: 1.4rem;
@@ -1341,8 +1346,9 @@
       const sections = Array.isArray(data.sections) && data.sections.length
         ? data.sections
         : WP_SECTION_DEFS.map(s => s.key);
-      if (dom.workpackagesList.querySelector('.empty-state')) {
-        dom.workpackagesList.innerHTML = '';
+      const listEmptyState = dom.workpackagesList.querySelector(':scope > .empty-state');
+      if (listEmptyState) {
+        listEmptyState.remove();
       }
       const card = document.createElement('div');
       card.className = 'wp-card glass-soft';
@@ -2030,38 +2036,82 @@
 
     function setupWpObserver() {
       const label = document.getElementById('ftWpLabel');
+      const indicator = document.getElementById('ftWpIndicator');
       if (!label) return;
 
-      const observer = new IntersectionObserver((entries) => {
-        let bestEntry = null;
-        entries.forEach(entry => {
-          if (entry.isIntersecting) {
-            if (!bestEntry || entry.intersectionRatio > bestEntry.intersectionRatio) {
-              bestEntry = entry;
+      let ticking = false;
+
+      function updateIndicator() {
+        ticking = false;
+        // Anchor line at ~35% of viewport height
+        const anchorY = window.innerHeight * 0.35;
+        const cards = getWpCards();
+
+        // Find the workpackage card crossing the anchor line
+        let activeCard = null;
+        const listRect = dom.workpackagesList.getBoundingClientRect();
+        const insideList = listRect.top <= anchorY && listRect.bottom >= anchorY;
+        if (insideList) {
+          for (const card of cards) {
+            const rect = card.getBoundingClientRect();
+            if (rect.top <= anchorY && rect.bottom >= anchorY) { activeCard = card; break; }
+          }
+          // Gap between cards — use the nearest one above the anchor
+          if (!activeCard) {
+            for (const card of cards) {
+              if (card.getBoundingClientRect().bottom < anchorY) activeCard = card;
             }
+            if (!activeCard && cards.length) activeCard = cards[0];
+          }
+        }
+
+        if (activeCard) {
+          currentVisibleWpUid = getWpUid(activeCard);
+          label.textContent = getWpLabel(activeCard);
+          indicator?.classList.remove('is-toplevel');
+          indicator?.querySelector('i')?.setAttribute('class', 'bi bi-kanban');
+          return;
+        }
+
+        // Not inside any workpackage — report the top-level section instead
+        currentVisibleWpUid = cards.length ? getWpUid(cards[0]) : null;
+        const topSections = [
+          { id: 'workpackagesSection', label: 'Workpackages' },
+          { id: 'notesSection', label: 'Additional Notes' }
+        ];
+        let sectionLabel = 'Project Details';
+        document.querySelectorAll('.main-card .section-block, .hero-panel').forEach(block => {
+          const rect = block.getBoundingClientRect();
+          if (rect.top <= anchorY && rect.bottom >= anchorY) {
+            const found = topSections.find(s => s.id === block.id);
+            if (found) { sectionLabel = found.label; return; }
+            const h = block.querySelector('h2, h1');
+            if (h) sectionLabel = h.textContent.trim();
           }
         });
-        if (bestEntry) {
-          const card = bestEntry.target;
-          currentVisibleWpUid = getWpUid(card);
-          label.textContent = getWpLabel(card);
-        }
-      }, { rootMargin: '-20% 0px -60% 0px', threshold: [0, 0.25, 0.5] });
+        label.textContent = sectionLabel;
+        indicator?.classList.add('is-toplevel');
+        indicator?.querySelector('i')?.setAttribute('class', 'bi bi-file-text');
+      }
 
-      // Observe current cards
-      getWpCards().forEach(card => observer.observe(card));
-
-      // Re-observe when new WPs are added
-      const mutObs = new MutationObserver(() => {
-        observer.disconnect();
-        const cards = getWpCards();
-        cards.forEach(card => observer.observe(card));
-        if (cards.length === 0) {
-          label.textContent = 'No workpackage';
-          currentVisibleWpUid = null;
+      function onScroll() {
+        if (!ticking) {
+          ticking = true;
+          window.requestAnimationFrame(updateIndicator);
         }
+      }
+
+      window.addEventListener('scroll', onScroll, { passive: true });
+      window.addEventListener('resize', onScroll, { passive: true });
+
+      // Refresh when workpackages are added/removed or renamed
+      const mutObs = new MutationObserver(onScroll);
+      mutObs.observe(dom.workpackagesList, { childList: true, subtree: true });
+      dom.workpackagesList.addEventListener('input', (e) => {
+        if (e.target.matches('.wp-id-input, .wp-name-input')) onScroll();
       });
-      mutObs.observe(dom.workpackagesList, { childList: true });
+
+      updateIndicator();
     }
 
     function applyMetaToPage() {
