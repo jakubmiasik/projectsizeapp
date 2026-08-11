@@ -482,6 +482,72 @@
       font-weight: 800;
       box-shadow: 0 20px 34px rgba(91, 95, 199, 0.28);
       z-index: 20;
+      display: none;
+    }
+
+    .floating-toolbar {
+      position: fixed;
+      bottom: 1.25rem;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      padding: 0.65rem 1rem;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.92);
+      border: 1px solid rgba(91, 95, 199, 0.18);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      box-shadow: 0 20px 40px rgba(23, 32, 51, 0.18);
+      z-index: 30;
+      font-size: 0.82rem;
+      max-width: calc(100% - 2rem);
+    }
+
+    .floating-toolbar .ft-wp-indicator {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.35rem 0.7rem;
+      border-radius: 999px;
+      background: rgba(91, 95, 199, 0.1);
+      color: var(--app-purple);
+      font-weight: 800;
+      font-size: 0.78rem;
+      white-space: nowrap;
+      max-width: 14rem;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .floating-toolbar .ft-divider {
+      width: 1px;
+      height: 1.4rem;
+      background: rgba(23, 32, 51, 0.12);
+      flex: 0 0 auto;
+    }
+
+    .floating-toolbar .btn {
+      font-size: 0.78rem;
+      padding: 0.35rem 0.65rem;
+      border-radius: 999px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .ft-wp-dropdown {
+      min-width: 14rem;
+    }
+
+    .ft-wp-dropdown .dropdown-item {
+      font-size: 0.82rem;
+      padding: 0.45rem 0.85rem;
+    }
+
+    .ft-wp-dropdown .dropdown-item.active {
+      background: rgba(91, 95, 199, 0.12);
+      color: var(--app-purple);
     }
 
     .dropdown-menu {
@@ -958,6 +1024,27 @@
     </main>
   </div>
 
+  <div class="floating-toolbar" id="floatingToolbar">
+    <span class="ft-wp-indicator" id="ftWpIndicator"><i class="bi bi-kanban"></i> <span id="ftWpLabel">No workpackage</span></span>
+    <span class="ft-divider"></span>
+    <div class="dropup">
+      <button class="btn btn-gradient btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" id="ftAddReqBtn">
+        <i class="bi bi-plus-circle"></i> Add requirement
+      </button>
+      <ul class="dropdown-menu ft-wp-dropdown" id="ftReqDropdown"></ul>
+    </div>
+    <div class="dropup">
+      <button class="btn btn-outline-primary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" id="ftAdd3ReqBtn">
+        <i class="bi bi-plus-square-dotted"></i> Add 3
+      </button>
+      <ul class="dropdown-menu ft-wp-dropdown" id="ftReq3Dropdown"></ul>
+    </div>
+    <span class="ft-divider"></span>
+    <button class="btn btn-outline-secondary btn-sm" type="button" id="ftAddWpBtn">
+      <i class="bi bi-plus-circle"></i> Workpackage
+    </button>
+  </div>
+
   <div class="modal fade" id="workpackageModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-xl modal-dialog-scrollable">
       <div class="modal-content glass-panel border-0">
@@ -1274,7 +1361,6 @@
             <div class="wp-section-card" data-section-key="requirements" ${isIncluded ? '' : 'hidden'}>
               <div class="wp-section-head">
                 <div><h4><i class="bi bi-list-check"></i> Requirements</h4></div>
-                <button type="button" class="btn btn-sm btn-gradient wp-add-req-btn"><i class="bi bi-plus-circle"></i> Add requirement</button>
               </div>
               <div class="wp-requirements-list" data-wp-req-list>
                 <div class="empty-state">No requirements yet.</div>
@@ -1356,12 +1442,6 @@
       card.querySelectorAll('.wp-id-input, .wp-name-input').forEach(input =>
         input.addEventListener('input', () => { updateWorkpackageSummaries(); scheduleDraftSave(); })
       );
-      card.querySelector('.wp-add-req-btn')?.addEventListener('click', () => {
-        if (reqList.querySelector('.empty-state')) reqList.innerHTML = '';
-        createRequirementCard(reqList, { type: 'General', estimateHours: '', html: '' });
-        scheduleDraftSave();
-      });
-
       updateWorkpackageSummaries();
       return uid;
     }
@@ -1638,76 +1718,155 @@
     }
 
     /* ── Preview ────────────────────────────────────────────────── */
+    function htmlToParagraphsHtml(html) {
+      return String(html || '').trim() || '<p class="text-muted">Not provided.</p>';
+    }
+
     function buildPreviewHtml() {
       const d = buildFullData();
 
       let workpackagesHtml = '';
       (d.workpackages || []).forEach((wp, i) => {
         const wpTitle = [wp.id, wp.name].filter(Boolean).join(' – ') || `Workpackage ${i + 1}`;
-        let inner = '';
+        let descHtml = '';
         if (wp.description && hasMeaningfulHtml(wp.description)) {
-          inner += `<div class="preview-section"><h4>Description</h4>${wp.description}</div>`;
+          descHtml = `<div class="mt-3"><h5>Description</h5>${htmlToParagraphsHtml(wp.description)}</div>`;
         }
-        const sectionOrder = ['stakeholders','requirements','dependencies','assumptions','outOfScope','deliverables'];
-        const sectionLabels = { stakeholders:'Stakeholders', requirements:'Requirements', dependencies:'Dependencies', assumptions:'Assumptions', outOfScope:'Out of Scope', deliverables:'Deliverables' };
-        sectionOrder.forEach(key => {
-          if (!Array.isArray(wp.sections) || !wp.sections.includes(key)) return;
-          if (key === 'requirements') {
-            if (Array.isArray(wp.requirements) && wp.requirements.length) {
-              inner += '<div class="preview-section"><h4>Requirements</h4>';
-              wp.requirements.forEach((item, ri) => {
-                inner += `<div class="preview-requirement">
-                  <strong>${ri+1}. ${escapeHtml(item.type)}</strong>
-                  <span>${item.estimateHours === '' ? 'No estimate' : `${escapeHtml(String(item.estimateHours))} h`}</span>
-                  <div>${item.html || '<em>No description</em>'}</div>
-                </div>`;
-              });
-              inner += '</div>';
-            }
-          } else {
-            const content = wp[key] || '';
-            if (hasMeaningfulHtml(content)) {
-              inner += `<div class="preview-section"><h4>${sectionLabels[key]}</h4>${content}</div>`;
-            }
+
+        const gridSections = [];
+        const sectionLabels = { stakeholders:'Stakeholders', dependencies:'Dependencies', assumptions:'Assumptions', outOfScope:'Out of Scope' };
+        ['stakeholders','dependencies','assumptions','outOfScope'].forEach(key => {
+          if (Array.isArray(wp.sections) && wp.sections.includes(key) && hasMeaningfulHtml(wp[key])) {
+            gridSections.push(`<div><h5>${sectionLabels[key]}</h5>${htmlToParagraphsHtml(wp[key])}</div>`);
           }
         });
-        if (inner) {
-          workpackagesHtml += `<div class="preview-wp"><h3>${escapeHtml(wpTitle)}</h3>${inner}</div>`;
+
+        let deliverablesHtml = '';
+        if (Array.isArray(wp.sections) && wp.sections.includes('deliverables') && hasMeaningfulHtml(wp.deliverables)) {
+          deliverablesHtml = `<div class="mt-3"><h5>Deliverables</h5>${htmlToParagraphsHtml(wp.deliverables)}</div>`;
         }
+
+        let requirementsHtml = '';
+        if (Array.isArray(wp.sections) && wp.sections.includes('requirements') && Array.isArray(wp.requirements) && wp.requirements.length) {
+          const reqCards = wp.requirements.map((item, ri) => `
+            <div class="preview-requirement-item">
+              <div class="preview-requirement-head">
+                <strong>${ri+1}. ${escapeHtml(item.type || 'General')}</strong>
+                <span>${item.estimateHours === '' ? 'No estimate' : `${escapeHtml(String(item.estimateHours))} h`}</span>
+              </div>
+              <div>${htmlToParagraphsHtml(item.html)}</div>
+            </div>
+          `).join('');
+          requirementsHtml = `<div class="mt-4"><h3>Requirements</h3><div class="preview-type-card">${reqCards}</div></div>`;
+        }
+
+        workpackagesHtml += `
+          <section class="preview-card">
+            <h2>${escapeHtml(wpTitle)}</h2>
+            ${descHtml}
+            ${gridSections.length ? `<div class="preview-grid-two">${gridSections.join('')}</div>` : ''}
+            ${deliverablesHtml}
+            ${requirementsHtml}
+          </section>`;
       });
 
-      return `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Requirements Preview</title>
-        <style>
-          body{font-family:Inter,system-ui,sans-serif;max-width:900px;margin:2rem auto;padding:0 1.5rem;color:#172033}
-          h1{text-align:center;margin-bottom:.25rem}
-          .preview-pill{display:inline-block;padding:.3rem .7rem;border-radius:999px;background:#f0f1ff;color:#5b5fc7;font-size:.82rem;font-weight:700;margin:.2rem}
-          .preview-section{margin:1.2rem 0;padding-left:1rem;border-left:3px solid #e0e0e0}
-          .preview-section h4{margin:0 0 .5rem;color:#5b5fc7}
-          .preview-wp{margin:2rem 0;padding:1rem;border:1px solid #e0e0e0;border-radius:.75rem}
-          .preview-wp h3{margin:0 0 1rem;color:#172033;border-bottom:2px solid #5b5fc7;padding-bottom:.5rem}
-          .preview-requirement{margin:.75rem 0;padding:.5rem .75rem;background:#f8f9ff;border-radius:.5rem}
-          img{max-width:100%;border-radius:.5rem;margin:.5rem 0}
-          hr{border:none;border-top:1px solid #e0e0e0;margin:2rem 0}
-        </style></head><body>
-        ${state.logoDataUrl ? `<div style="text-align:center"><img src="${state.logoDataUrl}" alt="Logo" style="max-height:80px"></div>` : ''}
-        <h1>${escapeHtml(d.projectName || 'Requirements Document')}</h1>
-        <div style="text-align:center;margin-bottom:2rem">
-          <span class="preview-pill">Linked estimation: ${escapeHtml(appMeta.title || 'Standalone')}</span>
-          <span class="preview-pill">Version ${escapeHtml(appMeta.version || '1')}</span>
+      return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>${escapeHtml(d.projectName || 'Requirements Preview')}</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootswatch@5.3.3/dist/lux/bootstrap.min.css" />
+  <style>
+    :root { --app-ink:#172033; --app-muted:#667085; --app-purple:#5b5fc7; --app-violet:#7c3aed; --app-cyan:#14b8c4; }
+    *{box-sizing:border-box}
+    body{margin:0;color:var(--app-ink);font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#f8fbff}
+    .preview-toolbar{position:sticky;top:0;display:flex;justify-content:space-between;gap:1rem;align-items:center;padding:1rem 1.25rem;background:rgba(255,255,255,.94);border-bottom:1px solid rgba(23,32,51,.08);backdrop-filter:blur(12px)}
+    .preview-toolbar button{border:none;border-radius:.85rem;padding:.8rem 1rem;background:linear-gradient(135deg,var(--app-purple),var(--app-violet),var(--app-cyan));color:#fff;font-weight:700}
+    .preview-wrap{width:min(1080px,calc(100% - 2rem));margin:1.25rem auto 3rem}
+    .preview-hero,.preview-card{background:#fff;border:1px solid rgba(23,32,51,.08);border-radius:1rem;box-shadow:0 18px 40px rgba(23,32,51,.08)}
+    .preview-hero{padding:2rem;margin-bottom:1rem}
+    .preview-brand{display:flex;justify-content:space-between;gap:1rem;align-items:flex-start;margin-bottom:1.2rem}
+    .preview-brand img{max-width:140px;max-height:72px;object-fit:contain}
+    .preview-pills{display:flex;flex-wrap:wrap;gap:.6rem;margin-top:1rem}
+    .preview-pill{display:inline-flex;align-items:center;gap:.4rem;padding:.45rem .8rem;border-radius:999px;background:rgba(91,95,199,.08);color:var(--app-purple);font-weight:700;font-size:.85rem}
+    .preview-card{padding:1.5rem;margin-top:1rem}
+    .preview-grid-two{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1rem;margin-top:1rem}
+    .preview-metrics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1rem;margin-top:1rem}
+    .preview-metric{border:1px solid rgba(23,32,51,.08);border-radius:1rem;padding:1rem;background:#fbfbff}
+    .preview-type-card{border:1px solid rgba(23,32,51,.08);border-radius:1rem;padding:1rem;background:#fbfbff;margin-top:.5rem}
+    .preview-requirement-item + .preview-requirement-item{margin-top:1rem;padding-top:1rem;border-top:1px solid rgba(23,32,51,.08)}
+    .preview-requirement-head{display:flex;justify-content:space-between;gap:1rem;margin-bottom:.5rem;color:var(--app-muted)}
+    .diagram-wrap img{max-width:100%;border-radius:1rem;border:1px solid rgba(23,32,51,.08)}
+    h1,h2,h3,h4,h5{margin-top:0} h1{font-size:2.1rem;font-weight:900} h2{font-size:1.35rem;font-weight:800} h3{font-size:1.1rem;font-weight:800} h5{font-size:.9rem;text-transform:uppercase;letter-spacing:.08em;color:var(--app-muted)}
+    @media (max-width: 768px){.preview-grid-two,.preview-metrics{grid-template-columns:1fr}.preview-brand{flex-direction:column}}
+    @media print{.preview-toolbar{display:none}.preview-wrap{width:100%;margin:0}.preview-card,.preview-hero{box-shadow:none;border-color:rgba(23,32,51,.14);page-break-inside:avoid}body{background:#fff}}
+  </style>
+</head>
+<body>
+  <div class="preview-toolbar">
+    <div>
+      <strong>${escapeHtml(d.projectName || 'Requirements Preview')}</strong>
+      <div style="color:#667085">Preview ready for print or Save as PDF.</div>
+    </div>
+    <button onclick="window.print()">Print / Save PDF</button>
+  </div>
+  <div class="preview-wrap">
+    <section class="preview-hero">
+      <div class="preview-brand">
+        <div>
+          <h1>${escapeHtml(d.projectName || 'Requirements Document')}</h1>
+          <p style="color:#667085;max-width:70ch">A delivery-aligned requirements document generated from the Fabric Project Sizing requirements workspace.</p>
+          <div class="preview-pills">
+            <span class="preview-pill">Linked estimation: ${escapeHtml(appMeta.title || 'Standalone')}</span>
+            <span class="preview-pill">Version ${escapeHtml(appMeta.version || '1')}</span>
+          </div>
         </div>
-        ${hasMeaningfulHtml(d.companyDesc) ? `<div class="preview-section"><h4>Company Description</h4>${d.companyDesc}</div>` : ''}
-        ${hasMeaningfulHtml(d.currentLandscape) ? `<div class="preview-section"><h4>Current Landscape</h4>${d.currentLandscape}</div>` : ''}
-        ${state.diagramDataUrl ? `<div class="preview-section"><h4>Architecture Diagram</h4><img src="${state.diagramDataUrl}" alt="Diagram"></div>` : ''}
-        ${hasMeaningfulHtml(d.architectureDesc) ? `<div class="preview-section"><h4>Architecture Description</h4>${d.architectureDesc}</div>` : ''}
-        ${hasMeaningfulHtml(d.timeline) ? `<div class="preview-section"><h4>Timeline</h4>${d.timeline}</div>` : ''}
-        ${hasMeaningfulHtml(d.cost) ? `<div class="preview-section"><h4>Cost</h4>${d.cost}</div>` : ''}
-        ${hasMeaningfulHtml(d.timeCostDesc) ? `<div class="preview-section"><h4>Time & Cost Description</h4>${d.timeCostDesc}</div>` : ''}
-        ${hasMeaningfulHtml(d.goals) ? `<div class="preview-section"><h4>Goals & Objectives</h4>${d.goals}</div>` : ''}
-        <hr>
-        <h2>Workpackages</h2>
-        ${workpackagesHtml || '<p>No workpackages defined.</p>'}
-        ${hasMeaningfulHtml(d.notes) ? `<hr><div class="preview-section"><h4>Additional Notes</h4>${d.notes}</div>` : ''}
-        </body></html>`;
+        ${d.logoDataUrl ? `<img src="${d.logoDataUrl}" alt="Logo" />` : ''}
+      </div>
+      <div>
+        <h3>Company Description</h3>
+        ${htmlToParagraphsHtml(d.companyDesc)}
+      </div>
+      <div class="mt-4">
+        <h3>Current Landscape Description</h3>
+        ${htmlToParagraphsHtml(d.currentLandscape)}
+      </div>
+      <div class="preview-metrics">
+        <div class="preview-metric">
+          <h5>Timeline</h5>
+          ${htmlToParagraphsHtml(d.timeline)}
+        </div>
+        <div class="preview-metric">
+          <h5>Cost</h5>
+          ${htmlToParagraphsHtml(d.cost)}
+        </div>
+      </div>
+      <div class="mt-4">
+        <h3>Time &amp; Cost Description</h3>
+        ${htmlToParagraphsHtml(d.timeCostDesc)}
+      </div>
+      <div class="mt-4">
+        <h3>Goals &amp; Objectives</h3>
+        ${htmlToParagraphsHtml(d.goals)}
+      </div>
+    </section>
+
+    <section class="preview-card">
+      <h2>Architecture</h2>
+      ${d.diagramDataUrl ? `<div class="diagram-wrap mb-3"><img src="${d.diagramDataUrl}" alt="Architecture diagram" /></div>` : ''}
+      ${htmlToParagraphsHtml(d.architectureDesc)}
+    </section>
+
+    ${workpackagesHtml}
+
+    <section class="preview-card">
+      <h2>Additional Notes</h2>
+      ${htmlToParagraphsHtml(d.notes)}
+    </section>
+  </div>
+</body>
+</html>`;
     }
 
     /* ── Events ─────────────────────────────────────────────────── */
@@ -1782,6 +1941,127 @@
       });
 
       window.addEventListener('beforeunload', saveDraftLocally);
+
+      // ── Floating toolbar ───────────────────────────────────────
+      initFloatingToolbar();
+    }
+
+    /* ── Floating toolbar logic ──────────────────────────────────── */
+    let currentVisibleWpUid = null;
+
+    function getWpCards() {
+      return Array.from(dom.workpackagesList.querySelectorAll('.wp-card'));
+    }
+
+    function getWpLabel(card) {
+      const id = card.querySelector('.wp-id-input')?.value.trim() || '';
+      const name = card.querySelector('.wp-name-input')?.value.trim() || '';
+      return [id, name].filter(Boolean).join(' – ') || 'Workpackage';
+    }
+
+    function getWpUid(card) {
+      return card.dataset.uid || '';
+    }
+
+    function populateWpDropdown(ulEl, handler) {
+      ulEl.innerHTML = '';
+      const cards = getWpCards();
+      if (!cards.length) {
+        ulEl.innerHTML = '<li><span class="dropdown-item text-muted">No workpackages yet</span></li>';
+        return;
+      }
+      cards.forEach(card => {
+        const uid = getWpUid(card);
+        const label = getWpLabel(card);
+        const li = document.createElement('li');
+        const a = document.createElement('a');
+        a.className = 'dropdown-item' + (uid === currentVisibleWpUid ? ' active' : '');
+        a.href = '#';
+        a.textContent = label;
+        a.addEventListener('click', (e) => { e.preventDefault(); handler(uid); });
+        li.appendChild(a);
+        ulEl.appendChild(li);
+      });
+    }
+
+    function addRequirementsToWp(uid, count) {
+      const card = dom.workpackagesList.querySelector(`.wp-card[data-uid="${uid}"]`);
+      if (!card) return;
+      // Expand collapsed WP
+      const collapseBody = card.querySelector('.wp-collapse-body');
+      if (collapseBody && !collapseBody.classList.contains('show')) {
+        new bootstrap.Collapse(collapseBody, { toggle: true });
+      }
+      const reqSection = card.querySelector('[data-section-key="requirements"]');
+      if (reqSection && reqSection.hidden) {
+        reqSection.hidden = false;
+      }
+      const reqList = card.querySelector('[data-wp-req-list]');
+      if (!reqList) return;
+      if (reqList.querySelector('.empty-state')) reqList.innerHTML = '';
+      for (let i = 0; i < count; i++) {
+        createRequirementCard(reqList, { type: 'General', estimateHours: '', html: '' });
+      }
+      scheduleDraftSave();
+      reqList.lastElementChild?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+
+    function initFloatingToolbar() {
+      const ftReqDropdown = document.getElementById('ftReqDropdown');
+      const ftReq3Dropdown = document.getElementById('ftReq3Dropdown');
+      const ftAddWpBtn = document.getElementById('ftAddWpBtn');
+
+      // Populate dropdowns on show
+      document.getElementById('ftAddReqBtn')?.addEventListener('show.bs.dropdown', () => {
+        populateWpDropdown(ftReqDropdown, (uid) => addRequirementsToWp(uid, 1));
+      });
+      document.getElementById('ftAdd3ReqBtn')?.addEventListener('show.bs.dropdown', () => {
+        populateWpDropdown(ftReq3Dropdown, (uid) => addRequirementsToWp(uid, 3));
+      });
+
+      // Add workpackage button opens existing modal
+      ftAddWpBtn?.addEventListener('click', () => {
+        document.getElementById('addWorkpackageBtn')?.click();
+      });
+
+      // IntersectionObserver for WP detection
+      setupWpObserver();
+    }
+
+    function setupWpObserver() {
+      const label = document.getElementById('ftWpLabel');
+      if (!label) return;
+
+      const observer = new IntersectionObserver((entries) => {
+        let bestEntry = null;
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            if (!bestEntry || entry.intersectionRatio > bestEntry.intersectionRatio) {
+              bestEntry = entry;
+            }
+          }
+        });
+        if (bestEntry) {
+          const card = bestEntry.target;
+          currentVisibleWpUid = getWpUid(card);
+          label.textContent = getWpLabel(card);
+        }
+      }, { rootMargin: '-20% 0px -60% 0px', threshold: [0, 0.25, 0.5] });
+
+      // Observe current cards
+      getWpCards().forEach(card => observer.observe(card));
+
+      // Re-observe when new WPs are added
+      const mutObs = new MutationObserver(() => {
+        observer.disconnect();
+        const cards = getWpCards();
+        cards.forEach(card => observer.observe(card));
+        if (cards.length === 0) {
+          label.textContent = 'No workpackage';
+          currentVisibleWpUid = null;
+        }
+      });
+      mutObs.observe(dom.workpackagesList, { childList: true });
     }
 
     function applyMetaToPage() {
