@@ -354,16 +354,17 @@
       border-left: 5px solid var(--app-purple);
     }
 
-    .requirement-number {
-      width: 2.2rem;
-      height: 2.2rem;
-      display: inline-grid;
-      place-items: center;
-      border-radius: 0.85rem;
+    .requirement-code {
+      display: inline-flex;
+      align-items: center;
+      padding: 0.3rem 0.7rem;
+      border-radius: 0.7rem;
       background: linear-gradient(135deg, rgba(91,95,199,0.14), rgba(124,58,237,0.18));
       color: var(--app-purple);
       font-weight: 800;
-      font-size: 0.92rem;
+      font-size: 0.85rem;
+      letter-spacing: 0.02em;
+      font-variant-numeric: tabular-nums;
     }
 
     .assignment-toolbar {
@@ -1442,7 +1443,12 @@
         card.remove();
         updateWorkpackageSummaries();
         ensureMinimumState();
+        renumberAllRequirements();
         scheduleDraftSave();
+      });
+      card.querySelector('.wp-id-input')?.addEventListener('input', () => {
+        const list = card.querySelector('[data-wp-req-list]');
+        if (list) renumberRequirements(list);
       });
       card.querySelectorAll('.wp-id-input, .wp-name-input').forEach(input =>
         input.addEventListener('input', () => { updateWorkpackageSummaries(); scheduleDraftSave(); })
@@ -1463,8 +1469,7 @@
       card.innerHTML = `
         <div class="d-flex align-items-center justify-content-between gap-2 mb-2">
           <div class="d-flex align-items-center gap-2">
-            <span class="requirement-number badge bg-primary"></span>
-            <strong>Requirement</strong>
+            <span class="requirement-code"></span>
           </div>
           <button type="button" class="btn btn-outline-danger btn-sm remove-requirement-btn"><i class="bi bi-trash"></i></button>
         </div>
@@ -1496,17 +1501,35 @@
         scheduleDraftSave();
       });
       card.querySelectorAll('input, select').forEach(el => el.addEventListener('input', scheduleDraftSave));
+      card.querySelector('.requirement-type-select').addEventListener('change', () => {
+        renumberRequirements(container);
+      });
       renumberRequirements(container);
       updateWorkpackageSummaries();
       return card;
     }
 
+    const REQ_TYPE_CODES = { 'General': 'G', 'Functional': 'F', 'Non-functional': 'NF' };
+
     function renumberRequirements(container) {
       if (!container) return;
-      container.querySelectorAll('.requirement-card').forEach((card, i) => {
-        const badge = card.querySelector('.requirement-number');
-        if (badge) badge.textContent = String(i + 1);
+      const wpCard = container.closest('.wp-card');
+      const cards = getWorkpackageCards();
+      const wpIndex = wpCard ? cards.indexOf(wpCard) : 0;
+      const wpId = wpCard?.querySelector('.wp-id-input')?.value.trim() || '';
+      const wpCode = wpId || `WP-${String((wpIndex < 0 ? 0 : wpIndex) + 1).padStart(2, '0')}`;
+      const typeCounters = {};
+      container.querySelectorAll('.requirement-card').forEach((card) => {
+        const type = card.querySelector('.requirement-type-select')?.value || 'General';
+        typeCounters[type] = (typeCounters[type] || 0) + 1;
+        const typeCode = REQ_TYPE_CODES[type] || type.replace(/[^A-Za-z]/g, '').slice(0, 2).toUpperCase();
+        const codeEl = card.querySelector('.requirement-code');
+        if (codeEl) codeEl.textContent = `${wpCode}-R${typeCode}-${String(typeCounters[type]).padStart(3, '0')}`;
       });
+    }
+
+    function renumberAllRequirements() {
+      document.querySelectorAll('.wp-requirements-list').forEach(list => renumberRequirements(list));
     }
 
     function getAllRequirementCards() {
@@ -1662,6 +1685,7 @@
       sourceWorkpackages.forEach(wp => createWorkpackageCard(wp));
 
       updateWorkpackageSummaries();
+      renumberAllRequirements();
       state.isApplyingData = false;
     }
 
@@ -1734,6 +1758,12 @@
       return String(html || '').trim() || '<p class="text-muted">Not provided.</p>';
     }
 
+    function buildRequirementCode(wp, wpIndex, type, seqNumber) {
+      const wpCode = (wp.id || '').trim() || `WP-${String(wpIndex + 1).padStart(2, '0')}`;
+      const typeCode = REQ_TYPE_CODES[type] || (type || 'G').replace(/[^A-Za-z]/g, '').slice(0, 2).toUpperCase();
+      return `${wpCode}-R${typeCode}-${String(seqNumber).padStart(3, '0')}`;
+    }
+
     function buildPreviewHtml() {
       const d = buildFullData();
 
@@ -1760,25 +1790,30 @@
 
         let requirementsHtml = '';
         if (Array.isArray(wp.sections) && wp.sections.includes('requirements') && Array.isArray(wp.requirements) && wp.requirements.length) {
-          const reqCards = wp.requirements.map((item, ri) => `
-            <div class="preview-requirement-item">
+          const typeCounters = {};
+          const reqRows = wp.requirements.map((item) => {
+            const type = item.type || 'General';
+            typeCounters[type] = (typeCounters[type] || 0) + 1;
+            const code = buildRequirementCode(wp, i, type, typeCounters[type]);
+            return `
+            <div class="preview-requirement-row">
               <div class="preview-requirement-head">
-                <strong>${ri+1}. ${escapeHtml(item.type || 'General')}</strong>
-                <span>${item.estimateHours === '' ? 'No estimate' : `${escapeHtml(String(item.estimateHours))} h`}</span>
+                <span class="preview-req-code">${escapeHtml(code)}</span>
+                <span class="preview-req-hours">${item.estimateHours === '' ? 'No estimate' : `${escapeHtml(String(item.estimateHours))} h`}</span>
               </div>
-              <div>${htmlToParagraphsHtml(item.html)}</div>
-            </div>
-          `).join('');
-          requirementsHtml = `<div class="mt-4"><h3>Requirements</h3><div class="preview-type-card">${reqCards}</div></div>`;
+              <div class="preview-req-body">${htmlToParagraphsHtml(item.html)}</div>
+            </div>`;
+          }).join('');
+          requirementsHtml = `<div class="mt-4"><h3>Requirements</h3>${reqRows}</div>`;
         }
 
         workpackagesHtml += `
           <section class="preview-card">
             <h2>${escapeHtml(wpTitle)}</h2>
             ${descHtml}
+            ${requirementsHtml}
             ${gridSections.length ? `<div class="preview-grid-two">${gridSections.join('')}</div>` : ''}
             ${deliverablesHtml}
-            ${requirementsHtml}
           </section>`;
       });
 
@@ -1807,8 +1842,12 @@
     .preview-metrics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1rem;margin-top:1rem}
     .preview-metric{border:1px solid rgba(23,32,51,.08);border-radius:1rem;padding:1rem;background:#fbfbff}
     .preview-type-card{border:1px solid rgba(23,32,51,.08);border-radius:1rem;padding:1rem;background:#fbfbff;margin-top:.5rem}
-    .preview-requirement-item + .preview-requirement-item{margin-top:1rem;padding-top:1rem;border-top:1px solid rgba(23,32,51,.08)}
-    .preview-requirement-head{display:flex;justify-content:space-between;gap:1rem;margin-bottom:.5rem;color:var(--app-muted)}
+    .preview-requirement-row{padding:.85rem 0}
+    .preview-requirement-row + .preview-requirement-row{border-top:1px solid rgba(23,32,51,.08)}
+    .preview-requirement-head{display:flex;justify-content:space-between;align-items:baseline;gap:1rem;margin-bottom:.35rem}
+    .preview-req-code{font-weight:800;color:var(--app-purple);font-size:.9rem;letter-spacing:.02em}
+    .preview-req-hours{color:var(--app-muted);font-size:.85rem;white-space:nowrap}
+    .preview-req-body p:last-child{margin-bottom:0}
     .diagram-wrap img{max-width:100%;border-radius:1rem;border:1px solid rgba(23,32,51,.08)}
     h1,h2,h3,h4,h5{margin-top:0} h1{font-size:2.1rem;font-weight:900} h2{font-size:1.35rem;font-weight:800} h3{font-size:1.1rem;font-weight:800} h5{font-size:.9rem;text-transform:uppercase;letter-spacing:.08em;color:var(--app-muted)}
     @media (max-width: 768px){.preview-grid-two,.preview-metrics{grid-template-columns:1fr}.preview-brand{flex-direction:column}}
