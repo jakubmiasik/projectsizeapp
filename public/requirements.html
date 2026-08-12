@@ -1861,7 +1861,10 @@
     *{box-sizing:border-box}
     body{margin:0;color:var(--app-ink);font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#f8fbff}
     .preview-toolbar{position:sticky;top:0;display:flex;justify-content:space-between;gap:1rem;align-items:center;padding:1rem 1.25rem;background:rgba(255,255,255,.94);border-bottom:1px solid rgba(23,32,51,.08);backdrop-filter:blur(12px)}
-    .preview-toolbar button{border:none;border-radius:.85rem;padding:.8rem 1rem;background:linear-gradient(135deg,var(--app-purple),var(--app-violet),var(--app-cyan));color:#fff;font-weight:700}
+    .preview-toolbar button{border:none;border-radius:.85rem;padding:.8rem 1rem;background:linear-gradient(135deg,var(--app-purple),var(--app-violet),var(--app-cyan));color:#fff;font-weight:700;cursor:pointer}
+    .preview-toolbar button:disabled{opacity:.65;cursor:default}
+    .preview-toolbar-actions{display:flex;gap:.6rem;flex-wrap:wrap;justify-content:flex-end}
+    .preview-toolbar-actions button:first-child{background:#fff;color:var(--app-purple);border:1px solid rgba(91,95,199,.35)}
     .preview-wrap{width:min(1080px,calc(100% - 2rem));margin:1.25rem auto 3rem}
     .preview-hero,.preview-card{background:#fff;border:1px solid rgba(23,32,51,.08);border-radius:1rem;box-shadow:0 18px 40px rgba(23,32,51,.08)}
     .preview-hero{padding:2rem;margin-bottom:1rem}
@@ -1901,9 +1904,12 @@
   <div class="preview-toolbar">
     <div>
       <strong>${escapeHtml(d.projectName || 'Requirements Preview')}</strong>
-      <div style="color:#667085">Preview ready for print or Save as PDF.</div>
+      <div style="color:#667085">Preview ready for print, Save as PDF or download as HTML.</div>
     </div>
-    <button onclick="window.print()">Print / Save PDF</button>
+    <div class="preview-toolbar-actions">
+      <button type="button" id="downloadHtmlBtn" data-filename="${escapeHtml((d.projectName || 'requirements-document').replace(/[^a-z0-9._-]+/gi, '-').replace(/^-+|-+$/g, '').toLowerCase() || 'requirements-document')}">Save as HTML</button>
+      <button type="button" onclick="window.print()">Print / Save PDF</button>
+    </div>
   </div>
   <div class="preview-wrap">
     <section class="preview-hero">
@@ -1959,6 +1965,75 @@
       ${htmlToParagraphsHtml(d.notes)}
     </section>
   </div>
+  <script>
+    (function () {
+      var btn = document.getElementById('downloadHtmlBtn');
+      if (!btn) return;
+
+      function serialize(bootstrapCss) {
+        var clone = document.documentElement.cloneNode(true);
+
+        // Drop the on-screen toolbar and any scripts so the saved file is static
+        var toolbar = clone.querySelector('.preview-toolbar');
+        if (toolbar) toolbar.parentNode.removeChild(toolbar);
+        var scripts = clone.querySelectorAll('script');
+        for (var i = 0; i < scripts.length; i++) {
+          scripts[i].parentNode.removeChild(scripts[i]);
+        }
+
+        // Inline the Bootstrap stylesheet so the file renders identically offline
+        if (bootstrapCss) {
+          var link = clone.querySelector('link[rel="stylesheet"]');
+          if (link) {
+            var style = document.createElement('style');
+            style.textContent = bootstrapCss;
+            link.parentNode.replaceChild(style, link);
+          }
+        }
+
+        return '<!DOCTYPE html>\\n' + clone.outerHTML;
+      }
+
+      function download(html, name) {
+        var blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement('a');
+        a.href = url;
+        a.download = name + '.html';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+      }
+
+      btn.addEventListener('click', function () {
+        var name = btn.getAttribute('data-filename') || 'requirements-document';
+        var label = btn.textContent;
+        btn.disabled = true;
+        btn.textContent = 'Preparing...';
+
+        var link = document.querySelector('link[rel="stylesheet"]');
+        var href = link ? link.href : null;
+
+        var done = function (css) {
+          try {
+            download(serialize(css), name);
+          } finally {
+            btn.disabled = false;
+            btn.textContent = label;
+          }
+        };
+
+        if (!href || typeof fetch !== 'function') { done(null); return; }
+
+        // Best effort: inline the CDN stylesheet. Fall back to the link tag.
+        fetch(href)
+          .then(function (res) { return res.ok ? res.text() : null; })
+          .then(done)
+          .catch(function () { done(null); });
+      });
+    })();
+  <\/script>
 </body>
 </html>`;
     }
