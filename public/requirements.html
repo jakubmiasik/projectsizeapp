@@ -1932,20 +1932,6 @@
         <h3>Current Landscape Description</h3>
         ${htmlToParagraphsHtml(d.currentLandscape)}
       </div>
-      <div class="preview-metrics">
-        <div class="preview-metric">
-          <h5>Timeline</h5>
-          ${htmlToParagraphsHtml(d.timeline)}
-        </div>
-        <div class="preview-metric">
-          <h5>Cost</h5>
-          ${htmlToParagraphsHtml(d.cost)}
-        </div>
-      </div>
-      <div class="mt-4">
-        <h3>Time &amp; Cost Description</h3>
-        ${htmlToParagraphsHtml(d.timeCostDesc)}
-      </div>
       <div class="mt-4">
         <h3>Goals &amp; Objectives</h3>
         ${htmlToParagraphsHtml(d.goals)}
@@ -1959,6 +1945,24 @@
     </section>
 
     ${workpackagesHtml}
+
+    <section class="preview-card">
+      <h2>Timeline &amp; Cost</h2>
+      <div class="preview-metrics">
+        <div class="preview-metric">
+          <h5>Timeline</h5>
+          ${htmlToParagraphsHtml(d.timeline)}
+        </div>
+        <div class="preview-metric">
+          <h5>Cost</h5>
+          ${htmlToParagraphsHtml(d.cost)}
+        </div>
+      </div>
+      <div class="preview-wp-section">
+        <h3>Time &amp; Cost Description</h3>
+        ${htmlToParagraphsHtml(d.timeCostDesc)}
+      </div>
+    </section>
 
     <section class="preview-card">
       <h2>Additional Notes</h2>
