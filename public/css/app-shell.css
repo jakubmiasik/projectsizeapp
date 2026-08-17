@@ -44,6 +44,10 @@
      client-facing document render identically on any machine. */
   --font-body: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --font-display: var(--font-body);
+  /* Bootstrap components read these, so they follow the app font too. This
+     sheet loads after Bootstrap, so these win. */
+  --bs-body-font-family: var(--font-body);
+  --bs-font-sans-serif: var(--font-body);
   --transition-fast: 150ms ease;
   --transition-normal: 250ms ease;
 }
@@ -87,6 +91,31 @@ body {
 a { color: var(--color-primary); transition: color var(--transition-fast); }
 a:hover { color: var(--color-primary-strong); }
 code { font-size: .8rem; }
+
+/* Form controls do not inherit the document font by default — browsers give
+   them their own system face. Without this, every input, textarea, select and
+   button renders in a different typeface than the label sitting above it. */
+input,
+textarea,
+select,
+button,
+optgroup,
+option,
+.form-control,
+.form-select,
+.btn,
+.richtext-editor,
+[contenteditable] {
+  font-family: var(--font-body);
+}
+/* Placeholders inherit from their control rather than the UA stylesheet. */
+input::placeholder,
+textarea::placeholder,
+.form-control::placeholder { font-family: var(--font-body); }
+/* Numeric fields keep the tabular figures the rest of the app uses. */
+input[type="number"],
+input[type="date"],
+input[type="time"] { font-variant-numeric: tabular-nums; }
 
 /* ──── App Layout: Sidebar + Main ──── */
 .app-layout {
