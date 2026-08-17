@@ -131,15 +131,6 @@
     .landing-auth-note{margin-top:var(--space-3);font-size:var(--text-xs);color:var(--color-text-muted)}
     .btn-primary{background:linear-gradient(135deg,var(--color-primary),var(--color-primary-strong));color:#fff;border:none;padding:.85rem 2rem;border-radius:999px;font-size:var(--text-base);font-weight:700;cursor:pointer;box-shadow:0 8px 18px rgba(1,105,111,.25);transition:transform .2s,box-shadow .2s} .btn-primary:hover{transform:translateY(-1px);box-shadow:0 12px 24px rgba(1,105,111,.3)}
     .badge-row{display:flex;align-items:center;gap:var(--space-3);flex-wrap:wrap}
-    .btn-detailed-estimation,.btn-requirements{color:#fff;border:none;width:2.4rem;height:2.4rem;border-radius:50%;cursor:pointer;transition:transform .15s,box-shadow .15s;display:inline-flex;align-items:center;justify-content:center;position:relative}
-    .btn-detailed-estimation{background:linear-gradient(135deg,#2563eb,#1d4ed8)}
-    .btn-detailed-estimation:hover{transform:translateY(-1px);box-shadow:0 6px 16px rgba(37,99,235,.3)}
-    .btn-requirements{background:linear-gradient(135deg,#7c3aed,#5b21b6)}
-    .btn-requirements:hover{transform:translateY(-1px);box-shadow:0 6px 16px rgba(124,58,237,.3)}
-    .btn-detailed-estimation svg,.btn-requirements svg{width:1.15rem;height:1.15rem;fill:currentColor}
-    [data-tooltip]{position:relative}
-    [data-tooltip]::after{content:attr(data-tooltip);position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%);padding:.35rem .65rem;border-radius:.5rem;background:rgba(23,32,51,.92);color:#fff;font-size:.72rem;font-weight:600;white-space:nowrap;pointer-events:none;opacity:0;transition:opacity .15s;z-index:10}
-    [data-tooltip]:hover::after{opacity:1}
     /* Detailed Estimation View */
     .detailed-estimation-view{display:none;padding:var(--space-4) 0}
     .detailed-estimation-view.active{display:block}
@@ -309,8 +300,6 @@
           <div class="result-scroll">
             <div class="badge-row">
               <div id="badge" class="badge s">S</div>
-              <button type="button" class="btn-detailed-estimation" id="btn-detailed-estimation" data-tooltip="Detailed Estimation" style="display:none"><svg viewBox="0 0 24 24"><path d="M19 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2zm-7 14H7v-2h5v2zm5-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg></button>
-              <button type="button" class="btn-requirements" id="btn-requirements" data-tooltip="Requirements" style="display:none"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm-1 2 5 5h-5V4zM8 17v-1h8v1H8zm0-3v-1h8v1H8zm0-3v-1h5v1H8z"/></svg></button>
             </div>
 
             <div class="score-pair">
@@ -836,6 +825,21 @@
       if (shareBtn) {
         shareBtn.style.display = (loadedEstimation && !loadedEstimation.isShared) ? '' : 'none';
       }
+      publishProjectToShell();
+    }
+
+    // Mirrors the loaded estimation into the sidebar tree and breadcrumb. The
+    // detailed estimator and requirements stay admin-only, so non-admins only
+    // ever see the project and its T-Shirt sizing step.
+    function publishProjectToShell() {
+      if (typeof AppShell === 'undefined') return;
+      if (!loadedEstimation) { AppShell.setProject(null); return; }
+      AppShell.setProject({
+        id: loadedEstimation.id,
+        title: loadedEstimation.title,
+        version: loadedEstimation.version,
+        steps: currentUserRole === 'admin' ? ['detailed', 'requirements'] : []
+      });
     }
 
     function getResourcePlan() {
@@ -1293,11 +1297,8 @@
           estimatedTotalsSection.style.display = '';
           adminOnlyBadge.style.display = '';
         }
-        // Admin-only buttons
-        const deBtn = document.getElementById('btn-detailed-estimation');
-        const reqBtn = document.getElementById('btn-requirements');
-        if (deBtn) deBtn.style.display = isAdmin ? '' : 'none';
-        if (reqBtn) reqBtn.style.display = isAdmin ? '' : 'none';
+        // Admin-only steps of the project tree
+        publishProjectToShell();
       }
 
       try {
@@ -2126,6 +2127,22 @@
             }
           });
         }
+
+        // Deep link: the sidebar tree and breadcrumb link between pages with
+        // ?estimationId=..., so reopen that estimation on arrival.
+        const deepLinkId = new URLSearchParams(window.location.search).get('estimationId');
+        if (deepLinkId && !loadedEstimation) {
+          try {
+            await loadEstimationById(deepLinkId);
+          } catch {
+            try {
+              await loadEstimationById(deepLinkId, { shared: true });
+            } catch {
+              AppShell.toast('That estimation could not be opened.', 'error');
+            }
+          }
+          if (typeof window.__syncDetailedView === 'function') window.__syncDetailedView();
+        }
       } catch {
         showUnauthenticatedLanding();
       }
@@ -2142,7 +2159,6 @@
       const deView = document.getElementById('detailed-estimation-view');
       const appSection = document.getElementById('app-section');
       const heroSection = document.querySelector('.hero.container');
-      const btnOpen = document.getElementById('btn-detailed-estimation');
       const btnBack = document.getElementById('de-back-btn');
       const btnSave = document.getElementById('de-save-inline-btn');
 
@@ -2151,16 +2167,38 @@
         if (heroSection) heroSection.style.display = 'none';
         deView.classList.add('active');
         deCalculate();
+        AppShell.setActive('detailed');
       }
 
       function hideDetailedView() {
         deView.classList.remove('active');
         if (appSection) appSection.style.display = '';
         if (heroSection) heroSection.style.display = '';
+        AppShell.setActive('sizing');
       }
 
-      btnOpen.addEventListener('click', showDetailedView);
-      btnBack.addEventListener('click', hideDetailedView);
+      // The estimator is a view on this page, but the sidebar links to it by
+      // URL, so #detailed is what opens and closes it.
+      function syncFromHash() {
+        if (window.location.hash === '#detailed') showDetailedView();
+        else hideDetailedView();
+      }
+
+      btnBack.addEventListener('click', () => {
+        if (window.location.hash === '#detailed') {
+          history.pushState(null, '', window.location.pathname + window.location.search);
+        }
+        hideDetailedView();
+      });
+      window.addEventListener('hashchange', syncFromHash);
+      window.addEventListener('popstate', syncFromHash);
+      // Deep links load the estimation asynchronously, so the loader re-runs
+      // this once the data is in.
+      window.__syncDetailedView = syncFromHash;
+      if (window.location.hash === '#detailed') {
+        window.addEventListener('load', syncFromHash);
+      }
+
       btnSave.addEventListener('click', () => {
         const saveBtn = document.getElementById('save-cloud-btn');
         if (saveBtn) saveBtn.click();
@@ -2578,23 +2616,8 @@
     })();
     // ==================== END DETAILED ESTIMATION ====================
 
-    // ==================== REQUIREMENTS ====================
-    (function initRequirements() {
-      const btnOpen = document.getElementById('btn-requirements');
-      btnOpen.addEventListener('click', function() {
-        if (!loadedEstimation) {
-          showAlert('Please save or load an estimation first before opening Requirements.', 'No estimation loaded');
-          return;
-        }
-        const params = new URLSearchParams({
-          estimationId: loadedEstimation.id,
-          version: loadedEstimation.version || 1,
-          title: loadedEstimation.title || 'Estimation'
-        });
-        window.open('/requirements.html?' + params.toString(), '_blank');
-      });
-    })();
-    // ==================== END REQUIREMENTS ====================
+    // Requirements is reached from the project tree in the sidebar, which is
+    // only rendered once an estimation is loaded.
   </script>
 
   </div>
