@@ -1863,6 +1863,8 @@
       --bs-body-font-family:var(--app-font); --bs-font-sans-serif:var(--app-font); }
     *{box-sizing:border-box}
     body{margin:0;color:var(--app-ink);font-family:var(--app-font);font-variant-numeric:tabular-nums;background:#f8fbff}
+    /* Controls do not inherit the document font, so state it for them too. */
+    input,textarea,select,button,.btn,.form-control{font-family:var(--app-font)}
     .preview-toolbar{position:sticky;top:0;display:flex;justify-content:space-between;gap:1rem;align-items:center;padding:1rem 1.25rem;background:rgba(255,255,255,.94);border-bottom:1px solid rgba(23,32,51,.08);backdrop-filter:blur(12px)}
     .preview-toolbar button{border:none;border-radius:.85rem;padding:.8rem 1rem;background:linear-gradient(135deg,var(--app-purple),var(--app-violet),var(--app-cyan));color:#fff;font-weight:700;cursor:pointer}
     .preview-toolbar button:disabled{opacity:.65;cursor:default}
