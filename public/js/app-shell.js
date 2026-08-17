@@ -44,6 +44,10 @@
     extraSections: [],
     user: null,
     projects: [],
+    // Pages call openProject() before DOMContentLoaded, so the open list has to
+    // be hydrated on first touch rather than during init — otherwise the first
+    // write would persist a list of one and drop every other open estimation.
+    projectsLoaded: false,
     activeProjectId: null
   };
 
@@ -233,7 +237,15 @@
     } catch (e) { /* private mode */ }
   }
 
+  /** Loads the persisted open list once, on whichever call needs it first. */
+  function ensureProjects() {
+    if (state.projectsLoaded) return;
+    state.projectsLoaded = true;
+    state.projects = readProjects();
+  }
+
   function findProject(id) {
+    ensureProjects();
     for (var i = 0; i < state.projects.length; i++) {
       if (state.projects[i].id === id) return state.projects[i];
     }
@@ -315,6 +327,7 @@
    */
   function openProject(project) {
     if (!project || !project.id) return false;
+    ensureProjects();
     var entry = {
       id: project.id,
       title: project.title || '',
@@ -345,6 +358,7 @@
    * project is no longer open.
    */
   function closeProject(id) {
+    ensureProjects();
     var wasActive = state.activeProjectId === id;
     state.projects = state.projects.filter(function (p) { return p.id !== id; });
     if (wasActive) state.activeProjectId = null;
@@ -364,6 +378,7 @@
   function renderProjects() {
     var host = document.getElementById('projectTree');
     if (!host) return;
+    ensureProjects();
     host.innerHTML = '';
     state.projects.forEach(function (project) {
       host.appendChild(buildProjectTree(project));
@@ -592,8 +607,9 @@
     function boot() {
       applyDensity(readStored(STORAGE.density) === 'compact' ? 'compact' : 'comfortable');
       // Restore the estimations left open on other pages before first paint of
-      // the nav, so the sidebar is complete on arrival.
-      state.projects = readProjects();
+      // the nav, so the sidebar is complete on arrival. Pages that opened a
+      // project before DOMContentLoaded have already hydrated the list.
+      ensureProjects();
       if (opts.activeProjectId && findProject(opts.activeProjectId)) {
         state.activeProjectId = opts.activeProjectId;
       }
@@ -654,7 +670,7 @@
     openProject: openProject,
     closeProject: closeProject,
     setActiveProject: setActiveProject,
-    getProjects: function () { return state.projects.slice(); },
+    getProjects: function () { ensureProjects(); return state.projects.slice(); },
     getProject: activeProject,
     isProjectOpen: function (id) { return Boolean(findProject(id)); },
     maxProjects: MAX_PROJECTS,

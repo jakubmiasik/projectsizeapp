@@ -38,9 +38,10 @@
   --shadow-sm: 0 1px 3px rgba(0, 0, 0, .04), 0 4px 12px rgba(0, 0, 0, .03);
   --shadow-md: 0 4px 16px rgba(0, 0, 0, .06);
   --shadow-lg: 0 8px 32px rgba(0, 0, 0, .08);
-  /* Matches the requirements preview / exported document exactly. Inter is not
-     webfont-loaded anywhere, so both resolve to the same locally-available face
-     (Inter if installed, otherwise the system UI font). */
+  /* Inter — a UI typeface with a large x-height, unambiguous 1/l/I and 0/O, and
+     tabular figures, which suits a screen full of hour and cost numbers. Loaded
+     as a webfont on both pages and in the exported preview, so the app and the
+     client-facing document render identically on any machine. */
   --font-body: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --font-display: var(--font-body);
   --transition-fast: 150ms ease;
@@ -75,6 +76,9 @@
 body {
   background-color: var(--color-bg);
   font-family: var(--font-body);
+  /* Figures line up column-to-column in the estimate tables. */
+  font-variant-numeric: tabular-nums;
+  -webkit-font-smoothing: antialiased;
   color: var(--color-text);
   margin: 0;
   overflow-x: hidden;
