@@ -2450,6 +2450,15 @@
 
     // Sidebar, dark mode and density are handled by the shared app shell.
     AppShell.init({ active: 'requirements' });
+    // Keep the loaded project visible in the sidebar tree and breadcrumb.
+    if (appMeta.estimationId) {
+      AppShell.setProject({
+        id: appMeta.estimationId,
+        title: appMeta.title || 'Estimation',
+        version: appMeta.version,
+        steps: ['detailed', 'requirements']
+      });
+    }
     loadShellUser();
 
     async function loadShellUser() {

@@ -15,21 +15,31 @@
     sidebar: 'fps-sidebar'
   };
 
-  // Nav entries shared by every page. `match` decides the active highlight.
+  // Nav entries shared by every page. The loaded project is nested underneath
+  // Sizing Workspace by setProject(); there is no standalone Requirements entry
+  // because Requirements only ever exists in the context of a project.
   var NAV_SECTIONS = [
     {
       title: 'Main',
       items: [
-        { id: 'sizing', label: 'Sizing Workspace', icon: 'bi-speedometer2', href: '/' },
-        { id: 'requirements', label: 'Requirements', icon: 'bi-list-check', href: '/requirements.html' }
+        { id: 'sizing', label: 'Sizing Workspace', icon: 'bi-speedometer2', href: '/' }
       ]
     }
   ];
 
+  // Labels reused by both the sidebar tree and the breadcrumb so the two can
+  // never drift apart.
+  var STEP_LABELS = {
+    sizing: 'Sizing Workspace',
+    detailed: 'Detailed estimation',
+    requirements: 'Requirements'
+  };
+
   var state = {
     active: null,
     extraSections: [],
-    user: null
+    user: null,
+    project: null
   };
 
   /* ──── Preferences (applied immediately, before paint) ──── */
@@ -135,9 +145,23 @@
 
   /* ──── Sidebar rendering ──── */
 
+  function isActiveItem(id) {
+    if (!id) return false;
+    if (id === state.active) return true;
+    // On the sizing page highlight both the section and its T-Shirt step.
+    if (id === 'sizing-step' && state.active === 'sizing') return true;
+    // The detailed estimator and requirements both live inside the project.
+    if (id === 'sizing' && (state.active === 'detailed' || state.active === 'requirements')) return false;
+    return false;
+  }
+
   function buildLink(item) {
     var el = document.createElement(item.onClick ? 'button' : 'a');
-    el.className = 'sidebar-link' + (item.id && item.id === state.active ? ' active' : '');
+    el.className = 'sidebar-link' + (isActiveItem(item.id) ? ' active' : '');
+    if (item.depth) {
+      el.classList.add('sidebar-link-child');
+      el.dataset.depth = String(item.depth);
+    }
     if (item.onClick) {
       el.type = 'button';
       el.addEventListener('click', item.onClick);
@@ -147,14 +171,66 @@
     el.title = item.label;
     if (item.id) el.dataset.navId = item.id;
 
-    var icon = document.createElement('i');
-    icon.className = 'bi ' + item.icon;
+    if (item.icon) {
+      var icon = document.createElement('i');
+      icon.className = 'bi ' + item.icon;
+      el.appendChild(icon);
+    } else {
+      // Tree nodes use a connector dash instead of an icon so the hierarchy
+      // reads as a tree rather than a flat list of unrelated destinations.
+      var dash = document.createElement('span');
+      dash.className = 'sidebar-link-dash';
+      dash.setAttribute('aria-hidden', 'true');
+      el.appendChild(dash);
+    }
     var label = document.createElement('span');
     label.textContent = item.label;
-    el.appendChild(icon);
     el.appendChild(label);
     return el;
   }
+
+  /* ──── Loaded project hierarchy ──── */
+
+  // Every hop carries the project so navigating between pages keeps the same
+  // estimation loaded instead of dropping the user on an empty workspace.
+  function projectQuery(project) {
+    var params = new global.URLSearchParams({
+      estimationId: project.id || '',
+      version: project.version || 1,
+      title: project.title || ''
+    });
+    return params.toString();
+  }
+
+  function projectUrls(project) {
+    var q = projectQuery(project);
+    return {
+      project: '/?' + q,
+      sizing: '/?' + q,
+      detailed: '/?' + q + '#detailed',
+      requirements: '/requirements.html?' + q
+    };
+  }
+
+  function projectTreeItems() {
+    var project = state.project;
+    if (!project || !project.id) return [];
+    var urls = projectUrls(project);
+    var nodes = [
+      { id: 'project', label: project.title || 'Untitled project', href: urls.project, depth: 1, icon: 'bi-folder2-open' },
+      { id: 'sizing-step', label: 'T-Shirt Sizing', href: urls.sizing, depth: 2 },
+      { id: 'detailed', label: '3-Layer Architecture Effort Estimator', href: urls.detailed, depth: 3 },
+      { id: 'requirements', label: 'Requirements', href: urls.requirements, depth: 4 }
+    ];
+    // The deeper steps stay admin-only, matching the buttons they replaced.
+    var allowed = project.steps;
+    if (!allowed) return nodes;
+    return nodes.filter(function (node) {
+      if (node.id === 'project' || node.id === 'sizing-step') return true;
+      return allowed.indexOf(node.id) !== -1;
+    });
+  }
+
 
   function renderSidebar() {
     var sidebar = document.getElementById('appSidebar');
@@ -188,7 +264,20 @@
       title.className = 'nav-section-title';
       title.textContent = section.title;
       nav.appendChild(title);
-      section.items.forEach(function (item) { nav.appendChild(buildLink(item)); });
+      section.items.forEach(function (item) {
+        nav.appendChild(buildLink(item));
+        // The loaded project hangs off Sizing Workspace as a nested tree.
+        if (item.id === 'sizing') {
+          var tree = projectTreeItems();
+          if (tree.length) {
+            var group = document.createElement('div');
+            group.className = 'sidebar-tree';
+            group.id = 'projectTree';
+            tree.forEach(function (node) { group.appendChild(buildLink(node)); });
+            nav.appendChild(group);
+          }
+        }
+      });
     });
 
     // Collapse toggle always sits at the bottom of the nav
@@ -273,6 +362,48 @@
     footer.appendChild(signOut);
   }
 
+  /* ──── Breadcrumb ──── */
+
+  // Home › Project title › current step. The project crumb keeps its query
+  // string so going "up" reopens the same estimation.
+  function renderBreadcrumb() {
+    var nav = document.querySelector('.topbar-breadcrumb');
+    if (!nav) return;
+    nav.innerHTML = '';
+
+    var home = document.createElement('a');
+    home.href = '/';
+    home.setAttribute('aria-label', 'Home');
+    home.innerHTML = '<i class="bi bi-house-fill"></i>';
+    nav.appendChild(home);
+
+    var crumbs = [];
+    if (state.project && state.project.id) {
+      crumbs.push({ label: state.project.title || 'Untitled project', href: projectUrls(state.project).project });
+    }
+    crumbs.push({ label: STEP_LABELS[state.active] || STEP_LABELS.sizing });
+
+    crumbs.forEach(function (crumb, index) {
+      var sep = document.createElement('span');
+      sep.className = 'separator';
+      sep.textContent = '/';
+      nav.appendChild(sep);
+
+      var isLast = index === crumbs.length - 1;
+      var el;
+      if (crumb.href && !isLast) {
+        el = document.createElement('a');
+        el.href = crumb.href;
+      } else {
+        el = document.createElement('span');
+        el.className = 'current';
+      }
+      el.textContent = crumb.label;
+      el.title = crumb.label;
+      nav.appendChild(el);
+    });
+  }
+
   /* ──── Topbar wiring ──── */
 
   function wireTopbar() {
@@ -319,6 +450,7 @@
       applySidebar(readStored(STORAGE.sidebar) !== 'expanded');
       wireTopbar();
       wireShortcuts();
+      renderBreadcrumb();
     }
 
     if (document.readyState === 'loading') {
@@ -340,11 +472,35 @@
     renderFooter();
   }
 
+  /**
+   * Publishes the currently loaded estimation so the sidebar shows its
+   * hierarchy and the breadcrumb points back at it. Pass null to clear.
+   * @param {{id:string,title:string,version:number|string}|null} project
+   */
+  function setProject(project) {
+    state.project = project && project.id ? {
+      id: project.id,
+      title: project.title || '',
+      version: project.version || 1,
+      steps: project.steps || null
+    } : null;
+    if (document.getElementById('appSidebar')) renderSidebar();
+    renderBreadcrumb();
+  }
+
+  function setActive(id) {
+    state.active = id;
+    if (document.getElementById('appSidebar')) renderSidebar();
+    renderBreadcrumb();
+  }
+
   global.AppShell = {
     init: init,
     addNavSection: addNavSection,
     setUser: setUser,
-    setActive: function (id) { state.active = id; renderSidebar(); },
+    setProject: setProject,
+    getProject: function () { return state.project; },
+    setActive: setActive,
     toggleTheme: toggleTheme,
     toggleDensity: toggleDensity,
     toggleSidebar: toggleSidebarMobile,
