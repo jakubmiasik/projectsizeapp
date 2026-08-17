@@ -38,7 +38,10 @@
   --shadow-sm: 0 1px 3px rgba(0, 0, 0, .04), 0 4px 12px rgba(0, 0, 0, .03);
   --shadow-md: 0 4px 16px rgba(0, 0, 0, .06);
   --shadow-lg: 0 8px 32px rgba(0, 0, 0, .08);
-  --font-body: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  /* Matches the requirements preview / exported document exactly. Inter is not
+     webfont-loaded anywhere, so both resolve to the same locally-available face
+     (Inter if installed, otherwise the system UI font). */
+  --font-body: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --font-display: var(--font-body);
   --transition-fast: 150ms ease;
   --transition-normal: 250ms ease;
@@ -205,13 +208,76 @@ code { font-size: .8rem; }
 }
 .sidebar-link.active i { color: var(--color-primary); }
 
-/* ──── Loaded project tree ────
-   The estimation that is currently open is shown as a nested hierarchy under
-   Sizing Workspace: project › t-shirt sizing › effort estimator › requirements. */
+/* ──── Open projects ────
+   Each loaded estimation is listed under Sizing Workspace with its own steps.
+   The project row is a label, not a link — it is context, not a destination. */
+.sidebar-projects { display: block; }
 .sidebar-tree {
   position: relative;
   margin: 2px 0 6px;
 }
+.sidebar-project {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 8px 8px 12px;
+  margin-bottom: 2px;
+  border-radius: var(--radius-md);
+  font-size: .82rem;
+  font-weight: 600;
+  color: var(--color-text);
+}
+.sidebar-project > i {
+  font-size: .95rem;
+  width: 16px;
+  text-align: center;
+  color: var(--color-text-muted);
+  flex-shrink: 0;
+}
+.sidebar-project-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sidebar-project.active {
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
+}
+.sidebar-project.active > i { color: var(--color-primary); }
+
+.sidebar-project-close {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: none;
+  border-radius: 4px;
+  background: none;
+  color: var(--color-text-subtle);
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+  /* Kept visible on touch devices, where there is no hover to reveal it. */
+  opacity: .55;
+  transition: opacity var(--transition-fast), color var(--transition-fast), background var(--transition-fast);
+}
+.sidebar-project:hover .sidebar-project-close { opacity: 1; }
+.sidebar-project-close:hover {
+  color: #c0392b;
+  background: rgba(192, 57, 43, .12);
+  opacity: 1;
+}
+.sidebar-project-close:focus-visible {
+  opacity: 1;
+  outline: 2px solid var(--color-primary);
+  outline-offset: 1px;
+}
+
 .sidebar-link-child {
   font-size: .82rem;
   font-weight: 500;
@@ -253,7 +319,8 @@ code { font-size: .8rem; }
   content: "";
   position: absolute;
   left: 18px;
-  top: 4px;
+  /* Guide starts below the project label so it connects only the steps. */
+  top: 34px;
   bottom: 4px;
   width: 1px;
   background: var(--color-divider);

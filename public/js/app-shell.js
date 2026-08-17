@@ -12,12 +12,16 @@
   var STORAGE = {
     theme: 'fps-theme',
     density: 'fps-density',
-    sidebar: 'fps-sidebar'
+    sidebar: 'fps-sidebar',
+    projects: 'fps-open-projects'
   };
 
-  // Nav entries shared by every page. The loaded project is nested underneath
-  // Sizing Workspace by setProject(); there is no standalone Requirements entry
-  // because Requirements only ever exists in the context of a project.
+  // How many estimations may be open at once.
+  var MAX_PROJECTS = 5;
+
+  // Nav entries shared by every page. "Sizing Workspace" is deliberately a
+  // clean link with no query string: it is the blank form for starting
+  // something new. Open estimations are listed underneath it by openProject().
   var NAV_SECTIONS = [
     {
       title: 'Main',
@@ -39,7 +43,8 @@
     active: null,
     extraSections: [],
     user: null,
-    project: null
+    projects: [],
+    activeProjectId: null
   };
 
   /* ──── Preferences (applied immediately, before paint) ──── */
@@ -145,14 +150,12 @@
 
   /* ──── Sidebar rendering ──── */
 
+  // Top-level nav items only; project step highlighting is decided per project
+  // in buildProjectTree, because the same step id appears under every project.
   function isActiveItem(id) {
     if (!id) return false;
-    if (id === state.active) return true;
-    // On the sizing page highlight both the section and its T-Shirt step.
-    if (id === 'sizing-step' && state.active === 'sizing') return true;
-    // The detailed estimator and requirements both live inside the project.
-    if (id === 'sizing' && (state.active === 'detailed' || state.active === 'requirements')) return false;
-    return false;
+    if (id === 'sizing') return !state.activeProjectId && state.active === 'sizing';
+    return id === state.active;
   }
 
   function buildLink(item) {
@@ -189,7 +192,7 @@
     return el;
   }
 
-  /* ──── Loaded project hierarchy ──── */
+  /* ──── Open projects ──── */
 
   // Every hop carries the project so navigating between pages keeps the same
   // estimation loaded instead of dropping the user on an empty workspace.
@@ -205,30 +208,172 @@
   function projectUrls(project) {
     var q = projectQuery(project);
     return {
-      project: '/?' + q,
       sizing: '/?' + q,
       detailed: '/?' + q + '#detailed',
       requirements: '/requirements.html?' + q
     };
   }
 
-  function projectTreeItems() {
-    var project = state.project;
-    if (!project || !project.id) return [];
+  // The open list is shared by every page in the app, so it lives in
+  // localStorage rather than in a single document's memory.
+  function readProjects() {
+    try {
+      var raw = global.localStorage.getItem(STORAGE.projects);
+      var parsed = raw ? JSON.parse(raw) : [];
+      if (!Array.isArray(parsed)) return [];
+      return parsed.filter(function (p) { return p && p.id; }).slice(0, MAX_PROJECTS);
+    } catch (e) {
+      return [];
+    }
+  }
+
+  function writeProjects() {
+    try {
+      global.localStorage.setItem(STORAGE.projects, JSON.stringify(state.projects));
+    } catch (e) { /* private mode */ }
+  }
+
+  function findProject(id) {
+    for (var i = 0; i < state.projects.length; i++) {
+      if (state.projects[i].id === id) return state.projects[i];
+    }
+    return null;
+  }
+
+  function activeProject() {
+    return state.activeProjectId ? findProject(state.activeProjectId) : null;
+  }
+
+  // The deeper steps are admin-only, matching the buttons they replaced.
+  function projectStepItems(project) {
     var urls = projectUrls(project);
     var nodes = [
-      { id: 'project', label: project.title || 'Untitled project', href: urls.project, depth: 1, icon: 'bi-folder2-open' },
-      { id: 'sizing-step', label: 'T-Shirt Sizing', href: urls.sizing, depth: 2 },
-      { id: 'detailed', label: '3-Layer Architecture Effort Estimator', href: urls.detailed, depth: 3 },
-      { id: 'requirements', label: 'Requirements', href: urls.requirements, depth: 4 }
+      { step: 'sizing', label: 'T-Shirt Sizing', href: urls.sizing, depth: 2 },
+      { step: 'detailed', label: '3-Layer Architecture Effort Estimator', href: urls.detailed, depth: 3 },
+      { step: 'requirements', label: 'Requirements', href: urls.requirements, depth: 4 }
     ];
-    // The deeper steps stay admin-only, matching the buttons they replaced.
     var allowed = project.steps;
     if (!allowed) return nodes;
     return nodes.filter(function (node) {
-      if (node.id === 'project' || node.id === 'sizing-step') return true;
-      return allowed.indexOf(node.id) !== -1;
+      return node.step === 'sizing' || allowed.indexOf(node.step) !== -1;
     });
+  }
+
+  /** The project row itself: a plain label plus a close button, never a link. */
+  function buildProjectRow(project) {
+    var row = document.createElement('div');
+    row.className = 'sidebar-project' + (project.id === state.activeProjectId ? ' active' : '');
+    row.dataset.projectId = project.id;
+
+    var icon = document.createElement('i');
+    icon.className = 'bi bi-folder2-open';
+    var label = document.createElement('span');
+    label.className = 'sidebar-project-name';
+    label.textContent = project.title || 'Untitled project';
+    label.title = project.title || 'Untitled project';
+
+    var close = document.createElement('button');
+    close.type = 'button';
+    close.className = 'sidebar-project-close';
+    close.dataset.closeProject = project.id;
+    close.title = 'Close ' + (project.title || 'project');
+    close.setAttribute('aria-label', 'Close ' + (project.title || 'project'));
+    close.textContent = '\u00d7';
+    close.addEventListener('click', function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      closeProject(project.id);
+    });
+
+    row.appendChild(icon);
+    row.appendChild(label);
+    row.appendChild(close);
+    return row;
+  }
+
+  function buildProjectTree(project) {
+    var group = document.createElement('div');
+    group.className = 'sidebar-tree';
+    group.dataset.projectTree = project.id;
+    group.appendChild(buildProjectRow(project));
+
+    var isActiveProject = project.id === state.activeProjectId;
+    projectStepItems(project).forEach(function (node) {
+      var link = buildLink({ label: node.label, href: node.href, depth: node.depth });
+      link.dataset.navId = node.step;
+      // Only the project you are actually looking at highlights a step.
+      if (isActiveProject && node.step === state.active) link.classList.add('active');
+      group.appendChild(link);
+    });
+    return group;
+  }
+
+  /**
+   * Opens an estimation in the sidebar. Re-opening one that is already open
+   * just refreshes its title/version, so a project can never appear twice.
+   * @returns {boolean} false when the cap of 5 was hit.
+   */
+  function openProject(project) {
+    if (!project || !project.id) return false;
+    var entry = {
+      id: project.id,
+      title: project.title || '',
+      version: project.version || 1,
+      steps: project.steps || null
+    };
+    var existing = findProject(project.id);
+    if (existing) {
+      existing.title = entry.title || existing.title;
+      existing.version = entry.version;
+      existing.steps = entry.steps;
+    } else {
+      if (state.projects.length >= MAX_PROJECTS) {
+        toast('You can have ' + MAX_PROJECTS + ' estimations open at once. Close one first.', 'error');
+        return false;
+      }
+      state.projects.push(entry);
+    }
+    writeProjects();
+    renderProjects();
+    renderBreadcrumb();
+    return true;
+  }
+
+  /**
+   * Closes an estimation and everything under it. If you are currently looking
+   * at one of its pages you get sent back to the blank workspace, because that
+   * project is no longer open.
+   */
+  function closeProject(id) {
+    var wasActive = state.activeProjectId === id;
+    state.projects = state.projects.filter(function (p) { return p.id !== id; });
+    if (wasActive) state.activeProjectId = null;
+    writeProjects();
+    renderProjects();
+    renderBreadcrumb();
+    if (wasActive) global.location.href = '/';
+  }
+
+  function setActiveProject(id) {
+    state.activeProjectId = id && findProject(id) ? id : null;
+    renderProjects();
+    renderBreadcrumb();
+  }
+
+  /** Re-renders just the open-projects list, leaving the rest of the nav be. */
+  function renderProjects() {
+    var host = document.getElementById('projectTree');
+    if (!host) return;
+    host.innerHTML = '';
+    state.projects.forEach(function (project) {
+      host.appendChild(buildProjectTree(project));
+    });
+    var sizingLink = document.querySelector('.sidebar-link[data-nav-id="sizing"]');
+    if (sizingLink) {
+      // Sizing Workspace is the blank form, so it only lights up when no
+      // project is open in front of it.
+      sizingLink.classList.toggle('active', !state.activeProjectId && state.active === 'sizing');
+    }
   }
 
 
@@ -266,16 +411,13 @@
       nav.appendChild(title);
       section.items.forEach(function (item) {
         nav.appendChild(buildLink(item));
-        // The loaded project hangs off Sizing Workspace as a nested tree.
+        // Open estimations are listed underneath Sizing Workspace. The host
+        // element always exists so renderProjects() can refresh it in place.
         if (item.id === 'sizing') {
-          var tree = projectTreeItems();
-          if (tree.length) {
-            var group = document.createElement('div');
-            group.className = 'sidebar-tree';
-            group.id = 'projectTree';
-            tree.forEach(function (node) { group.appendChild(buildLink(node)); });
-            nav.appendChild(group);
-          }
+          var host = document.createElement('div');
+          host.className = 'sidebar-projects';
+          host.id = 'projectTree';
+          nav.appendChild(host);
         }
       });
     });
@@ -304,6 +446,7 @@
     footer.id = 'sidebarFooter';
     sidebar.appendChild(footer);
 
+    renderProjects();
     renderFooter();
   }
 
@@ -378,8 +521,11 @@
     nav.appendChild(home);
 
     var crumbs = [];
-    if (state.project && state.project.id) {
-      crumbs.push({ label: state.project.title || 'Untitled project', href: projectUrls(state.project).project });
+    var project = activeProject();
+    if (project) {
+      // The project is a context, not a destination, so this crumb is plain
+      // text — consistent with the sidebar, where it is not a link either.
+      crumbs.push({ label: project.title || 'Untitled project' });
     }
     crumbs.push({ label: STEP_LABELS[state.active] || STEP_LABELS.sizing });
 
@@ -396,7 +542,7 @@
         el.href = crumb.href;
       } else {
         el = document.createElement('span');
-        el.className = 'current';
+        el.className = isLast ? 'current' : 'crumb-context';
       }
       el.textContent = crumb.label;
       el.title = crumb.label;
@@ -445,6 +591,12 @@
 
     function boot() {
       applyDensity(readStored(STORAGE.density) === 'compact' ? 'compact' : 'comfortable');
+      // Restore the estimations left open on other pages before first paint of
+      // the nav, so the sidebar is complete on arrival.
+      state.projects = readProjects();
+      if (opts.activeProjectId && findProject(opts.activeProjectId)) {
+        state.activeProjectId = opts.activeProjectId;
+      }
       renderSidebar();
       // Sidebar starts collapsed unless the user explicitly expanded it before.
       applySidebar(readStored(STORAGE.sidebar) !== 'expanded');
@@ -473,24 +625,24 @@
   }
 
   /**
-   * Publishes the currently loaded estimation so the sidebar shows its
-   * hierarchy and the breadcrumb points back at it. Pass null to clear.
-   * @param {{id:string,title:string,version:number|string}|null} project
+   * Opens an estimation and makes it the one you are currently working in.
+   * @returns {boolean} false when the cap of 5 open estimations was hit.
    */
   function setProject(project) {
-    state.project = project && project.id ? {
-      id: project.id,
-      title: project.title || '',
-      version: project.version || 1,
-      steps: project.steps || null
-    } : null;
-    if (document.getElementById('appSidebar')) renderSidebar();
-    renderBreadcrumb();
+    if (!project || !project.id) {
+      state.activeProjectId = null;
+      renderProjects();
+      renderBreadcrumb();
+      return true;
+    }
+    var opened = openProject(project);
+    if (opened) setActiveProject(project.id);
+    return opened;
   }
 
   function setActive(id) {
     state.active = id;
-    if (document.getElementById('appSidebar')) renderSidebar();
+    renderProjects();
     renderBreadcrumb();
   }
 
@@ -499,7 +651,13 @@
     addNavSection: addNavSection,
     setUser: setUser,
     setProject: setProject,
-    getProject: function () { return state.project; },
+    openProject: openProject,
+    closeProject: closeProject,
+    setActiveProject: setActiveProject,
+    getProjects: function () { return state.projects.slice(); },
+    getProject: activeProject,
+    isProjectOpen: function (id) { return Boolean(findProject(id)); },
+    maxProjects: MAX_PROJECTS,
     setActive: setActive,
     toggleTheme: toggleTheme,
     toggleDensity: toggleDensity,
