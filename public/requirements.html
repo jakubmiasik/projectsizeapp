@@ -4,23 +4,29 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Requirements Generator</title>
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%235b5fc7'/%3E%3Ctext x='32' y='42' text-anchor='middle' font-size='30' font-family='Arial' fill='white'%3ER%3C/text%3E%3C/svg%3E" />
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootswatch@5.3.3/dist/lux/bootstrap.min.css" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%2301696f'/%3E%3Ctext x='32' y='42' text-anchor='middle' font-size='30' font-family='Arial' fill='white'%3ER%3C/text%3E%3C/svg%3E" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+  <!-- Shared design system: tokens, dark mode, sidebar shell, density -->
+  <link rel="stylesheet" href="/css/app-shell.css" />
+  <script src="/js/app-shell.js"></script>
   <style>
+    /* The page's own tokens are aliases onto the shared design system in
+       app-shell.css, so this page follows the same palette and dark mode. */
     :root {
-      --app-ink: #172033;
-      --app-muted: #667085;
-      --app-purple: #5b5fc7;
-      --app-violet: #7c3aed;
-      --app-cyan: #14b8c4;
-      --app-surface: rgba(255, 255, 255, 0.72);
-      --app-surface-strong: rgba(255, 255, 255, 0.9);
-      --app-border: rgba(255, 255, 255, 0.35);
-      --app-shadow: 0 24px 60px rgba(23, 32, 51, 0.12);
-      --app-shadow-sm: 0 14px 32px rgba(23, 32, 51, 0.08);
-      --bs-primary: #5b5fc7;
-      --bs-primary-rgb: 91, 95, 199;
+      --app-ink: var(--color-text);
+      --app-muted: var(--color-text-muted);
+      --app-purple: var(--color-primary);
+      --app-violet: var(--color-primary-strong);
+      --app-cyan: var(--color-primary);
+      --app-surface: var(--color-surface);
+      --app-surface-strong: var(--color-surface);
+      --app-border: var(--color-border);
+      --app-shadow: var(--shadow-md);
+      --app-shadow-sm: var(--shadow-sm);
+      --bs-primary: var(--color-primary);
+      --bs-primary-rgb: 1, 105, 111;
     }
 
     * { box-sizing: border-box; }
@@ -28,64 +34,32 @@
     body {
       min-height: 100vh;
       margin: 0;
-      color: var(--app-ink);
-      font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      background:
-        radial-gradient(circle at top left, rgba(124, 58, 237, 0.22), transparent 34%),
-        radial-gradient(circle at top right, rgba(20, 184, 196, 0.2), transparent 28%),
-        radial-gradient(circle at bottom center, rgba(91, 95, 199, 0.14), transparent 36%),
-        linear-gradient(180deg, #f6f7fb 0%, #f8fbff 100%);
-      position: relative;
+      color: var(--color-text);
+      font-family: var(--font-body);
+      background: var(--color-bg);
       overflow-x: hidden;
     }
 
-    body::before {
-      content: "";
-      position: fixed;
-      inset: 0;
-      pointer-events: none;
-      background-image:
-        linear-gradient(rgba(255,255,255,0.36) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(255,255,255,0.36) 1px, transparent 1px);
-      background-size: 28px 28px;
-      mask-image: linear-gradient(180deg, rgba(0,0,0,0.24), transparent 88%);
-      z-index: 0;
-    }
-
-    .app-shell,
-    .toast-container,
-    .fab-add {
-      position: relative;
-      z-index: 1;
-    }
-
     .app-container {
-      width: calc(100% - 2rem);
+      width: 100%;
       max-width: 1600px;
       margin: 0 auto;
     }
 
+    /* The glass panels are now plain themed surfaces so they read correctly in
+       both light and dark mode. */
     .glass-panel {
-      background: var(--app-surface);
-      border: 1px solid var(--app-border);
-      backdrop-filter: blur(18px);
-      -webkit-backdrop-filter: blur(18px);
-      border-radius: 1rem;
-      box-shadow: var(--app-shadow);
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-sm);
     }
 
     .glass-soft {
-      background: rgba(255,255,255,0.82);
-      border: 1px solid rgba(255,255,255,0.55);
-      border-radius: 1rem;
-      box-shadow: var(--app-shadow-sm);
-    }
-
-    .app-navbar {
-      background: rgba(248, 250, 255, 0.74);
-      backdrop-filter: blur(16px);
-      -webkit-backdrop-filter: blur(16px);
-      border-bottom: 1px solid rgba(91, 95, 199, 0.08);
+      background: var(--color-surface-2);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-sm);
     }
 
     .brand-wrap {
@@ -106,7 +80,7 @@
       font-weight: 800;
       font-size: 1.2rem;
       background: linear-gradient(135deg, var(--app-purple), var(--app-violet) 65%, var(--app-cyan));
-      box-shadow: 0 16px 28px rgba(91, 95, 199, 0.28);
+      box-shadow: 0 16px 28px color-mix(in srgb, var(--color-primary) 28%, transparent);
     }
 
     .brand-copy small,
@@ -127,36 +101,44 @@
       gap: 0.5rem;
       padding: 0.45rem 0.8rem;
       border-radius: 999px;
-      background: rgba(91, 95, 199, 0.08);
+      background: color-mix(in srgb, var(--color-primary) 8%, transparent);
       color: var(--app-purple);
       font-size: 0.85rem;
       font-weight: 700;
-      border: 1px solid rgba(91, 95, 199, 0.08);
+      border: 1px solid color-mix(in srgb, var(--color-primary) 8%, transparent);
     }
 
     .btn {
-      border-radius: 0.85rem;
+      border-radius: var(--radius-md);
       box-shadow: none !important;
     }
 
+    /* Solid primary fill instead of the old purple gradient, matching the
+       shared design system. */
     .btn-gradient,
     .fab-add {
       color: #fff;
       border: none;
-      background: linear-gradient(135deg, var(--app-purple), var(--app-violet) 72%, var(--app-cyan));
+      background: var(--color-primary);
     }
 
     .btn-gradient:hover,
     .fab-add:hover {
       color: #fff;
-      transform: translateY(-1px);
+      background: var(--color-primary-strong);
     }
+
+    [data-theme="dark"] .btn-gradient,
+    [data-theme="dark"] .fab-add,
+    [data-theme="dark"] .btn-gradient:hover,
+    [data-theme="dark"] .fab-add:hover { color: #062b2c; }
 
     .btn-save {
       color: #fff;
       border: none;
-      background: linear-gradient(135deg, #1f9f63, #157347);
+      background: var(--color-success);
     }
+    .btn-save:hover { color: #fff; background: #146c43; }
 
     .hero-panel {
       padding: 2rem;
@@ -169,7 +151,7 @@
       gap: 0.5rem;
       padding: 0.45rem 0.85rem;
       border-radius: 999px;
-      background: rgba(124, 58, 237, 0.1);
+      background: color-mix(in srgb, var(--color-primary) 10%, transparent);
       color: var(--app-violet);
       font-size: 0.85rem;
       font-weight: 700;
@@ -207,7 +189,7 @@
       display: grid;
       place-items: center;
       border-radius: 0.9rem;
-      background: rgba(91, 95, 199, 0.1);
+      background: color-mix(in srgb, var(--color-primary) 10%, transparent);
       color: var(--app-purple);
       margin-bottom: 0.8rem;
       font-size: 1.1rem;
@@ -221,7 +203,7 @@
     .section-block + .section-block {
       margin-top: 1.3rem;
       padding-top: 1.3rem;
-      border-top: 1px solid rgba(23, 32, 51, 0.08);
+      border-top: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
     }
 
     .section-head {
@@ -246,7 +228,7 @@
 
     .section-divider {
       margin: 1.4rem 0;
-      border-color: rgba(23, 32, 51, 0.08);
+      border-color: color-mix(in srgb, var(--color-text) 8%, transparent);
       opacity: 1;
     }
 
@@ -263,24 +245,24 @@
     .form-control,
     .form-select {
       border-radius: 0.85rem;
-      border-color: rgba(23, 32, 51, 0.12);
+      border-color: color-mix(in srgb, var(--color-text) 12%, transparent);
       min-height: 3rem;
-      background-color: rgba(255,255,255,0.92);
+      background-color: var(--color-surface);
     }
 
     .form-control:focus,
     .form-select:focus,
     .rte-editor:focus {
-      border-color: rgba(91, 95, 199, 0.55);
-      box-shadow: 0 0 0 0.22rem rgba(91, 95, 199, 0.16);
+      border-color: color-mix(in srgb, var(--color-primary) 55%, transparent);
+      box-shadow: 0 0 0 0.22rem color-mix(in srgb, var(--color-primary) 16%, transparent);
       outline: none;
     }
 
     .image-preview {
       min-height: 10rem;
-      border: 1px dashed rgba(91, 95, 199, 0.28);
+      border: 1px dashed color-mix(in srgb, var(--color-primary) 28%, transparent);
       border-radius: 1rem;
-      background: rgba(91, 95, 199, 0.04);
+      background: color-mix(in srgb, var(--color-primary) 4%, transparent);
       display: flex;
       align-items: center;
       justify-content: center;
@@ -327,7 +309,7 @@
       gap: 0.35rem;
       padding: 0.5rem 0.85rem;
       border-radius: 999px;
-      background: rgba(91, 95, 199, 0.08);
+      background: color-mix(in srgb, var(--color-primary) 8%, transparent);
       color: var(--app-purple);
       font-size: 0.88rem;
       font-weight: 700;
@@ -344,8 +326,8 @@
       gap: 1rem;
       padding: 0.85rem 1rem;
       margin-bottom: 1rem;
-      background: rgba(255,255,255,0.86);
-      border: 1px solid rgba(255,255,255,0.55);
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
       border-radius: 1rem;
       backdrop-filter: blur(12px);
     }
@@ -362,7 +344,7 @@
       white-space: nowrap;
       padding: 0.35rem 0.85rem;
       border-radius: 0.7rem;
-      background: linear-gradient(135deg, rgba(91,95,199,0.14), rgba(124,58,237,0.18));
+      background: linear-gradient(135deg, color-mix(in srgb, var(--color-primary) 14%, transparent), color-mix(in srgb, var(--color-primary) 18%, transparent));
       color: var(--app-purple);
       font-weight: 800;
       font-size: 0.95rem;
@@ -395,7 +377,7 @@
       gap: 0.55rem;
       padding: 0.4rem 0.7rem;
       border-radius: 999px;
-      background: rgba(20, 184, 196, 0.08);
+      background: color-mix(in srgb, var(--color-primary) 8%, transparent);
       color: #0f6d75;
       font-size: 0.84rem;
       font-weight: 800;
@@ -404,8 +386,8 @@
     .rte-shell {
       border-radius: 1rem;
       overflow: hidden;
-      border: 1px solid rgba(23, 32, 51, 0.12);
-      background: rgba(255,255,255,0.92);
+      border: 1px solid color-mix(in srgb, var(--color-text) 12%, transparent);
+      background: var(--color-surface);
     }
 
     .rte-toolbar {
@@ -414,14 +396,14 @@
       align-items: center;
       gap: 0.35rem;
       padding: 0.65rem;
-      background: rgba(91, 95, 199, 0.06);
-      border-bottom: 1px solid rgba(23, 32, 51, 0.08);
+      background: color-mix(in srgb, var(--color-primary) 6%, transparent);
+      border-bottom: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
     }
 
     .rte-toolbar button,
     .rte-toolbar select {
-      border: 1px solid rgba(23, 32, 51, 0.12);
-      background: rgba(255,255,255,0.92);
+      border: 1px solid color-mix(in srgb, var(--color-text) 12%, transparent);
+      background: var(--color-surface);
       color: var(--app-ink);
       border-radius: 0.7rem;
       min-height: 2.2rem;
@@ -439,13 +421,13 @@
 
     .rte-toolbar button:hover,
     .rte-toolbar select:hover {
-      border-color: rgba(91, 95, 199, 0.38);
+      border-color: color-mix(in srgb, var(--color-primary) 38%, transparent);
     }
 
     .rte-toolbar .toolbar-divider {
       width: 1px;
       height: 1.6rem;
-      background: rgba(23, 32, 51, 0.12);
+      background: color-mix(in srgb, var(--color-text) 12%, transparent);
       margin: 0 0.15rem;
     }
 
@@ -454,8 +436,8 @@
       height: 1.2rem;
       border-radius: 999px;
       display: inline-block;
-      border: 2px solid rgba(255,255,255,0.95);
-      box-shadow: 0 0 0 1px rgba(23,32,51,0.16);
+      border: 2px solid var(--color-border);
+      box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-text) 16%, transparent);
     }
 
     .rte-editor {
@@ -492,7 +474,7 @@
       border-radius: 999px;
       padding: 0.95rem 1.2rem;
       font-weight: 800;
-      box-shadow: 0 20px 34px rgba(91, 95, 199, 0.28);
+      box-shadow: 0 20px 34px color-mix(in srgb, var(--color-primary) 28%, transparent);
       z-index: 20;
       display: none;
     }
@@ -506,11 +488,11 @@
       gap: 0.6rem;
       padding: 0.65rem 1rem;
       border-radius: 999px;
-      background: rgba(255,255,255,0.92);
-      border: 1px solid rgba(91, 95, 199, 0.18);
+      background: var(--color-surface);
+      border: 1px solid color-mix(in srgb, var(--color-primary) 18%, transparent);
       backdrop-filter: blur(16px);
       -webkit-backdrop-filter: blur(16px);
-      box-shadow: 0 20px 40px rgba(23, 32, 51, 0.18);
+      box-shadow: 0 20px 40px color-mix(in srgb, var(--color-text) 18%, transparent);
       z-index: 30;
       font-size: 0.82rem;
       max-width: calc(100% - 2rem);
@@ -522,7 +504,7 @@
       gap: 0.35rem;
       padding: 0.35rem 0.7rem;
       border-radius: 999px;
-      background: rgba(91, 95, 199, 0.1);
+      background: color-mix(in srgb, var(--color-primary) 10%, transparent);
       color: var(--app-purple);
       font-weight: 800;
       font-size: 0.78rem;
@@ -533,14 +515,14 @@
     }
 
     .floating-toolbar .ft-wp-indicator.is-toplevel {
-      background: rgba(23, 32, 51, 0.07);
+      background: color-mix(in srgb, var(--color-text) 7%, transparent);
       color: var(--app-muted);
     }
 
     .floating-toolbar .ft-divider {
       width: 1px;
       height: 1.4rem;
-      background: rgba(23, 32, 51, 0.12);
+      background: color-mix(in srgb, var(--color-text) 12%, transparent);
       flex: 0 0 auto;
     }
 
@@ -562,14 +544,14 @@
     }
 
     .ft-wp-dropdown .dropdown-item.active {
-      background: rgba(91, 95, 199, 0.12);
+      background: color-mix(in srgb, var(--color-primary) 12%, transparent);
       color: var(--app-purple);
     }
 
     .dropdown-menu {
       border-radius: 1rem;
-      border: 1px solid rgba(23, 32, 51, 0.08);
-      box-shadow: 0 16px 34px rgba(23, 32, 51, 0.14);
+      border: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
+      box-shadow: 0 16px 34px color-mix(in srgb, var(--color-text) 14%, transparent);
       padding: 0.55rem;
     }
 
@@ -579,12 +561,12 @@
     }
 
     .empty-state {
-      border: 1px dashed rgba(91, 95, 199, 0.22);
+      border: 1px dashed color-mix(in srgb, var(--color-primary) 22%, transparent);
       border-radius: 1rem;
       padding: 1rem;
       color: var(--app-muted);
       text-align: center;
-      background: rgba(91, 95, 199, 0.04);
+      background: color-mix(in srgb, var(--color-primary) 4%, transparent);
     }
 
     @media (max-width: 991.98px) {
@@ -651,7 +633,7 @@
 
     .completion-checklist-workpackage {
       padding-top: 0.7rem;
-      border-top: 1px solid rgba(23, 32, 51, 0.08);
+      border-top: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
     }
 
     .completion-checklist-workpackage:first-child {
@@ -705,8 +687,8 @@
     /* Workpackage card restructured */
     .wp-card {
       padding: 1.1rem;
-      border: 1px solid rgba(91, 95, 199, 0.14);
-      background: linear-gradient(180deg, rgba(255,255,255,0.92), rgba(248,250,255,0.84));
+      border: 1px solid color-mix(in srgb, var(--color-primary) 14%, transparent);
+      background: linear-gradient(180deg, var(--color-surface), rgba(248,250,255,0.84));
     }
 
     .wp-card-header {
@@ -744,7 +726,7 @@
 
     .wp-collapse-body {
       margin-top: 1rem;
-      border-top: 1px solid rgba(23, 32, 51, 0.08);
+      border-top: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
       padding-top: 1rem;
     }
 
@@ -754,10 +736,10 @@
     }
 
     .wp-section-card {
-      border: 1px solid rgba(23, 32, 51, 0.08);
+      border: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
       border-radius: 1rem;
       padding: 1rem;
-      background: rgba(255,255,255,0.64);
+      background: var(--color-surface);
     }
 
     .wp-section-card[hidden] {
@@ -784,8 +766,8 @@
       gap: 0.45rem;
       padding: 0.45rem 0.7rem;
       border-radius: 999px;
-      background: rgba(91, 95, 199, 0.07);
-      border: 1px solid rgba(91, 95, 199, 0.1);
+      background: color-mix(in srgb, var(--color-primary) 7%, transparent);
+      border: 1px solid color-mix(in srgb, var(--color-primary) 10%, transparent);
       font-size: 0.82rem;
       font-weight: 700;
       color: var(--app-purple);
@@ -840,7 +822,7 @@
     }
 
     .completion-checklist-item:hover {
-      background: rgba(91, 95, 199, 0.08);
+      background: color-mix(in srgb, var(--color-primary) 8%, transparent);
       color: var(--app-ink);
     }
 
@@ -857,26 +839,29 @@
   </style>
 </head>
 <body>
-  <div class="app-shell pb-5">
-    <nav class="navbar navbar-expand-lg sticky-top app-navbar py-3">
-      <div class="container-fluid px-4 d-flex flex-nowrap align-items-center gap-3">
-        <button type="button" class="btn btn-outline-secondary btn-sm px-2 py-1" id="backBtn" title="Back to Sizing">
-          <i class="bi bi-arrow-left"></i>
+  <div class="app-layout">
+    <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
+    <aside class="sidebar" id="appSidebar"></aside>
+
+    <div class="main-content">
+      <header class="topbar">
+        <button type="button" class="btn-icon-round mobile-toggle" id="mobileToggleBtn" aria-label="Open navigation">
+          <i class="bi bi-list"></i>
         </button>
-        <a href="/" class="brand-wrap flex-shrink-0">
-          <span class="brand-mark">R</span>
-          <span class="brand-copy">
-            <h1>Requirements Generator</h1>
-            <small>Project scoping workspace</small>
-          </span>
-        </a>
-        <div class="ms-auto d-flex flex-nowrap align-items-center gap-2">
+
+        <nav class="topbar-breadcrumb">
+          <a href="/" aria-label="Home"><i class="bi bi-house-fill"></i></a>
+          <span class="separator">/</span>
+          <span class="current">Requirements</span>
+        </nav>
+
+        <div class="topbar-actions">
           <span class="estimation-pill" id="navbarEstimationPill">
             <i class="bi bi-diagram-3"></i>
             <span id="navbarEstimationText">Not linked yet</span>
           </span>
           <div class="dropdown" id="completionDropdown">
-            <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" id="completionBtn">
+            <button class="topbar-btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" id="completionBtn">
               <i class="bi bi-check2-square"></i> <span id="completionBtnLabel">Completion: 0%</span>
             </button>
             <div class="dropdown-menu dropdown-menu-end p-3" style="min-width:20rem;max-height:70vh;overflow-y:auto" id="completionDropdownMenu">
@@ -895,17 +880,22 @@
               </div>
             </div>
           </div>
-          <button type="button" class="btn btn-save" id="saveBtn">
+          <button type="button" class="topbar-btn" id="saveBtn">
             <i class="bi bi-check2-circle"></i> Save
           </button>
-          <button type="button" class="btn btn-gradient" id="previewBtn">
+          <button type="button" class="topbar-btn topbar-btn-primary" id="previewBtn">
             <i class="bi bi-eye"></i> Preview
           </button>
+          <button type="button" class="btn-density-toggle" id="densityToggleBtn" title="Toggle compact/comfortable view (Ctrl+D)" aria-label="Toggle density">
+            <i class="bi bi-distribute-vertical" id="densityIcon"></i>
+          </button>
+          <button type="button" class="btn-theme-toggle" id="themeToggleBtn" title="Toggle dark/light mode (Ctrl+Shift+D)" aria-label="Switch theme">
+            <i class="bi bi-moon" id="themeIcon"></i>
+          </button>
         </div>
-      </div>
-    </nav>
+      </header>
 
-    <main class="app-container">
+      <main class="page-content app-container">
       <section class="hero-panel glass-panel">
         <div class="eyebrow">✨ Delivery requirements</div>
         <h2 class="hero-title">Requirements planning for delivery-ready projects</h2>
@@ -1037,8 +1027,9 @@
           <div data-rte-host data-editor-id="notesEditor" data-placeholder="Capture additional notes, implementation commentary or document-ready caveats." data-min-height="lg"></div>
         </div>
       </section>
-    </main>
-  </div>
+      </main>
+    </div><!-- /.main-content -->
+  </div><!-- /.app-layout -->
 
   <div class="floating-toolbar" id="floatingToolbar">
     <span class="ft-wp-indicator" id="ftWpIndicator"><i class="bi bi-kanban"></i> <span id="ftWpLabel">No workpackage</span></span>
@@ -2048,7 +2039,7 @@
       dom.diagramUpload.addEventListener('change', (e) => handleImageUpload(e, 'diagram'));
 
       document.getElementById('saveBtn').addEventListener('click', saveToServer);
-      document.getElementById('backBtn').addEventListener('click', () => { window.close(); });
+      // Navigation back to the sizing workspace now lives in the sidebar.
 
       document.getElementById('previewBtn').addEventListener('click', () => {
         const popup = window.open('', '_blank');
@@ -2455,6 +2446,21 @@
       observer.observe(dom.workpackagesList, { childList: true, subtree: true, characterData: true });
 
       renderCompletionChecklist();
+    }
+
+    // Sidebar, dark mode and density are handled by the shared app shell.
+    AppShell.init({ active: 'requirements' });
+    loadShellUser();
+
+    async function loadShellUser() {
+      try {
+        const resp = await fetch('/api/user');
+        if (!resp.ok) return;
+        const user = await resp.json();
+        AppShell.setUser({ name: user.name, email: user.email });
+      } catch (err) {
+        // Signed-out or offline: the sidebar keeps its Sign In entry.
+      }
     }
 
     initStaticEditors();
