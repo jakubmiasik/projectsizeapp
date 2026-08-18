@@ -1764,8 +1764,93 @@
     }
 
     /* ── Preview ────────────────────────────────────────────────── */
+    /* ── Rich text sanitisation ───────────────────────────────────────
+       Editor content is contenteditable, so pasting from Word, Excel or a
+       web page brings along inline styles and sized images. Those survive
+       into the preview and the print document, where an explicit height,
+       an absolute position or an oversized image inflates the page count
+       enormously (a single pasted fragment can turn 30 pages into 1000+).
+       Everything is filtered through an allow-list before it is rendered. */
+    const RTE_ALLOWED_TAGS = new Set([
+      'P', 'BR', 'DIV', 'SPAN', 'STRONG', 'B', 'EM', 'I', 'U', 'S', 'STRIKE', 'SUB', 'SUP',
+      'A', 'UL', 'OL', 'LI', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6',
+      'BLOCKQUOTE', 'CODE', 'PRE', 'HR', 'IMG',
+      'TABLE', 'THEAD', 'TBODY', 'TFOOT', 'TR', 'TD', 'TH'
+    ]);
+    // Purely cosmetic properties. Anything affecting geometry, flow or
+    // pagination (height, width, position, page-break-*, transform, …) is
+    // deliberately absent.
+    const RTE_ALLOWED_STYLES = new Set([
+      'color', 'background-color', 'font-weight', 'font-style',
+      'text-decoration', 'text-decoration-line', 'text-align'
+    ]);
+
+    function sanitizeStyleAttr(value) {
+      const kept = [];
+      String(value || '').split(';').forEach((decl) => {
+        const idx = decl.indexOf(':');
+        if (idx < 0) return;
+        const prop = decl.slice(0, idx).trim().toLowerCase();
+        const val = decl.slice(idx + 1).trim();
+        if (!RTE_ALLOWED_STYLES.has(prop)) return;
+        if (/url\s*\(|expression\s*\(|[{}]/i.test(val)) return;
+        kept.push(`${prop}: ${val}`);
+      });
+      return kept.join('; ');
+    }
+
+    function sanitizeRichHtml(html) {
+      const raw = String(html || '');
+      if (!raw.trim()) return '';
+      const doc = new DOMParser().parseFromString(`<body>${raw}</body>`, 'text/html');
+
+      doc.body.querySelectorAll('script, style, link, meta, base, iframe, object, embed, svg, math, form, input, textarea, select, button, video, audio, canvas, noscript')
+        .forEach((node) => node.remove());
+
+      const walk = (node) => {
+        Array.from(node.children).forEach((el) => {
+          if (!RTE_ALLOWED_TAGS.has(el.tagName)) {
+            // Keep the text, drop the element itself.
+            const parent = el.parentNode;
+            while (el.firstChild) parent.insertBefore(el.firstChild, el);
+            parent.removeChild(el);
+            return;
+          }
+          Array.from(el.attributes).forEach((attr) => {
+            const name = attr.name.toLowerCase();
+            if (name === 'style') {
+              const safe = sanitizeStyleAttr(attr.value);
+              if (safe) el.setAttribute('style', safe);
+              else el.removeAttribute('style');
+              return;
+            }
+            if (name === 'href' && el.tagName === 'A') {
+              if (!/^(https?:|mailto:|#)/i.test(attr.value.trim())) el.removeAttribute('href');
+              return;
+            }
+            if (name === 'src' && el.tagName === 'IMG') {
+              if (!/^(https?:|data:image\/)/i.test(attr.value.trim())) el.remove();
+              return;
+            }
+            if (name === 'alt' || name === 'title') return;
+            // Everything else — including width/height attributes and every
+            // on* handler — is dropped.
+            el.removeAttribute(attr.name);
+          });
+          walk(el);
+        });
+      };
+      walk(doc.body);
+
+      return doc.body.innerHTML.trim();
+    }
+
     function htmlToParagraphsHtml(html) {
-      return String(html || '').trim() || '<p class="text-muted">Not provided.</p>';
+      const clean = sanitizeRichHtml(html);
+      // The .rich wrapper is what the defensive stylesheet keys off, so every
+      // piece of user-authored HTML is covered no matter which section it
+      // lands in.
+      return clean ? `<div class="rich">${clean}</div>` : '<p class="text-muted">Not provided.</p>';
     }
 
     function buildRequirementCode(wp, wpIndex, type, seqNumber) {
@@ -1900,7 +1985,16 @@
     .preview-req-body p:last-child{margin-bottom:0}
     .preview-wp-total{display:flex;justify-content:space-between;align-items:baseline;gap:1rem;margin-top:1.5rem;padding-top:.85rem;border-top:2px solid rgba(91,95,199,.25);color:var(--app-muted);font-size:.9rem}
     .preview-wp-total strong{color:var(--app-purple);font-size:1rem}
-    .diagram-wrap img{max-width:100%;border-radius:1rem;border:1px solid rgba(23,32,51,.08)}
+    .diagram-wrap img{border-radius:1rem;border:1px solid rgba(23,32,51,.08)}
+    /* Second line of defence behind sanitizeRichHtml(): an image's intrinsic
+       size carries no inline style to strip, and drafts saved before
+       sanitisation existed may still hold pasted geometry. User HTML never
+       gets to dictate layout or pagination. */
+    .rich{overflow-wrap:anywhere}
+    .rich *{position:static !important;float:none !important;height:auto !important;min-height:0 !important;max-width:100% !important;break-before:auto !important;page-break-before:auto !important;transform:none !important}
+    .rich img{max-height:200mm;height:auto !important}
+    .rich table{width:100%;table-layout:fixed;border-collapse:collapse}
+    .diagram-wrap img{max-width:100%;max-height:200mm;height:auto;border-radius:1rem;border:1px solid rgba(23,32,51,.08)}
     h1,h2,h3,h4,h5{margin-top:0} h1{font-size:2.1rem;font-weight:900} h2{font-size:1.35rem;font-weight:800} h3{font-size:1.1rem;font-weight:800} h5{font-size:.9rem;text-transform:uppercase;letter-spacing:.08em;color:var(--app-muted)}
     @media (max-width: 768px){.preview-grid-two,.preview-metrics{grid-template-columns:1fr}.preview-brand{justify-content:flex-start}}
     /* Print: a workpackage card holds every one of its requirements, so it is
@@ -2161,6 +2255,22 @@
             scheduleDraftSave();
           }
         }
+      });
+
+      // Sanitise on paste so foreign markup never reaches the stored draft.
+      document.addEventListener('paste', (event) => {
+        const editor = event.target.closest && event.target.closest('.rte-editor');
+        if (!editor) return;
+        const clip = event.clipboardData;
+        if (!clip) return;
+        const html = clip.getData('text/html');
+        const text = clip.getData('text/plain');
+        if (!html && !text) return;
+        event.preventDefault();
+        const clean = html ? sanitizeRichHtml(html) : '';
+        if (clean) document.execCommand('insertHTML', false, clean);
+        else if (text) document.execCommand('insertText', false, text);
+        scheduleDraftSave();
       });
 
       document.addEventListener('input', (event) => {
