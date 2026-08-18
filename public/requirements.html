@@ -1939,8 +1939,14 @@
   <title>${escapeHtml(d.projectName || 'Requirements Preview')}</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Stack+Sans+Text:wght@400;500;600;700;800&display=swap" />
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootswatch@5.3.3/dist/lux/bootstrap.min.css" />
+  <!-- Loaded as preloads rather than render-blocking stylesheets. A CDN that
+       is blocked or slow (common on corporate networks, and this popup cannot
+       reuse the opener's HTTP cache) would otherwise leave the document stuck
+       in readyState "loading" forever. Chrome's print preview waits on that,
+       which is the "Loading preview" spinner that never finishes. Each link is
+       promoted to a real stylesheet only once it has actually arrived. -->
+  <link rel="preload" as="style" data-optional-css href="https://fonts.googleapis.com/css2?family=Stack+Sans+Text:wght@400;500;600;700;800&display=swap" onload="this.rel='stylesheet'" onerror="this.remove()" />
+  <link rel="preload" as="style" data-optional-css href="https://cdn.jsdelivr.net/npm/bootswatch@5.3.3/dist/lux/bootstrap.min.css" onload="this.rel='stylesheet'" onerror="this.remove()" />
   <style>
     :root { --app-ink:#172033; --app-muted:#667085; --app-purple:#5b5fc7; --app-violet:#7c3aed; --app-cyan:#14b8c4;
       /* Matches --font-body in app-shell.css; Bootstrap reads these too, so
@@ -2108,11 +2114,23 @@
         ]);
       }
 
+      // Optional CSS is nice to have, never worth a hung print dialog. Any
+      // stylesheet that has not arrived is dropped outright, so nothing is
+      // still in flight when the print dialog opens.
+      function dropPendingStylesheets() {
+        var links = document.querySelectorAll('link[data-optional-css]');
+        for (var i = 0; i < links.length; i++) {
+          if (links[i].rel !== 'stylesheet') links[i].remove();
+        }
+      }
+      setTimeout(dropPendingStylesheets, 5000);
+
       printBtn.addEventListener('click', function () {
         printBtn.disabled = true;
         printBtn.textContent = 'Preparing...';
         var fonts = document.fonts && document.fonts.ready ? document.fonts.ready : Promise.resolve();
         withTimeout(Promise.all([fonts, imagesSettled()]), 4000).then(function () {
+          dropPendingStylesheets();
           printBtn.disabled = false;
           printBtn.textContent = label;
           window.print();
