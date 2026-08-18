@@ -1903,7 +1903,19 @@
     .diagram-wrap img{max-width:100%;border-radius:1rem;border:1px solid rgba(23,32,51,.08)}
     h1,h2,h3,h4,h5{margin-top:0} h1{font-size:2.1rem;font-weight:900} h2{font-size:1.35rem;font-weight:800} h3{font-size:1.1rem;font-weight:800} h5{font-size:.9rem;text-transform:uppercase;letter-spacing:.08em;color:var(--app-muted)}
     @media (max-width: 768px){.preview-grid-two,.preview-metrics{grid-template-columns:1fr}.preview-brand{justify-content:flex-start}}
-    @media print{.preview-toolbar{display:none}.preview-wrap{width:100%;margin:0}.preview-card,.preview-hero{box-shadow:none;border-color:rgba(23,32,51,.14);page-break-inside:avoid}body{background:#fff}}
+    /* Print: a workpackage card holds every one of its requirements, so it is
+       routinely taller than a page. Asking the engine to keep such a box intact
+       makes print preview churn forever, so cards break freely and only small
+       atomic blocks are kept together. */
+    @media print{
+      .preview-toolbar{display:none}
+      .preview-wrap{width:100%;margin:0}
+      body{background:#fff}
+      .preview-card,.preview-hero{box-shadow:none;border-color:rgba(23,32,51,.14);break-inside:auto;page-break-inside:auto}
+      .preview-requirement-row,.preview-metric,.preview-type-card,.preview-wp-total,.diagram-wrap{break-inside:avoid;page-break-inside:avoid}
+      h1,h2,h3,h4,h5{break-after:avoid;page-break-after:avoid}
+      img{max-width:100%}
+    }
   </style>
 </head>
 <body>
@@ -1914,7 +1926,7 @@
     </div>
     <div class="preview-toolbar-actions">
       <button type="button" id="downloadHtmlBtn" data-filename="${escapeHtml((d.projectName || 'requirements-document').replace(/[^a-z0-9._-]+/gi, '-').replace(/^-+|-+$/g, '').toLowerCase() || 'requirements-document')}">Save as HTML</button>
-      <button type="button" onclick="window.print()">Print / Save PDF</button>
+      <button type="button" id="printBtn">Print / Save PDF</button>
     </div>
   </div>
   <div class="preview-wrap">
@@ -1976,6 +1988,44 @@
     </section>
   </div>
   <script>
+    (function () {
+      var printBtn = document.getElementById('printBtn');
+      if (!printBtn) return;
+      var label = printBtn.textContent;
+
+      // Resolves once every image has finished (or failed), so printing never
+      // starts against half-decoded logo/diagram data URLs.
+      function imagesSettled() {
+        var imgs = Array.prototype.slice.call(document.images);
+        return Promise.all(imgs.map(function (img) {
+          if (img.complete) return Promise.resolve();
+          return new Promise(function (resolve) {
+            img.addEventListener('load', resolve, { once: true });
+            img.addEventListener('error', resolve, { once: true });
+          });
+        }));
+      }
+
+      // Never let a slow webfont or CDN hold the button hostage: print anyway.
+      function withTimeout(promise, ms) {
+        return Promise.race([
+          promise,
+          new Promise(function (resolve) { setTimeout(resolve, ms); })
+        ]);
+      }
+
+      printBtn.addEventListener('click', function () {
+        printBtn.disabled = true;
+        printBtn.textContent = 'Preparing...';
+        var fonts = document.fonts && document.fonts.ready ? document.fonts.ready : Promise.resolve();
+        withTimeout(Promise.all([fonts, imagesSettled()]), 4000).then(function () {
+          printBtn.disabled = false;
+          printBtn.textContent = label;
+          window.print();
+        });
+      });
+    }());
+
     (function () {
       var btn = document.getElementById('downloadHtmlBtn');
       if (!btn) return;
