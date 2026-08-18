@@ -38,11 +38,11 @@
   --shadow-sm: 0 1px 3px rgba(0, 0, 0, .04), 0 4px 12px rgba(0, 0, 0, .03);
   --shadow-md: 0 4px 16px rgba(0, 0, 0, .06);
   --shadow-lg: 0 8px 32px rgba(0, 0, 0, .08);
-  /* Inter — a UI typeface with a large x-height, unambiguous 1/l/I and 0/O, and
-     tabular figures, which suits a screen full of hour and cost numbers. Loaded
-     as a webfont on both pages and in the exported preview, so the app and the
-     client-facing document render identically on any machine. */
-  --font-body: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  /* Stack Sans Text (Koto, OFL via Google Fonts) — a text-optimised grotesque
+     with a large x-height and open apertures, so it stays legible in dense
+     estimate tables. Loaded as a webfont on both pages and in the exported
+     preview, so the app and the client-facing document match on any machine. */
+  --font-body: "Stack Sans Text", Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --font-display: var(--font-body);
   /* Bootstrap components read these, so they follow the app font too. This
      sheet loads after Bootstrap, so these win. */
