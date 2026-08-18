@@ -1304,11 +1304,54 @@
       });
     }
 
+    /* Uploaded and pasted images arrive at full camera/screenshot resolution.
+       Stored raw as base64 they bloat the saved document past the request size
+       limit, so re-encode them down to something a document actually needs. */
+    const IMAGE_MAX_DIM = 1600;
+    const IMAGE_MAX_BYTES = 400 * 1024;
+
+    function downscaleDataUrl(dataUrl) {
+      return new Promise((resolve) => {
+        if (!/^data:image\/(png|jpeg|jpg|webp|gif)/i.test(dataUrl)) return resolve(dataUrl);
+        const approxBytes = Math.floor((dataUrl.length - dataUrl.indexOf(',') - 1) * 0.75);
+        const img = new Image();
+        img.onload = () => {
+          const scale = Math.min(1, IMAGE_MAX_DIM / Math.max(img.naturalWidth, img.naturalHeight));
+          if (scale === 1 && approxBytes <= IMAGE_MAX_BYTES) return resolve(dataUrl);
+          const canvas = document.createElement('canvas');
+          canvas.width = Math.max(1, Math.round(img.naturalWidth * scale));
+          canvas.height = Math.max(1, Math.round(img.naturalHeight * scale));
+          const ctx = canvas.getContext('2d');
+          ctx.fillStyle = '#ffffff';
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+          let out = '';
+          try {
+            out = canvas.toDataURL('image/jpeg', 0.82);
+          } catch (e) {
+            return resolve(dataUrl);
+          }
+          resolve(out && out.length < dataUrl.length ? out : dataUrl);
+        };
+        img.onerror = () => resolve(dataUrl);
+        img.src = dataUrl;
+      });
+    }
+
+    async function shrinkEditorImages(editor) {
+      const imgs = Array.from(editor.querySelectorAll('img[src^="data:"]'));
+      for (const img of imgs) {
+        const shrunk = await downscaleDataUrl(img.getAttribute('src') || '');
+        if (shrunk !== img.getAttribute('src')) img.setAttribute('src', shrunk);
+      }
+      if (imgs.length) scheduleDraftSave();
+    }
+
     async function handleImageUpload(event, kind) {
       const file = event.target.files?.[0];
       if (!file) return;
       try {
-        const dataUrl = await readFileAsDataUrl(file);
+        const dataUrl = await downscaleDataUrl(await readFileAsDataUrl(file));
         if (kind === 'logo') {
           state.logoDataUrl = dataUrl;
         } else {
@@ -1760,12 +1803,18 @@
           headers: { 'Content-Type': 'application/json' },
           body
         });
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        if (!response.ok) {
+          if (response.status === 413) {
+            const mb = (body.length / (1024 * 1024)).toFixed(1);
+            throw new Error(`Document too large (${mb} MB). Remove or replace large embedded images and save again.`);
+          }
+          throw new Error(`HTTP ${response.status}`);
+        }
         saveDraftLocally();
         showToast('Saved to server.', 'success');
       } catch (e) {
         console.error('Save error:', e);
-        showToast('Save failed. Check console.', 'danger');
+        showToast(e && e.message ? `Save failed. ${e.message}` : 'Save failed. Check console.', 'danger');
       } finally {
         saveBtn.disabled = false;
         saveBtn.innerHTML = originalHtml;
@@ -2356,6 +2405,7 @@
         if (clean) document.execCommand('insertHTML', false, clean);
         else if (text) document.execCommand('insertText', false, text);
         scheduleDraftSave();
+        shrinkEditorImages(editor);
       });
 
       document.addEventListener('input', (event) => {
