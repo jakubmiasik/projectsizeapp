@@ -261,7 +261,9 @@ app.put('/api/requirements/:estimationId/:version', requireAuth, async (req, res
     res.json({ id, success: true });
   } catch (err) {
     console.error('Failed to save requirements:', err);
-    res.status(500).json({ error: 'Failed to save requirements' });
+    // Surface the underlying reason: a generic 500 gives the user nothing to
+    // act on, and these failures are usually size or timeout related.
+    res.status(500).json({ error: 'Failed to save requirements', detail: err.message, code: err.code });
   }
 });
 

@@ -6,6 +6,10 @@ function getConfig() {
   const config = {
     server: process.env.SQL_SERVER,
     database: process.env.SQL_DATABASE || 'fabricsizing',
+    // Requirements documents embed images, so a single write can carry several
+    // megabytes. The 15s default request timeout is not enough for that.
+    connectionTimeout: 30000,
+    requestTimeout: 120000,
     options: {
       encrypt: true,
       trustServerCertificate: false
@@ -694,22 +698,27 @@ async function getRequirements(estimationId, version) {
 
 async function saveRequirements(estimationId, version, data) {
   const p = await getPool();
-  // Upsert: update if exists, insert if not
-  const existing = await getRequirements(estimationId, version);
-  if (existing) {
+  const json = JSON.stringify(data);
+  // Look up only the id: SELECT * would drag the whole existing document
+  // (potentially megabytes of embedded images) back over the wire first.
+  const existing = await p.request()
+    .input('estimationId', sql.UniqueIdentifier, estimationId)
+    .input('version', sql.Int, version)
+    .query('SELECT id FROM requirements WHERE estimation_id = @estimationId AND version = @version');
+  const existingId = existing.recordset[0]?.id;
+  if (existingId) {
     await p.request()
-      .input('id', sql.UniqueIdentifier, existing.id)
-      .input('data', sql.NVarChar(sql.MAX), JSON.stringify(data))
+      .input('id', sql.UniqueIdentifier, existingId)
+      .input('data', sql.NVarChar(sql.MAX), json)
       .query('UPDATE requirements SET data = @data, updated_at = GETUTCDATE() WHERE id = @id');
-    return existing.id;
-  } else {
-    const result = await p.request()
-      .input('estimationId', sql.UniqueIdentifier, estimationId)
-      .input('version', sql.Int, version)
-      .input('data', sql.NVarChar(sql.MAX), JSON.stringify(data))
-      .query('INSERT INTO requirements (estimation_id, version, data) OUTPUT INSERTED.id VALUES (@estimationId, @version, @data)');
-    return result.recordset[0].id;
+    return existingId;
   }
+  const result = await p.request()
+    .input('estimationId', sql.UniqueIdentifier, estimationId)
+    .input('version', sql.Int, version)
+    .input('data', sql.NVarChar(sql.MAX), json)
+    .query('INSERT INTO requirements (estimation_id, version, data) OUTPUT INSERTED.id VALUES (@estimationId, @version, @data)');
+  return result.recordset[0].id;
 }
 
 async function deleteRequirements(estimationId, version) {

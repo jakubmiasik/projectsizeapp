@@ -1804,11 +1804,12 @@
           body
         });
         if (!response.ok) {
+          const mb = (body.length / (1024 * 1024)).toFixed(1);
           if (response.status === 413) {
-            const mb = (body.length / (1024 * 1024)).toFixed(1);
             throw new Error(`Document too large (${mb} MB). Remove or replace large embedded images and save again.`);
           }
-          throw new Error(`HTTP ${response.status}`);
+          const detail = await response.json().then((j) => j && j.detail).catch(() => '');
+          throw new Error(detail ? `HTTP ${response.status} — ${detail} (document ${mb} MB)` : `HTTP ${response.status} (document ${mb} MB)`);
         }
         saveDraftLocally();
         showToast('Saved to server.', 'success');
