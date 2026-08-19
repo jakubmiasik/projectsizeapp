@@ -264,6 +264,58 @@
       outline: none;
     }
 
+    .preview-order-list {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 0.6rem;
+    }
+
+    .preview-order-item {
+      display: flex;
+      align-items: center;
+      gap: 0.9rem;
+      padding: 0.85rem 1rem;
+      border: 1px solid color-mix(in srgb, var(--color-primary) 18%, transparent);
+      border-radius: 0.9rem;
+      background: color-mix(in srgb, var(--color-primary) 4%, transparent);
+    }
+
+    .preview-order-position {
+      flex: 0 0 auto;
+      width: 1.9rem;
+      height: 1.9rem;
+      border-radius: 50%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 600;
+      font-size: 0.85rem;
+      background: var(--color-primary);
+      color: #fff;
+    }
+
+    .preview-order-label {
+      flex: 1 1 auto;
+      min-width: 0;
+      font-weight: 500;
+    }
+
+    .preview-order-hint {
+      display: block;
+      font-weight: 400;
+      font-size: 0.85rem;
+      color: var(--app-muted);
+    }
+
+    .preview-order-actions {
+      flex: 0 0 auto;
+      display: flex;
+      gap: 0.35rem;
+    }
+
     .upload-row {
       display: flex;
       align-items: center;
@@ -1058,6 +1110,19 @@
           </div>
           <div data-rte-host data-editor-id="notesEditor" data-placeholder="Capture additional notes, implementation commentary or document-ready caveats." data-min-height="lg"></div>
         </div>
+
+        <div class="section-block" id="previewLayoutSection">
+          <div class="section-head">
+            <div>
+              <h2>4. Preview Layout</h2>
+              <p>Choose the order sections appear in the generated preview, print and HTML export.</p>
+            </div>
+            <button type="button" class="btn btn-outline-secondary btn-sm" id="resetPreviewOrderBtn">
+              <i class="bi bi-arrow-counterclockwise"></i> Reset order
+            </button>
+          </div>
+          <ol class="preview-order-list" id="previewOrderList"></ol>
+        </div>
       </section>
       </main>
     </div><!-- /.main-content -->
@@ -1146,8 +1211,41 @@
       diagramDataUrl: '',
       rteCounter: 0,
       draftTimer: null,
-      isApplyingData: false
+      isApplyingData: false,
+      previewOrder: []
     };
+
+    /* Order of these definitions is the default preview layout. The keys are
+       persisted with the document, so renaming one would silently reset a
+       user's saved order. */
+    const PREVIEW_SECTION_DEFS = [
+      { key: 'projectDetails', label: 'Project Details', hint: 'Company description, current landscape and goals' },
+      { key: 'architecture', label: 'Architecture', hint: 'Architecture diagram and description' },
+      { key: 'workpackages', label: 'Workpackages', hint: 'Every workpackage and its requirements' },
+      { key: 'timelineCost', label: 'Timeline & Cost', hint: 'Timeline, cost and the accompanying description' },
+      { key: 'notes', label: 'Additional Notes', hint: 'Closing notes and caveats' }
+    ];
+    const DEFAULT_PREVIEW_ORDER = PREVIEW_SECTION_DEFS.map((def) => def.key);
+
+    /* Tolerates anything a stored document might hold: unknown keys (removed
+       sections) and duplicates are dropped, and any key missing from the stored
+       order — a section added in a later release — is appended rather than
+       lost. Keys the user did order keep exactly the order they chose. */
+    function normalizePreviewOrder(order) {
+      const known = new Set(DEFAULT_PREVIEW_ORDER);
+      const seen = new Set();
+      const result = [];
+      (Array.isArray(order) ? order : []).forEach((key) => {
+        if (known.has(key) && !seen.has(key)) {
+          seen.add(key);
+          result.push(key);
+        }
+      });
+      DEFAULT_PREVIEW_ORDER.forEach((key) => {
+        if (!seen.has(key)) result.push(key);
+      });
+      return result;
+    }
 
     const editorIds = {
       companyDesc: 'companyDescEditor',
@@ -1169,6 +1267,8 @@
       diagramPreview: document.getElementById('diagramPreview'),
       logoRemove: document.getElementById('logoRemove'),
       diagramRemove: document.getElementById('diagramRemove'),
+      previewOrderList: document.getElementById('previewOrderList'),
+      resetPreviewOrderBtn: document.getElementById('resetPreviewOrderBtn'),
       toastContainer: document.getElementById('toastContainer')
     };
 
@@ -1346,6 +1446,53 @@
         reader.onerror = () => reject(new Error('Unable to read file.'));
         reader.readAsDataURL(file);
       });
+    }
+
+    /* ── Preview section order ──────────────────────────────────── */
+    function renderPreviewOrder() {
+      if (!dom.previewOrderList) return;
+      const order = normalizePreviewOrder(state.previewOrder);
+      state.previewOrder = order;
+      dom.previewOrderList.innerHTML = order.map((key, index) => {
+        const def = PREVIEW_SECTION_DEFS.find((d) => d.key === key);
+        if (!def) return '';
+        return `
+          <li class="preview-order-item" data-key="${escapeHtml(key)}">
+            <span class="preview-order-position">${index + 1}</span>
+            <span class="preview-order-label">
+              ${escapeHtml(def.label)}
+              <span class="preview-order-hint">${escapeHtml(def.hint)}</span>
+            </span>
+            <span class="preview-order-actions">
+              <button type="button" class="btn btn-outline-secondary btn-sm preview-order-up"
+                      aria-label="Move ${escapeHtml(def.label)} up" ${index === 0 ? 'disabled' : ''}>
+                <i class="bi bi-arrow-up"></i>
+              </button>
+              <button type="button" class="btn btn-outline-secondary btn-sm preview-order-down"
+                      aria-label="Move ${escapeHtml(def.label)} down" ${index === order.length - 1 ? 'disabled' : ''}>
+                <i class="bi bi-arrow-down"></i>
+              </button>
+            </span>
+          </li>`;
+      }).join('');
+    }
+
+    function movePreviewSection(key, delta) {
+      const order = normalizePreviewOrder(state.previewOrder);
+      const from = order.indexOf(key);
+      const to = from + delta;
+      if (from === -1 || to < 0 || to >= order.length) return;
+      order.splice(to, 0, order.splice(from, 1)[0]);
+      state.previewOrder = order;
+      renderPreviewOrder();
+      scheduleDraftSave();
+    }
+
+    function resetPreviewOrder() {
+      state.previewOrder = DEFAULT_PREVIEW_ORDER.slice();
+      renderPreviewOrder();
+      scheduleDraftSave();
+      showToast('Preview order reset to default.', 'secondary');
     }
 
     /* Uploaded and pasted images arrive at full camera/screenshot resolution.
@@ -1712,6 +1859,7 @@
         notes: getEditorHtml(editorIds.notes),
         logoDataUrl: state.logoDataUrl || '',
         diagramDataUrl: state.diagramDataUrl || '',
+        previewOrder: normalizePreviewOrder(state.previewOrder),
         workpackages
       };
     }
@@ -1731,6 +1879,8 @@
 
       state.logoDataUrl = payload.logoDataUrl || '';
       state.diagramDataUrl = payload.diagramDataUrl || '';
+      state.previewOrder = normalizePreviewOrder(payload.previewOrder);
+      renderPreviewOrder();
       dom.logoUpload.value = '';
       dom.diagramUpload.value = '';
       setImagePreview('logo', state.logoDataUrl);
@@ -2078,6 +2228,62 @@
           </section>`;
       });
 
+      // Each orderable section is built independently, then emitted in the
+      // user's chosen order. The hero title block is deliberately not part of
+      // this: it identifies the document and always leads.
+      const sectionHtml = {
+        projectDetails: `
+    <section class="preview-card">
+      <h2>Project Details</h2>
+      <div>
+        <h3>Company Description</h3>
+        ${htmlToParagraphsHtml(d.companyDesc)}
+      </div>
+      <div class="mt-4">
+        <h3>Current Landscape Description</h3>
+        ${htmlToParagraphsHtml(d.currentLandscape)}
+      </div>
+      <div class="mt-4">
+        <h3>Goals &amp; Objectives</h3>
+        ${htmlToParagraphsHtml(d.goals)}
+      </div>
+    </section>`,
+        architecture: `
+    <section class="preview-card">
+      <h2>Architecture</h2>
+      ${d.diagramDataUrl ? `<div class="diagram-wrap mb-3"><img src="${d.diagramDataUrl}" alt="Architecture diagram" /></div>` : ''}
+      ${htmlToParagraphsHtml(d.architectureDesc)}
+    </section>`,
+        workpackages: workpackagesHtml,
+        timelineCost: `
+    <section class="preview-card">
+      <h2>Timeline &amp; Cost</h2>
+      <div class="preview-metrics">
+        <div class="preview-metric">
+          <h5>Timeline</h5>
+          ${htmlToParagraphsHtml(d.timeline)}
+        </div>
+        <div class="preview-metric">
+          <h5>Cost</h5>
+          ${htmlToParagraphsHtml(d.cost)}
+        </div>
+      </div>
+      <div class="preview-wp-section">
+        <h3>Time &amp; Cost Description</h3>
+        ${htmlToParagraphsHtml(d.timeCostDesc)}
+      </div>
+    </section>`,
+        notes: `
+    <section class="preview-card">
+      <h2>Additional Notes</h2>
+      ${htmlToParagraphsHtml(d.notes)}
+    </section>`
+      };
+
+      const orderedSectionsHtml = normalizePreviewOrder(d.previewOrder)
+        .map((key) => sectionHtml[key] || '')
+        .join('\n');
+
       return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -2116,6 +2322,7 @@
     .preview-brand:empty{display:none}
     .preview-brand img{max-width:140px;max-height:72px;object-fit:contain}
     .preview-titleblock{width:100%;margin-bottom:1.2rem}
+    .preview-titleblock:last-child{margin-bottom:0}
     .preview-titleblock h1{width:100%}
     .preview-subtitle{width:100%;max-width:none;color:var(--app-muted);margin-bottom:0}
     .preview-pills{display:flex;flex-wrap:wrap;gap:.6rem;margin-top:1rem}
@@ -2189,50 +2396,8 @@
           <span class="preview-pill">Version ${escapeHtml(appMeta.version || '1')}</span>
         </div>
       </div>
-      <div>
-        <h3>Company Description</h3>
-        ${htmlToParagraphsHtml(d.companyDesc)}
-      </div>
-      <div class="mt-4">
-        <h3>Current Landscape Description</h3>
-        ${htmlToParagraphsHtml(d.currentLandscape)}
-      </div>
-      <div class="mt-4">
-        <h3>Goals &amp; Objectives</h3>
-        ${htmlToParagraphsHtml(d.goals)}
-      </div>
     </section>
-
-    <section class="preview-card">
-      <h2>Architecture</h2>
-      ${d.diagramDataUrl ? `<div class="diagram-wrap mb-3"><img src="${d.diagramDataUrl}" alt="Architecture diagram" /></div>` : ''}
-      ${htmlToParagraphsHtml(d.architectureDesc)}
-    </section>
-
-    ${workpackagesHtml}
-
-    <section class="preview-card">
-      <h2>Timeline &amp; Cost</h2>
-      <div class="preview-metrics">
-        <div class="preview-metric">
-          <h5>Timeline</h5>
-          ${htmlToParagraphsHtml(d.timeline)}
-        </div>
-        <div class="preview-metric">
-          <h5>Cost</h5>
-          ${htmlToParagraphsHtml(d.cost)}
-        </div>
-      </div>
-      <div class="preview-wp-section">
-        <h3>Time &amp; Cost Description</h3>
-        ${htmlToParagraphsHtml(d.timeCostDesc)}
-      </div>
-    </section>
-
-    <section class="preview-card">
-      <h2>Additional Notes</h2>
-      ${htmlToParagraphsHtml(d.notes)}
-    </section>
+${orderedSectionsHtml}
   </div>
   <script>
     (function () {
@@ -2363,6 +2528,16 @@
       dom.diagramUpload.addEventListener('change', (e) => handleImageUpload(e, 'diagram'));
       dom.logoRemove.addEventListener('click', () => removeImage('logo'));
       dom.diagramRemove.addEventListener('click', () => removeImage('diagram'));
+
+      // Delegated: the list is re-rendered after every move, so per-button
+      // listeners would be rebound constantly.
+      dom.previewOrderList?.addEventListener('click', (event) => {
+        const button = event.target.closest('.preview-order-up, .preview-order-down');
+        if (!button) return;
+        const key = button.closest('.preview-order-item')?.dataset.key;
+        if (key) movePreviewSection(key, button.classList.contains('preview-order-up') ? -1 : 1);
+      });
+      dom.resetPreviewOrderBtn?.addEventListener('click', resetPreviewOrder);
 
       document.getElementById('saveBtn').addEventListener('click', saveToServer);
       // Navigation back to the sizing workspace now lives in the sidebar.
