@@ -1808,8 +1808,18 @@
           if (response.status === 413) {
             throw new Error(`Document too large (${mb} MB). Remove or replace large embedded images and save again.`);
           }
-          const detail = await response.json().then((j) => j && j.detail).catch(() => '');
-          throw new Error(detail ? `HTTP ${response.status} — ${detail} (document ${mb} MB)` : `HTTP ${response.status} (document ${mb} MB)`);
+          // Read as text first: a platform error page is not JSON, and knowing
+          // which of the two we got is the difference between an app bug and
+          // an infrastructure limit.
+          const raw = await response.text().catch(() => '');
+          let detail = '';
+          try {
+            const parsed = JSON.parse(raw);
+            detail = parsed.detail || parsed.error || '';
+          } catch (e) {
+            detail = raw ? `non-JSON response: ${raw.slice(0, 200)}` : '';
+          }
+          throw new Error(`HTTP ${response.status} (document ${mb} MB)${detail ? ' — ' + detail : ''}`);
         }
         saveDraftLocally();
         showToast('Saved to server.', 'success');

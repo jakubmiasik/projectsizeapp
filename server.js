@@ -96,7 +96,7 @@ async function requireAuth(req, res, next) {
    next();
  } catch (err) {
    console.error('Failed to validate user access:', err);
-   res.status(500).json({ error: 'Failed to validate access' });
+   res.status(500).json({ error: 'Failed to validate access', detail: err.message, code: err.code });
  }
 }
 
@@ -459,6 +459,16 @@ app.get('/login', (_req, res) => {
 // SPA fallback - serve the page (auth check happens client-side)
 app.get('*', (_req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+// Anything that escapes a route handler (body parser failures, unexpected
+// throws) would otherwise become an HTML error page the client cannot read.
+// Always answer API calls with JSON carrying the real reason.
+app.use((err, req, res, next) => {
+  console.error(`Unhandled error on ${req.method} ${req.path}:`, err);
+  if (res.headersSent) return next(err);
+  const status = err.status || err.statusCode || 500;
+  res.status(status).json({ error: 'Request failed', detail: err.message, code: err.code || err.type });
 });
 
 async function start() {

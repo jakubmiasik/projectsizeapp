@@ -30,11 +30,37 @@ function getConfig() {
   return config;
 }
 
+let poolPromise = null;
+
 async function getPool() {
-  if (!pool) {
-    pool = await sql.connect(getConfig());
+  // A pool that has lost its connection stays cached forever otherwise, so
+  // every later request fails until the process restarts. Validate it, and
+  // share one in-flight connect between concurrent callers.
+  if (pool && pool.connected) return pool;
+  if (pool && !pool.connecting) {
+    try { await pool.close(); } catch { /* already gone */ }
+    pool = null;
   }
-  return pool;
+  if (!poolPromise) {
+    poolPromise = (async () => {
+      const p = new sql.ConnectionPool(getConfig());
+      p.on('error', (err) => {
+        console.error('SQL pool error, dropping pool:', err.message);
+        if (pool === p) { pool = null; poolPromise = null; }
+      });
+      await p.connect();
+      return p;
+    })().then((p) => {
+      pool = p;
+      poolPromise = null;
+      return p;
+    }).catch((err) => {
+      pool = null;
+      poolPromise = null;
+      throw err;
+    });
+  }
+  return poolPromise;
 }
 
 async function initialize() {
@@ -732,6 +758,7 @@ async function deleteRequirements(estimationId, version) {
 module.exports = {
   initialize,
   healthCheck,
+  _getPoolForTest: getPool,
   countAppUsers,
   getUserRole,
   getAppUserByEmail,
