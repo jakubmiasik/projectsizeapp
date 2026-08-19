@@ -264,6 +264,22 @@
       outline: none;
     }
 
+    .upload-row {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .upload-row .form-control {
+      flex: 1 1 auto;
+      min-width: 0;
+    }
+
+    .upload-remove {
+      flex: 0 0 auto;
+      white-space: nowrap;
+    }
+
     .image-preview {
       min-height: 10rem;
       border: 1px dashed color-mix(in srgb, var(--color-primary) 28%, transparent);
@@ -977,12 +993,22 @@
             </div>
             <div class="col-md-4">
               <label class="field-label" for="logoUpload">Logo Upload</label>
-              <input id="logoUpload" class="form-control" type="file" accept="image/*" />
+              <div class="upload-row">
+                <input id="logoUpload" class="form-control" type="file" accept="image/*" />
+                <button type="button" class="btn btn-outline-danger btn-sm upload-remove" id="logoRemove" hidden>
+                  <i class="bi bi-trash"></i> Remove
+                </button>
+              </div>
               <div class="image-preview mt-3" id="logoPreview">Logo preview</div>
             </div>
             <div class="col-md-8">
               <label class="field-label" for="diagramUpload">Architecture Diagram Upload</label>
-              <input id="diagramUpload" class="form-control" type="file" accept="image/*" />
+              <div class="upload-row">
+                <input id="diagramUpload" class="form-control" type="file" accept="image/*" />
+                <button type="button" class="btn btn-outline-danger btn-sm upload-remove" id="diagramRemove" hidden>
+                  <i class="bi bi-trash"></i> Remove
+                </button>
+              </div>
               <div class="image-preview diagram-preview mt-3" id="diagramPreview">Architecture diagram preview</div>
             </div>
             <div class="col-12">
@@ -1141,6 +1167,8 @@
       diagramUpload: document.getElementById('diagramUpload'),
       logoPreview: document.getElementById('logoPreview'),
       diagramPreview: document.getElementById('diagramPreview'),
+      logoRemove: document.getElementById('logoRemove'),
+      diagramRemove: document.getElementById('diagramRemove'),
       toastContainer: document.getElementById('toastContainer')
     };
 
@@ -1288,11 +1316,27 @@
 
     function setImagePreview(kind, dataUrl) {
       const preview = kind === 'logo' ? dom.logoPreview : dom.diagramPreview;
+      const removeBtn = kind === 'logo' ? dom.logoRemove : dom.diagramRemove;
+      // The remove control only makes sense once something is actually chosen,
+      // so keep its visibility tied to the preview it clears.
+      if (removeBtn) removeBtn.hidden = !dataUrl;
       if (!dataUrl) {
         preview.textContent = kind === 'logo' ? 'Logo preview' : 'Architecture diagram preview';
         return;
       }
       preview.innerHTML = `<img src="${dataUrl}" alt="${kind} preview" />`;
+    }
+
+    function removeImage(kind) {
+      const input = kind === 'logo' ? dom.logoUpload : dom.diagramUpload;
+      if (kind === 'logo') state.logoDataUrl = '';
+      else state.diagramDataUrl = '';
+      // Clearing the input matters: without it re-picking the same file fires
+      // no change event and the image could not be restored.
+      if (input) input.value = '';
+      setImagePreview(kind, '');
+      scheduleDraftSave();
+      showToast(`${kind === 'logo' ? 'Logo' : 'Architecture diagram'} removed.`, 'success');
     }
 
     function readFileAsDataUrl(file) {
@@ -2317,6 +2361,8 @@
     function attachEvents() {
       dom.logoUpload.addEventListener('change', (e) => handleImageUpload(e, 'logo'));
       dom.diagramUpload.addEventListener('change', (e) => handleImageUpload(e, 'diagram'));
+      dom.logoRemove.addEventListener('click', () => removeImage('logo'));
+      dom.diagramRemove.addEventListener('click', () => removeImage('diagram'));
 
       document.getElementById('saveBtn').addEventListener('click', saveToServer);
       // Navigation back to the sizing workspace now lives in the sidebar.
