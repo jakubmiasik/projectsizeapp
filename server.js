@@ -1,4 +1,5 @@
 const express = require('express');
+const compression = require('compression');
 const path = require('path');
 const db = require('./db');
 
@@ -10,6 +11,11 @@ if (process.env.APPLICATIONINSIGHTS_CONNECTION_STRING) {
   const appInsights = require('applicationinsights');
   appInsights.setup().setSendLiveMetrics(true).start();
 }
+
+// Documents are large runs of HTML and JSON, which compress by roughly an
+// order of magnitude. Must be registered before the routes and the static
+// handler so it covers both.
+app.use(compression());
 
 // Estimations embed images as base64 data URLs, so bodies are far larger than
 // a typical JSON API request.
@@ -64,6 +70,17 @@ async function resolveUserAccess(user) {
 async function userOwnsEstimationGroup(groupId, userOid) {
   const versions = await db.listEstimationVersions(groupId, userOid);
   return versions.length > 0;
+}
+
+// The requirements routes are addressed by estimation id, which is guessable in
+// the sense that it appears in shareable URLs. Without this check any signed-in
+// user could read or overwrite another user's requirements.
+async function canAccessRequirements(req) {
+  if (req.user?.role === 'admin') return true;
+  return db.canAccessEstimation(req.params.estimationId, {
+    userOid: req.user?.oid,
+    userEmail: req.user?.email
+  });
 }
 
 function requireUserEmail(req, res) {
@@ -244,7 +261,27 @@ app.delete('/api/admin/estimations/:id', requireAuth, requireAdmin, async (req, 
 
 app.get('/api/requirements/:estimationId/:version', requireAuth, async (req, res) => {
   try {
-    const requirements = await db.getRequirements(req.params.estimationId, parseInt(req.params.version, 10));
+    if (!await canAccessRequirements(req)) {
+      return res.status(404).json({ error: 'Not found' });
+    }
+
+    const version = parseInt(req.params.version, 10);
+
+    // Validate the cache before reading the document. updated_at comes off the
+    // index; the document itself can be megabytes, so a 304 here avoids the
+    // expensive read entirely rather than only saving bandwidth.
+    const meta = await db.getRequirementsMeta(req.params.estimationId, version);
+    if (!meta) return res.json(null);
+
+    const etag = `W/"req-${meta.id}-${new Date(meta.updated_at).getTime()}"`;
+    // no-cache means "store it, but always revalidate", which is what makes the
+    // conditional request above happen on every load. Without it the browser
+    // may cache heuristically and serve a stale document without asking.
+    res.set('Cache-Control', 'private, no-cache');
+    res.set('ETag', etag);
+    if (req.headers['if-none-match'] === etag) return res.status(304).end();
+
+    const requirements = await db.getRequirements(req.params.estimationId, version);
     if (!requirements) return res.json(null);
     res.json({ ...requirements, data: JSON.parse(requirements.data) });
   } catch (err) {
@@ -255,6 +292,10 @@ app.get('/api/requirements/:estimationId/:version', requireAuth, async (req, res
 
 app.put('/api/requirements/:estimationId/:version', requireAuth, async (req, res) => {
   try {
+    if (!await canAccessRequirements(req)) {
+      return res.status(404).json({ error: 'Not found' });
+    }
+
     const { data } = req.body;
     if (!data) return res.status(400).json({ error: 'Missing data' });
     const id = await db.saveRequirements(req.params.estimationId, parseInt(req.params.version, 10), data);
