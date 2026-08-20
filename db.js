@@ -552,7 +552,7 @@ async function saveEstimation({ userOid, userName, clientName, title, data, pare
     .input('userName', sql.NVarChar, userName)
     .input('clientName', sql.NVarChar, clientName)
     .input('title', sql.NVarChar, title)
-    .input('data', sql.NVarChar, JSON.stringify(data))
+    .input('data', sql.NVarChar(sql.MAX), JSON.stringify(data))
     .input('version', sql.Int, version)
     .input('parentId', sql.UniqueIdentifier, resolvedParentId)
     .query(`
@@ -571,7 +571,7 @@ async function updateEstimation({ id, userOid, userName, clientName, title, data
     .input('userName', sql.NVarChar, userName)
     .input('clientName', sql.NVarChar, clientName)
     .input('title', sql.NVarChar, title)
-    .input('data', sql.NVarChar, JSON.stringify(data))
+    .input('data', sql.NVarChar(sql.MAX), JSON.stringify(data))
     .query(`
       UPDATE estimations
       SET user_name = @userName,
@@ -713,12 +713,54 @@ async function deleteEstimationAsAdmin(id) {
 
 // ==================== REQUIREMENTS ====================
 
+// Whether a user may see an estimation at all: either they own it, or its
+// owner shared the group it belongs to with them. Deliberately returns a flag
+// rather than the row, so an access check never drags the document blob
+// (potentially megabytes of embedded images) back over the wire.
+async function canAccessEstimation(id, { userOid, userEmail }) {
+  const p = await getPool();
+  const result = await p.request()
+    .input('id', sql.UniqueIdentifier, id)
+    .input('userOid', sql.NVarChar(255), userOid || '')
+    .input('userEmail', sql.NVarChar(255), userEmail || '')
+    .query(`
+      SELECT TOP 1 1 AS ok
+      FROM estimations e
+      LEFT JOIN estimation_shares s
+        ON (e.id = s.estimation_group_id OR e.parent_id = s.estimation_group_id)
+       AND LOWER(s.shared_with_email) = LOWER(@userEmail)
+      WHERE e.id = @id
+        AND (e.user_oid = @userOid OR s.id IS NOT NULL)
+    `);
+  return result.recordset.length > 0;
+}
+
+// Just enough to build a cache validator. Reading updated_at is an index-sized
+// read; reading the row is not, so callers can answer a conditional GET
+// without ever touching the document.
+async function getRequirementsMeta(estimationId, version) {
+  const p = await getPool();
+  const result = await p.request()
+    .input('estimationId', sql.UniqueIdentifier, estimationId)
+    .input('version', sql.Int, version)
+    .query(`
+      SELECT id, updated_at
+      FROM requirements
+      WHERE estimation_id = @estimationId AND version = @version
+    `);
+  return result.recordset[0] || null;
+}
+
 async function getRequirements(estimationId, version) {
   const p = await getPool();
   const result = await p.request()
     .input('estimationId', sql.UniqueIdentifier, estimationId)
     .input('version', sql.Int, version)
-    .query('SELECT * FROM requirements WHERE estimation_id = @estimationId AND version = @version');
+    .query(`
+      SELECT id, estimation_id, version, data, created_at, updated_at
+      FROM requirements
+      WHERE estimation_id = @estimationId AND version = @version
+    `);
   return result.recordset[0] || null;
 }
 
@@ -774,6 +816,7 @@ module.exports = {
   getEstimation,
   getSharedEstimation,
   getEstimationForAdmin,
+  canAccessEstimation,
   saveEstimation,
   updateEstimation,
   listEstimationVersions,
@@ -782,6 +825,7 @@ module.exports = {
   deleteEstimation,
   deleteEstimationAsAdmin,
   getRequirements,
+  getRequirementsMeta,
   saveRequirements,
   deleteRequirements
 };
