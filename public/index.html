@@ -399,7 +399,7 @@
     <section class="detailed-estimation-view container" id="detailed-estimation-view">
       <div class="de-header">
         <button type="button" class="de-back-btn" id="de-back-btn">← Back to Sizing</button>
-        <h2 style="margin:0;flex:1">3-Layer Architecture Effort Estimator</h2>
+        <h2 style="margin:0;flex:1">Project Estimate</h2>
         <button type="button" class="de-save-btn" id="de-save-inline-btn">Save</button>
       </div>
 
@@ -416,6 +416,7 @@
           <div class="de-field"><label>Hours per KPI/DAX</label><input type="number" id="de-hrsPerKpi" value="3" step="0.5" min="0"></div>
           <div class="de-field"><label>Hours per Report</label><input type="number" id="de-hrsPerReport" value="12" step="0.5" min="0"></div>
           <div class="de-field"><label>Tab Impact %</label><input type="number" id="de-tabImpactPct" value="30" step="5" min="0" max="100"></div>
+          <div class="de-field"><label>Analysis %</label><input type="number" id="de-analysisPct" value="15" step="1" min="0" max="100"></div>
           <div class="de-field"><label>Documentation %</label><input type="number" id="de-documentationPct" value="10" step="1" min="0" max="100"></div>
           <div class="de-field"><label>Contingency %</label><input type="number" id="de-contingencyPct" value="15" step="1" min="0" max="100"></div>
           <div class="de-field"><label>UAT %</label><input type="number" id="de-uatPct" value="10" step="1" min="0" max="100"></div>
@@ -514,6 +515,7 @@
           <div class="de-result-card"><div class="de-result-label">Transformation Hours</div><div class="de-result-value" id="de-res-transform">0.0</div></div>
           <div class="de-result-card"><div class="de-result-label">Gold Layer Hours</div><div class="de-result-value" id="de-res-gold">0.0</div></div>
           <div class="de-result-card"><div class="de-result-label">Base Hours</div><div class="de-result-value" id="de-res-base">0.0</div></div>
+          <div class="de-result-card"><div class="de-result-label">Analysis</div><div class="de-result-value" id="de-res-analysis">0.0</div></div>
           <div class="de-result-card"><div class="de-result-label">Contingency</div><div class="de-result-value" id="de-res-contingency">0.0</div></div>
           <div class="de-result-card"><div class="de-result-label">Documentation</div><div class="de-result-value" id="de-res-documentation">0.0</div></div>
           <div class="de-result-card"><div class="de-result-label">UAT</div><div class="de-result-value" id="de-res-uat">0.0</div></div>
@@ -2356,6 +2358,7 @@
         const hrsPerKpi = getDeNum('de-hrsPerKpi');
         const hrsPerReport = getDeNum('de-hrsPerReport');
         const tabImpactPct = getDeNum('de-tabImpactPct') / 100;
+        const analysisPct = getDeNum('de-analysisPct') / 100;
         const documentationPct = getDeNum('de-documentationPct') / 100;
         const contingencyPct = getDeNum('de-contingencyPct') / 100;
         const uatPct = getDeNum('de-uatPct') / 100;
@@ -2428,10 +2431,13 @@
 
         const goldHours = dimensionHours + factHours + semanticHours + kpiHours + reportHours;
         const baseHours = ingestionHours + transformHours + goldHours;
+        // Analysis is driven by every implementation part (ingestion, transformation
+        // and the whole gold layer), which is exactly what baseHours already sums.
+        const analysisHours = baseHours * analysisPct;
         const contingencyHours = baseHours * contingencyPct;
         const documentationHours = baseHours * documentationPct;
         const uatHours = baseHours * uatPct;
-        const totalPrgHours = baseHours + contingencyHours + documentationHours + uatHours;
+        const totalPrgHours = baseHours + analysisHours + contingencyHours + documentationHours + uatHours;
 
         // Work packages
         const wpRows = document.querySelectorAll('#de-wp-rows tr');
@@ -2447,6 +2453,7 @@
         document.getElementById('de-res-transform').textContent = formatDe(transformHours);
         document.getElementById('de-res-gold').textContent = formatDe(goldHours);
         document.getElementById('de-res-base').textContent = formatDe(baseHours);
+        document.getElementById('de-res-analysis').textContent = formatDe(analysisHours);
         document.getElementById('de-res-contingency').textContent = formatDe(contingencyHours);
         document.getElementById('de-res-documentation').textContent = formatDe(documentationHours);
         document.getElementById('de-res-uat').textContent = formatDe(uatHours);
@@ -2471,7 +2478,7 @@
           `• Additional work packages: ${wpRows.length} item(s).`,
           '',
           'Effort summary:',
-          `• Total calculated effort is ${formatDe(totalPrgHours)} PRG hours including contingency, documentation, and UAT.`,
+          `• Total calculated effort is ${formatDe(totalPrgHours)} PRG hours including analysis, contingency, documentation, and UAT.`,
           `• Project total (including work packages): ${formatDe(projectTotal)} hours.`,
           '',
           'Input assumptions:',
@@ -2504,6 +2511,7 @@
             hrsPerKpi: getDeNum('de-hrsPerKpi'),
             hrsPerReport: getDeNum('de-hrsPerReport'),
             tabImpactPct: getDeNum('de-tabImpactPct'),
+            analysisPct: getDeNum('de-analysisPct'),
             documentationPct: getDeNum('de-documentationPct'),
             contingencyPct: getDeNum('de-contingencyPct'),
             uatPct: getDeNum('de-uatPct'),
@@ -2576,11 +2584,17 @@
 
         // Calibration
         if (payload.calibration) {
-          const fields = ['hrsPerSource','hrsPerIngest','hrsPerTransform','hrsPerDimension','hrsPerFact','hrsPerSemanticModel','hrsPerKpi','hrsPerReport','tabImpactPct','documentationPct','contingencyPct','uatPct'];
+          const fields = ['hrsPerSource','hrsPerIngest','hrsPerTransform','hrsPerDimension','hrsPerFact','hrsPerSemanticModel','hrsPerKpi','hrsPerReport','tabImpactPct','analysisPct','documentationPct','contingencyPct','uatPct'];
           fields.forEach(f => {
             const el = document.getElementById('de-' + f);
             if (el && payload.calibration[f] !== undefined) el.value = payload.calibration[f];
           });
+          // Estimates saved before Analysis existed have no analysisPct. Falling back
+          // to the 15% default would silently inflate a total the user already signed
+          // off, so those load with 0% and can be raised deliberately.
+          if (payload.calibration.analysisPct === undefined) {
+            document.getElementById('de-analysisPct').value = 0;
+          }
         }
 
         // Ingestion
