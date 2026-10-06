@@ -35,7 +35,7 @@
   // never drift apart.
   var STEP_LABELS = {
     sizing: 'Sizing Workspace',
-    detailed: 'Detailed estimation',
+    detailed: 'Project Estimate',
     requirements: 'Requirements'
   };
 
@@ -261,8 +261,8 @@
     var urls = projectUrls(project);
     var nodes = [
       { step: 'sizing', label: 'T-Shirt Sizing', href: urls.sizing, depth: 2 },
-      { step: 'detailed', label: '3-Layer Architecture Effort Estimator', href: urls.detailed, depth: 3 },
-      { step: 'requirements', label: 'Requirements', href: urls.requirements, depth: 4 }
+      { step: 'detailed', label: STEP_LABELS.detailed, href: urls.detailed, depth: 3 },
+      { step: 'requirements', label: STEP_LABELS.requirements, href: urls.requirements, depth: 4 }
     ];
     var allowed = project.steps;
     if (!allowed) return nodes;
