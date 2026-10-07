@@ -82,6 +82,7 @@
     .share-search-item,.share-current-item{display:flex;align-items:center;justify-content:space-between;gap:var(--space-3);width:100%;padding:var(--space-3) var(--space-4);border:1px solid var(--color-border);border-radius:var(--radius-md);background:var(--color-surface-2);color:var(--color-text)}
     .share-search-item{cursor:pointer;text-align:left}
     .share-search-item:hover{border-color:var(--color-primary);background:var(--color-surface-offset)}
+    .share-search-item.selected{border-color:var(--color-primary-strong);background:var(--color-primary-soft)}
     .share-current-item{background:var(--color-surface)}
     .share-person-info{display:flex;flex-direction:column;gap:.15rem;min-width:0}
     .share-person-name{font-weight:700}
@@ -116,18 +117,17 @@
     .admin-delete-inline svg{width:.85rem;height:.85rem;fill:currentColor}
     .admin-delete-inline:hover{color:#c0392b;background:rgba(192,57,43,.12)}
     .admin-delete-inline:focus-visible{outline:2px solid #c0392b;outline-offset:1px}
-    .admin-add-row{display:grid;grid-template-columns:1fr auto auto;gap:var(--space-2);margin-bottom:var(--space-4);padding:var(--space-3) var(--space-4);border:1px dashed var(--color-border);border-radius:var(--radius-md);background:var(--color-surface-offset)}
-    .admin-people-picker{position:relative;min-width:0}
-    .admin-people-picker .admin-input{width:100%;box-sizing:border-box}
-    .admin-people-results{position:absolute;z-index:30;top:calc(100% + 4px);left:0;right:0;margin:0;padding:.25rem;list-style:none;max-height:240px;overflow-y:auto;background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-md);box-shadow:0 10px 30px rgba(0,0,0,.18)}
-    .admin-people-results li{list-style:none}
-    .admin-people-results .share-search-item{display:flex;align-items:center;justify-content:space-between;gap:.75rem;width:100%;padding:.5rem .6rem;border:0;border-radius:8px;background:transparent;color:var(--color-text);text-align:left;cursor:pointer}
-    .admin-people-results .share-search-item:hover{background:var(--color-surface-offset)}
-    .admin-people-results .share-search-empty{padding:.55rem .6rem;color:var(--color-text-muted);font-size:var(--text-xs)}
-    .admin-people-selected{display:flex;align-items:center;justify-content:space-between;gap:.75rem;padding:.4rem .6rem;border:1px solid var(--color-border);border-radius:8px;background:var(--color-surface)}
+    /* Stretching every control to the row height keeps the role dropdown and
+       the Add button exactly as tall as each other, despite the dropdown
+       carrying a border and the button not. */
+    .admin-add-row{display:grid;grid-template-columns:1fr auto auto;align-items:stretch;gap:var(--space-2);margin-bottom:var(--space-3);padding:var(--space-3) var(--space-4);border:1px dashed var(--color-border);border-radius:var(--radius-md);background:var(--color-surface-offset)}
+    .admin-add-row .admin-input{min-width:0}
+    .admin-add-row .admin-dropdown{display:block}
+    .admin-add-row .admin-dropdown-toggle{height:100%;width:100%;justify-content:space-between}
+    #admin-user-results{margin-bottom:var(--space-4)}
     .admin-input{border:1px solid var(--color-border);background:var(--color-surface);border-radius:8px;padding:.5rem .7rem;color:var(--color-text);font-size:var(--text-sm);transition:border-color .2s}
     .admin-input:focus{outline:none;border-color:var(--color-primary-strong);box-shadow:0 0 0 3px var(--color-primary-soft)}
-    .admin-add-btn{border:none;background:linear-gradient(135deg,var(--color-primary),var(--color-primary-strong));color:#fff;border-radius:8px;padding:.5rem 1rem;font-weight:600;font-size:var(--text-sm);cursor:pointer;transition:transform .15s,box-shadow .15s}
+    .admin-add-btn{display:inline-flex;align-items:center;justify-content:center;border:none;background:linear-gradient(135deg,var(--color-primary),var(--color-primary-strong));color:#fff;border-radius:8px;padding:.5rem 1rem;font-weight:600;font-size:var(--text-sm);cursor:pointer;transition:transform .15s,box-shadow .15s}
     .admin-add-btn:hover{transform:translateY(-1px);box-shadow:0 4px 12px rgba(1,105,111,.25)}
     .role-badge{display:inline-flex;padding:.2rem .55rem;border-radius:999px;font-size:var(--text-xs);font-weight:700}
     .role-badge.admin{background:#fde8e8;color:#c0392b}
@@ -1397,10 +1397,6 @@
         const adminEstimationDetails = document.getElementById('admin-estimation-details');
         const adminUserSearch = document.getElementById('admin-user-search');
         const adminUserResults = document.getElementById('admin-user-results');
-        const adminUserSelected = document.getElementById('admin-user-selected');
-        const adminUserSelectedName = document.getElementById('admin-user-selected-name');
-        const adminUserSelectedEmail = document.getElementById('admin-user-selected-email');
-        const adminUserClear = document.getElementById('admin-user-clear');
         const adminNewRole = document.getElementById('admin-new-role-dropdown');
         const adminAddBtn = document.getElementById('admin-add-btn');
         const versionCache = new Map();
@@ -2058,65 +2054,69 @@
           // the tenant rather than typing an address with a typo in it.
           let adminPickedUser = null;
           let adminSearchTimeout = null;
+          let adminSearchResults = [];
 
-          function setAdminPickedUser(person) {
-            adminPickedUser = person;
-            if (person) {
-              adminUserSelectedName.textContent = person.display_name || person.email;
-              adminUserSelectedEmail.textContent = person.email;
-              adminUserSelected.hidden = false;
-              adminUserSearch.hidden = true;
-            } else {
-              adminUserSelected.hidden = true;
-              adminUserSearch.hidden = false;
-              adminUserSearch.value = '';
+          // Mirrors the share modal's picker: one always-visible results list
+          // in the same markup, rather than a second search UI of its own.
+          function renderAdminSearchResults() {
+            if (!adminUserSearch.value.trim()) {
+              adminUserResults.innerHTML = '<li class="share-search-empty">Start typing to search your directory.</li>';
+              return;
             }
-            adminUserResults.hidden = true;
-            adminUserResults.innerHTML = '';
-          }
 
-          function renderAdminSearchResults(people) {
             const existing = new Set(adminState.users.map((u) => (u.email || '').toLowerCase()));
-            const available = people.filter((p) => !existing.has((p.email || '').toLowerCase()));
+            const available = adminSearchResults.filter((p) => !existing.has((p.email || '').toLowerCase()));
 
             if (available.length === 0) {
               adminUserResults.innerHTML = '<li class="share-search-empty">No new people match that search.</li>';
-            } else {
-              adminUserResults.innerHTML = available.map((person) => `
+              return;
+            }
+
+            adminUserResults.innerHTML = available.map((person) => {
+              const picked = adminPickedUser && adminPickedUser.email === person.email;
+              return `
                 <li>
-                  <button type="button" class="share-search-item" data-pick-email="${escapeHtml(person.email)}" data-pick-name="${escapeHtml(person.display_name || '')}">
+                  <button type="button" class="share-search-item${picked ? ' selected' : ''}" data-pick-email="${escapeHtml(person.email)}" data-pick-name="${escapeHtml(person.display_name || '')}">
                     <span class="share-person-info">
                       <span class="share-person-name">${escapeHtml(person.display_name || person.email)}</span>
                       <span class="share-person-email">${escapeHtml(person.email)}</span>
                     </span>
-                    <span class="user-badge">Select</span>
+                    <span class="user-badge">${picked ? 'Selected' : 'Select'}</span>
                   </button>
                 </li>
-              `).join('');
-            }
-            adminUserResults.hidden = false;
+              `;
+            }).join('');
+          }
+
+          function resetAdminPicker() {
+            adminPickedUser = null;
+            adminSearchResults = [];
+            adminUserSearch.value = '';
+            renderAdminSearchResults();
           }
 
           adminUserSearch.addEventListener('input', () => {
             const query = adminUserSearch.value.trim();
             if (adminSearchTimeout) clearTimeout(adminSearchTimeout);
 
-            if (query.length < 2) {
-              adminUserResults.hidden = true;
-              adminUserResults.innerHTML = '';
+            // Typing again invalidates an earlier pick, so Add can never post
+            // someone the admin is no longer looking at.
+            adminPickedUser = null;
+
+            if (!query) {
+              adminSearchResults = [];
+              renderAdminSearchResults();
               return;
             }
 
-            adminUserResults.innerHTML = '<li class="share-search-empty">Searching the directory...</li>';
-            adminUserResults.hidden = false;
+            adminUserResults.innerHTML = '<li class="share-search-empty">Searching...</li>';
             adminSearchTimeout = setTimeout(async () => {
               try {
-                const people = await fetchJson(`/api/users/search?q=${encodeURIComponent(query)}`, {}, 'Failed to search the directory');
+                adminSearchResults = await fetchJson(`/api/users/search?q=${encodeURIComponent(query)}`, {}, 'Failed to search users');
                 if (adminUserSearch.value.trim() !== query) return;
-                renderAdminSearchResults(people);
+                renderAdminSearchResults();
               } catch (err) {
                 adminUserResults.innerHTML = `<li class="share-search-empty">${escapeHtml(err.message)}</li>`;
-                adminUserResults.hidden = false;
               }
             }, 250);
           });
@@ -2124,21 +2124,11 @@
           adminUserResults.addEventListener('click', (event) => {
             const button = event.target.closest('[data-pick-email]');
             if (!button) return;
-            setAdminPickedUser({
+            adminPickedUser = {
               email: button.dataset.pickEmail,
               display_name: button.dataset.pickName || ''
-            });
-          });
-
-          adminUserClear.addEventListener('click', () => {
-            setAdminPickedUser(null);
-            adminUserSearch.focus();
-          });
-
-          document.addEventListener('click', (event) => {
-            if (!adminUserResults.hidden && !event.target.closest('.admin-people-picker')) {
-              adminUserResults.hidden = true;
-            }
+            };
+            renderAdminSearchResults();
           });
 
           adminAddBtn.addEventListener('click', async () => {
@@ -2159,7 +2149,7 @@
                   role
                 })
               }, 'Failed to add user');
-              setAdminPickedUser(null);
+              resetAdminPicker();
               adminNewRole.dataset.selectedValue = 'explorer';
               adminNewRole.querySelector('.admin-dropdown-toggle').textContent = 'Explorer ';
               adminNewRole.querySelectorAll('.admin-dropdown-item').forEach(i => i.classList.toggle('active', i.dataset.value === 'explorer'));
@@ -2844,17 +2834,7 @@
           <div style="margin-bottom:var(--space-3)">
             <h4>Manage Access</h4>
             <div class="admin-add-row">
-              <div class="admin-people-picker">
-                <input type="text" id="admin-user-search" placeholder="Search people in your directory" class="admin-input" autocomplete="off" />
-                <ul id="admin-user-results" class="admin-people-results" hidden></ul>
-                <div id="admin-user-selected" class="admin-people-selected" hidden>
-                  <span class="share-person-info">
-                    <span class="share-person-name" id="admin-user-selected-name"></span>
-                    <span class="share-person-email" id="admin-user-selected-email"></span>
-                  </span>
-                  <button type="button" class="share-remove-btn" id="admin-user-clear" title="Choose someone else">&times;</button>
-                </div>
-              </div>
+              <input type="text" id="admin-user-search" placeholder="Search people in your directory" class="admin-input" autocomplete="off" />
               <div class="admin-dropdown" id="admin-new-role-dropdown">
                 <button class="admin-dropdown-toggle" type="button" id="admin-new-role-btn">Explorer </button>
                 <div class="admin-dropdown-menu">
@@ -2864,6 +2844,9 @@
               </div>
               <button class="admin-add-btn" id="admin-add-btn">+ Add</button>
             </div>
+            <ul class="share-search-results" id="admin-user-results">
+              <li class="share-search-empty">Start typing to search your directory.</li>
+            </ul>
           </div>
           <ul id="admin-users-list" class="estimation-list"></ul>
         </div>
