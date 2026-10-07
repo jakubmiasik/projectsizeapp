@@ -316,16 +316,29 @@ app.get('/api/users/search', requireAuth, async (req, res) => {
       return res.json([]);
     }
 
-    const users = await graph.searchDirectoryUsers(query);
     const currentUserEmail = normalizeEmail(req.user.email);
+    let users;
+    let source = 'directory';
+
+    try {
+      users = await graph.searchDirectoryUsers(query);
+    } catch (err) {
+      // The Graph permission grant is a deployment step that may not have
+      // happened yet. Falling back to the people this app already knows about
+      // keeps sharing working — it is exactly what the picker did before the
+      // directory lookup existed — rather than blocking the user entirely.
+      if (!graph.isGraphConfigError(err)) throw err;
+      console.warn(
+        'Directory search unavailable, falling back to known users:',
+        err.message
+      );
+      users = await db.searchUsers(query);
+      source = 'local';
+    }
+
+    res.set('X-User-Search-Source', source);
     res.json(users.filter((user) => normalizeEmail(user.email) !== currentUserEmail));
   } catch (err) {
-    // A misconfigured directory permission is the likeliest failure here and
-    // it is fixable, so say so instead of a blank 500.
-    if (graph.isGraphConfigError(err)) {
-      console.error('Directory search is not configured:', err.message);
-      return res.status(503).json({ error: err.message, code: err.code });
-    }
     console.error('Failed to search directory users:', err);
     res.status(500).json({ error: 'Failed to search users' });
   }

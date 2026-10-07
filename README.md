@@ -18,15 +18,20 @@ The app connects with `azure-active-directory-default`, so the App Service manag
 identity needs to be a user in the target database with read/write rights. No
 connection-string secret is stored.
 
-### Microsoft Graph — required for the people pickers
+### Microsoft Graph — optional, improves the people pickers
 
-**Share estimation** and **Admin Panel → Manage Access** both search the Entra
-directory rather than the app's own user table, so you can only grant access to
-someone who actually exists in the tenant.
+**Share estimation** and **Admin Panel → Manage Access** search the Entra
+directory, so you can pick a colleague by name instead of typing an address.
 
 This requires the App Service managed identity to hold the Graph **application**
-permission `User.ReadBasic.All`, with admin consent granted. Until that is done,
-both pickers return HTTP 503 with a message naming the missing permission.
+permission `User.ReadBasic.All`, with admin consent granted.
+
+Without the grant the app still works: the pickers fall back to searching the
+people the app already knows about (the `app_users` table), and anything typed
+that looks like an email address can be granted access directly. Searching by
+display name for someone who has never used the app is the only thing you lose.
+The fallback is logged server-side and tagged on the response with
+`X-User-Search-Source: local`.
 
 To grant it:
 
