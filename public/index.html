@@ -1609,6 +1609,14 @@
           document.getElementById('load-tab-shared').style.display = tabName === 'shared' ? '' : 'none';
         }
 
+        // Directory search needs a Graph permission grant that may not be in
+        // place yet, in which case the server can only match people who have
+        // used the app before. Letting a typed-out address stand in as a
+        // result means access can still be granted to anyone meanwhile.
+        function looksLikeEmail(value) {
+          return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || '').trim());
+        }
+
         function renderShareSearchResults() {
           const query = shareSearchInput.value.trim();
           const alreadyShared = new Set(shareState.shares.map((item) => (item.shared_with_email || '').toLowerCase()));
@@ -1623,6 +1631,20 @@
           }
 
           if (visibleResults.length === 0) {
+            if (looksLikeEmail(query) && !alreadyShared.has(query.toLowerCase()) && query.toLowerCase() !== currentUserEmail) {
+              shareSearchResultsEl.innerHTML = `
+                <li>
+                  <button type="button" class="share-search-item" data-share-email="${escapeHtml(query)}" data-share-name="">
+                    <span class="share-person-info">
+                      <span class="share-person-name">${escapeHtml(query)}</span>
+                      <span class="share-person-email">Share with this address</span>
+                    </span>
+                    <span class="user-badge">Share</span>
+                  </button>
+                </li>
+              `;
+              return;
+            }
             shareSearchResultsEl.innerHTML = '<li class="share-search-empty">No matching users available to share with.</li>';
             return;
           }
@@ -2049,9 +2071,10 @@
             });
           });
 
-          // Manage Access picks people straight out of the Entra directory, so
-          // an admin can only grant access to someone who actually exists in
-          // the tenant rather than typing an address with a typo in it.
+          // Manage Access searches the Entra directory so an admin normally
+          // picks a real person rather than typing an address with a typo in
+          // it. A typed-out address is still offered when the directory has
+          // no match, so access does not depend on the Graph grant existing.
           let adminPickedUser = null;
           let adminSearchTimeout = null;
           let adminSearchResults = [];
@@ -2068,6 +2091,22 @@
             const available = adminSearchResults.filter((p) => !existing.has((p.email || '').toLowerCase()));
 
             if (available.length === 0) {
+              const query = adminUserSearch.value.trim();
+              if (looksLikeEmail(query) && !existing.has(query.toLowerCase())) {
+                const picked = adminPickedUser && adminPickedUser.email === query;
+                adminUserResults.innerHTML = `
+                  <li>
+                    <button type="button" class="share-search-item${picked ? ' selected' : ''}" data-pick-email="${escapeHtml(query)}" data-pick-name="">
+                      <span class="share-person-info">
+                        <span class="share-person-name">${escapeHtml(query)}</span>
+                        <span class="share-person-email">Add this address</span>
+                      </span>
+                      <span class="user-badge">${picked ? 'Selected' : 'Select'}</span>
+                    </button>
+                  </li>
+                `;
+                return;
+              }
               adminUserResults.innerHTML = '<li class="share-search-empty">No new people match that search.</li>';
               return;
             }
@@ -2135,7 +2174,7 @@
             const role = adminNewRole.dataset.selectedValue || 'explorer';
 
             if (!adminPickedUser) {
-              await showAlert('Search for a person in your directory and select them first.', 'Validation');
+              await showAlert('Search for a person and select them from the list first.', 'Validation');
               return;
             }
 
