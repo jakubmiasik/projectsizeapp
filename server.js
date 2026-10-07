@@ -2,6 +2,7 @@ const express = require('express');
 const compression = require('compression');
 const path = require('path');
 const db = require('./db');
+const graph = require('./graph');
 
 const app = express();
 const PORT = process.env.PORT || 8080;
@@ -315,11 +316,17 @@ app.get('/api/users/search', requireAuth, async (req, res) => {
       return res.json([]);
     }
 
-    const users = await db.searchUsers(query);
+    const users = await graph.searchDirectoryUsers(query);
     const currentUserEmail = normalizeEmail(req.user.email);
     res.json(users.filter((user) => normalizeEmail(user.email) !== currentUserEmail));
   } catch (err) {
-    console.error('Failed to search users:', err);
+    // A misconfigured directory permission is the likeliest failure here and
+    // it is fixable, so say so instead of a blank 500.
+    if (graph.isGraphConfigError(err)) {
+      console.error('Directory search is not configured:', err.message);
+      return res.status(503).json({ error: err.message, code: err.code });
+    }
+    console.error('Failed to search directory users:', err);
     res.status(500).json({ error: 'Failed to search users' });
   }
 });
@@ -384,8 +391,21 @@ app.post('/api/estimations/:groupId/share', requireAuth, async (req, res) => {
       return res.status(400).json({ error: 'You cannot share an estimation with yourself' });
     }
 
-    const targetUser = await db.getAppUserByEmail(email);
-    if (!targetUser) return res.status(404).json({ error: 'User not found' });
+    // People now come from the Entra directory, so the recipient often has no
+    // app_users row yet. Provision them as an explorer so the share is usable
+    // the moment they sign in, rather than failing with "User not found".
+    let targetUser = await db.getAppUserByEmail(email);
+    if (!targetUser) {
+      const displayName = String(req.body?.displayName || '').trim();
+      try {
+        targetUser = await db.addAppUser({ email, displayName, role: 'explorer' });
+      } catch (err) {
+        // A concurrent share of the same person loses the insert race; the row
+        // it wanted now exists, which is all this needs.
+        targetUser = await db.getAppUserByEmail(email);
+        if (!targetUser) throw err;
+      }
+    }
 
     const share = await db.shareEstimation(req.params.groupId, req.user.oid, req.user.name, targetUser.email);
     res.status(201).json(share);

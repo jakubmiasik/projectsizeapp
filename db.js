@@ -412,21 +412,6 @@ async function listAppUsers() {
   return result.recordset;
 }
 
-async function searchUsers(query) {
-  const p = await getPool();
-  const pattern = `%${query}%`;
-  const result = await p.request()
-    .input('pattern', sql.NVarChar, pattern)
-    .query(`
-      SELECT TOP 10 id, email, display_name
-      FROM app_users
-      WHERE LOWER(email) LIKE LOWER(@pattern)
-         OR LOWER(display_name) LIKE LOWER(@pattern)
-      ORDER BY CASE WHEN display_name = '' THEN 1 ELSE 0 END, display_name ASC, email ASC
-    `);
-  return result.recordset;
-}
-
 async function addAppUser({ email, displayName, role }) {
   const p = await getPool();
   const result = await p.request()
@@ -805,7 +790,6 @@ module.exports = {
   getUserRole,
   getAppUserByEmail,
   listAppUsers,
-  searchUsers,
   addAppUser,
   updateAppUserRole,
   deleteAppUser,

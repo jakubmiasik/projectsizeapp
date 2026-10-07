@@ -116,7 +116,15 @@
     .admin-delete-inline svg{width:.85rem;height:.85rem;fill:currentColor}
     .admin-delete-inline:hover{color:#c0392b;background:rgba(192,57,43,.12)}
     .admin-delete-inline:focus-visible{outline:2px solid #c0392b;outline-offset:1px}
-    .admin-add-row{display:grid;grid-template-columns:1fr 1fr auto auto;gap:var(--space-2);margin-bottom:var(--space-4);padding:var(--space-3) var(--space-4);border:1px dashed var(--color-border);border-radius:var(--radius-md);background:var(--color-surface-offset)}
+    .admin-add-row{display:grid;grid-template-columns:1fr auto auto;gap:var(--space-2);margin-bottom:var(--space-4);padding:var(--space-3) var(--space-4);border:1px dashed var(--color-border);border-radius:var(--radius-md);background:var(--color-surface-offset)}
+    .admin-people-picker{position:relative;min-width:0}
+    .admin-people-picker .admin-input{width:100%;box-sizing:border-box}
+    .admin-people-results{position:absolute;z-index:30;top:calc(100% + 4px);left:0;right:0;margin:0;padding:.25rem;list-style:none;max-height:240px;overflow-y:auto;background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-md);box-shadow:0 10px 30px rgba(0,0,0,.18)}
+    .admin-people-results li{list-style:none}
+    .admin-people-results .share-search-item{display:flex;align-items:center;justify-content:space-between;gap:.75rem;width:100%;padding:.5rem .6rem;border:0;border-radius:8px;background:transparent;color:var(--color-text);text-align:left;cursor:pointer}
+    .admin-people-results .share-search-item:hover{background:var(--color-surface-offset)}
+    .admin-people-results .share-search-empty{padding:.55rem .6rem;color:var(--color-text-muted);font-size:var(--text-xs)}
+    .admin-people-selected{display:flex;align-items:center;justify-content:space-between;gap:.75rem;padding:.4rem .6rem;border:1px solid var(--color-border);border-radius:8px;background:var(--color-surface)}
     .admin-input{border:1px solid var(--color-border);background:var(--color-surface);border-radius:8px;padding:.5rem .7rem;color:var(--color-text);font-size:var(--text-sm);transition:border-color .2s}
     .admin-input:focus{outline:none;border-color:var(--color-primary-strong);box-shadow:0 0 0 3px var(--color-primary-soft)}
     .admin-add-btn{border:none;background:linear-gradient(135deg,var(--color-primary),var(--color-primary-strong));color:#fff;border-radius:8px;padding:.5rem 1rem;font-weight:600;font-size:var(--text-sm);cursor:pointer;transition:transform .15s,box-shadow .15s}
@@ -401,6 +409,10 @@
         <button type="button" class="de-back-btn" id="de-back-btn">← Back to Sizing</button>
         <h2 style="margin:0;flex:1">Project Estimate</h2>
         <button type="button" class="de-save-btn" id="de-save-inline-btn">Save</button>
+      </div>
+
+      <div id="de-readonly-notice" hidden style="margin-bottom:var(--space-3);padding:.65rem .9rem;border:1px solid var(--color-border);border-left:3px solid var(--color-primary);border-radius:var(--radius-md);background:var(--color-surface-2);font-size:var(--text-xs);color:var(--color-text-muted)">
+        This estimation was shared with you, so Project Estimate is read-only. Use <strong>Save as my copy</strong> to make an editable copy of your own.
       </div>
 
       <!-- Calibration Parameters -->
@@ -835,11 +847,14 @@
         shareBtn.style.display = (loadedEstimation && !loadedEstimation.isShared) ? '' : 'none';
       }
       publishProjectToShell();
+      applyDetailedReadOnly();
     }
 
-    // Mirrors the loaded estimation into the sidebar tree and breadcrumb. The
-    // detailed estimator and requirements stay admin-only, so non-admins only
-    // ever see the project and its T-Shirt sizing step.
+    // Mirrors the loaded estimation into the sidebar tree and breadcrumb.
+    // Project Estimate and Requirements belong to the estimation, not to a
+    // role: anyone holding an estimation — owner or share recipient — gets
+    // both steps. The server still decides what they may read and write, and
+    // the admin-only cost figures live in the T-Shirt summary, not here.
     function publishProjectToShell() {
       if (typeof AppShell === 'undefined') return;
       if (!loadedEstimation) { AppShell.setProject(null); return; }
@@ -847,7 +862,31 @@
         id: loadedEstimation.id,
         title: loadedEstimation.title,
         version: loadedEstimation.version,
-        steps: currentUserRole === 'admin' ? ['detailed', 'requirements'] : []
+        steps: ['detailed', 'requirements']
+      });
+    }
+
+    // A shared estimation is read-only: saving it already forks into the
+    // recipient's own copy, so letting them type into the estimator would only
+    // promise an edit that never lands on the original.
+    function applyDetailedReadOnly() {
+      const view = document.getElementById('detailed-estimation-view');
+      if (!view) return;
+      const readOnly = Boolean(loadedEstimation && loadedEstimation.isShared);
+      view.classList.toggle('de-readonly', readOnly);
+
+      const saveBtn = document.getElementById('de-save-inline-btn');
+      if (saveBtn) saveBtn.textContent = readOnly ? 'Save as my copy' : 'Save';
+
+      const notice = document.getElementById('de-readonly-notice');
+      if (notice) notice.hidden = !readOnly;
+
+      view.querySelectorAll('input,select,textarea').forEach((el) => {
+        if (el.id === 'de-generated-assumptions') return; // already readonly
+        el.disabled = readOnly;
+      });
+      view.querySelectorAll('.de-add-btn,.de-del-btn').forEach((el) => {
+        el.disabled = readOnly;
       });
     }
 
@@ -1356,8 +1395,12 @@
         const adminEstimationsListEl = document.getElementById('admin-estimations-list');
         const adminEstimationModal = document.getElementById('admin-estimation-modal');
         const adminEstimationDetails = document.getElementById('admin-estimation-details');
-        const adminNewEmail = document.getElementById('admin-new-email');
-        const adminNewName = document.getElementById('admin-new-name');
+        const adminUserSearch = document.getElementById('admin-user-search');
+        const adminUserResults = document.getElementById('admin-user-results');
+        const adminUserSelected = document.getElementById('admin-user-selected');
+        const adminUserSelectedName = document.getElementById('admin-user-selected-name');
+        const adminUserSelectedEmail = document.getElementById('admin-user-selected-email');
+        const adminUserClear = document.getElementById('admin-user-clear');
         const adminNewRole = document.getElementById('admin-new-role-dropdown');
         const adminAddBtn = document.getElementById('admin-add-btn');
         const versionCache = new Map();
@@ -1579,7 +1622,7 @@
           });
 
           if (!query) {
-            shareSearchResultsEl.innerHTML = '<li class="share-search-empty">Start typing to search for users.</li>';
+            shareSearchResultsEl.innerHTML = '<li class="share-search-empty">Start typing to search your directory.</li>';
             return;
           }
 
@@ -1590,7 +1633,7 @@
 
           shareSearchResultsEl.innerHTML = visibleResults.map((person) => `
             <li>
-              <button type="button" class="share-search-item" data-share-email="${escapeHtml(person.email)}">
+              <button type="button" class="share-search-item" data-share-email="${escapeHtml(person.email)}" data-share-name="${escapeHtml(person.display_name || '')}">
                 <span class="share-person-info">
                   <span class="share-person-name">${escapeHtml(person.display_name || person.email)}</span>
                   <span class="share-person-email">${escapeHtml(person.email)}</span>
@@ -1862,7 +1905,12 @@
             await fetchJson(`/api/estimations/${shareState.groupId}/share`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ email: button.dataset.shareEmail })
+              body: JSON.stringify({
+                email: button.dataset.shareEmail,
+                // Lets the server name the app_users row it provisions for a
+                // directory person who has never signed in.
+                displayName: button.dataset.shareName || ''
+              })
             }, 'Failed to share estimation');
             shareSearchInput.value = '';
             shareState.searchResults = [];
@@ -2005,14 +2053,99 @@
             });
           });
 
-          adminAddBtn.addEventListener('click', async () => {
-            const email = adminNewEmail.value.trim().toLowerCase();
-            const displayName = adminNewName.value.trim();
-            const role = adminNewRole.dataset.selectedValue || 'explorer';
-            const emailPattern = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
+          // Manage Access picks people straight out of the Entra directory, so
+          // an admin can only grant access to someone who actually exists in
+          // the tenant rather than typing an address with a typo in it.
+          let adminPickedUser = null;
+          let adminSearchTimeout = null;
 
-            if (!emailPattern.test(email)) {
-              await showAlert('Enter a valid email address.', 'Validation');
+          function setAdminPickedUser(person) {
+            adminPickedUser = person;
+            if (person) {
+              adminUserSelectedName.textContent = person.display_name || person.email;
+              adminUserSelectedEmail.textContent = person.email;
+              adminUserSelected.hidden = false;
+              adminUserSearch.hidden = true;
+            } else {
+              adminUserSelected.hidden = true;
+              adminUserSearch.hidden = false;
+              adminUserSearch.value = '';
+            }
+            adminUserResults.hidden = true;
+            adminUserResults.innerHTML = '';
+          }
+
+          function renderAdminSearchResults(people) {
+            const existing = new Set(adminState.users.map((u) => (u.email || '').toLowerCase()));
+            const available = people.filter((p) => !existing.has((p.email || '').toLowerCase()));
+
+            if (available.length === 0) {
+              adminUserResults.innerHTML = '<li class="share-search-empty">No new people match that search.</li>';
+            } else {
+              adminUserResults.innerHTML = available.map((person) => `
+                <li>
+                  <button type="button" class="share-search-item" data-pick-email="${escapeHtml(person.email)}" data-pick-name="${escapeHtml(person.display_name || '')}">
+                    <span class="share-person-info">
+                      <span class="share-person-name">${escapeHtml(person.display_name || person.email)}</span>
+                      <span class="share-person-email">${escapeHtml(person.email)}</span>
+                    </span>
+                    <span class="user-badge">Select</span>
+                  </button>
+                </li>
+              `).join('');
+            }
+            adminUserResults.hidden = false;
+          }
+
+          adminUserSearch.addEventListener('input', () => {
+            const query = adminUserSearch.value.trim();
+            if (adminSearchTimeout) clearTimeout(adminSearchTimeout);
+
+            if (query.length < 2) {
+              adminUserResults.hidden = true;
+              adminUserResults.innerHTML = '';
+              return;
+            }
+
+            adminUserResults.innerHTML = '<li class="share-search-empty">Searching the directory...</li>';
+            adminUserResults.hidden = false;
+            adminSearchTimeout = setTimeout(async () => {
+              try {
+                const people = await fetchJson(`/api/users/search?q=${encodeURIComponent(query)}`, {}, 'Failed to search the directory');
+                if (adminUserSearch.value.trim() !== query) return;
+                renderAdminSearchResults(people);
+              } catch (err) {
+                adminUserResults.innerHTML = `<li class="share-search-empty">${escapeHtml(err.message)}</li>`;
+                adminUserResults.hidden = false;
+              }
+            }, 250);
+          });
+
+          adminUserResults.addEventListener('click', (event) => {
+            const button = event.target.closest('[data-pick-email]');
+            if (!button) return;
+            setAdminPickedUser({
+              email: button.dataset.pickEmail,
+              display_name: button.dataset.pickName || ''
+            });
+          });
+
+          adminUserClear.addEventListener('click', () => {
+            setAdminPickedUser(null);
+            adminUserSearch.focus();
+          });
+
+          document.addEventListener('click', (event) => {
+            if (!adminUserResults.hidden && !event.target.closest('.admin-people-picker')) {
+              adminUserResults.hidden = true;
+            }
+          });
+
+          adminAddBtn.addEventListener('click', async () => {
+            const role = adminNewRole.dataset.selectedValue || 'explorer';
+
+            if (!adminPickedUser) {
+              await showAlert('Search for a person in your directory and select them first.', 'Validation');
               return;
             }
 
@@ -2020,10 +2153,13 @@
               await fetchJson('/api/admin/users', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email, displayName, role })
+                body: JSON.stringify({
+                  email: adminPickedUser.email,
+                  displayName: adminPickedUser.display_name,
+                  role
+                })
               }, 'Failed to add user');
-              adminNewEmail.value = '';
-              adminNewName.value = '';
+              setAdminPickedUser(null);
               adminNewRole.dataset.selectedValue = 'explorer';
               adminNewRole.querySelector('.admin-dropdown-toggle').textContent = 'Explorer ';
               adminNewRole.querySelectorAll('.admin-dropdown-item').forEach(i => i.classList.toggle('active', i.dataset.value === 'explorer'));
@@ -2175,6 +2311,9 @@
         if (heroSection) heroSection.style.display = 'none';
         deView.classList.add('active');
         deCalculate();
+        // Rows are rebuilt by loadDePayload, so re-apply on every open rather
+        // than only when the estimation is first loaded.
+        applyDetailedReadOnly();
         AppShell.setActive('detailed');
       }
 
@@ -2673,7 +2812,7 @@
       <h3 id="share-modal-title">Share estimation</h3>
       <div class="modal-field">
         <label for="share-search-input">Search people</label>
-        <input type="text" id="share-search-input" class="modal-input" placeholder="Type a name or email" autocomplete="off" />
+        <input type="text" id="share-search-input" class="modal-input" placeholder="Search people in your directory" autocomplete="off" />
       </div>
       <div class="share-search-panel">
         <div class="share-section-copy">Select a user to share this estimation with.</div>
@@ -2705,8 +2844,17 @@
           <div style="margin-bottom:var(--space-3)">
             <h4>Manage Access</h4>
             <div class="admin-add-row">
-              <input type="email" id="admin-new-email" placeholder="user@example.com" class="admin-input" />
-              <input type="text" id="admin-new-name" placeholder="Display name" class="admin-input" />
+              <div class="admin-people-picker">
+                <input type="text" id="admin-user-search" placeholder="Search people in your directory" class="admin-input" autocomplete="off" />
+                <ul id="admin-user-results" class="admin-people-results" hidden></ul>
+                <div id="admin-user-selected" class="admin-people-selected" hidden>
+                  <span class="share-person-info">
+                    <span class="share-person-name" id="admin-user-selected-name"></span>
+                    <span class="share-person-email" id="admin-user-selected-email"></span>
+                  </span>
+                  <button type="button" class="share-remove-btn" id="admin-user-clear" title="Choose someone else">&times;</button>
+                </div>
+              </div>
               <div class="admin-dropdown" id="admin-new-role-dropdown">
                 <button class="admin-dropdown-toggle" type="button" id="admin-new-role-btn">Explorer </button>
                 <div class="admin-dropdown-menu">
