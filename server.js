@@ -513,6 +513,25 @@ app.put('/api/estimations/:id', requireAuth, async (req, res) => {
   }
 });
 
+// Delete a single version from an estimation group. Owner-only: a share
+// recipient reads the group and must not be able to remove history from it.
+app.delete('/api/estimations/:id/versions/:versionId', requireAuth, async (req, res) => {
+  try {
+    const result = await db.deleteEstimationVersion(req.params.id, req.params.versionId, req.user.oid);
+    if (result.reason === 'last_version') {
+      return res.status(409).json({
+        error: 'This is the only version. Delete the estimation instead.',
+        code: 'LAST_VERSION'
+      });
+    }
+    if (!result.ok) return res.status(404).json({ error: 'Not found' });
+    res.json({ success: true, groupId: result.groupId });
+  } catch (err) {
+    console.error('Failed to delete estimation version:', err);
+    res.status(500).json({ error: 'Failed to delete version' });
+  }
+});
+
 // Delete an estimation
 app.delete('/api/estimations/:id', requireAuth, async (req, res) => {
   try {

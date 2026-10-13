@@ -693,6 +693,90 @@ async function deleteEstimation(id, userOid) {
   return result.rowsAffected[0] > 0;
 }
 
+// Removing one version is not simply deleting its row: the row with
+// parent_id IS NULL is the anchor the whole group hangs off. Children point at
+// it, estimation_shares keys on it, and both listing queries find a group by
+// looking for that root. Deleting it naively orphans every other version.
+//
+// So when the root is the version being removed, the oldest survivor is
+// promoted to root and everything that referenced the old id is re-pointed.
+// Version numbers are deliberately left with gaps: requirements rows are keyed
+// by version number, so renumbering would silently detach them.
+async function deleteEstimationVersion(groupId, versionId, userOid) {
+  const rootId = await resolveParentId(groupId, userOid);
+  if (!rootId) return { ok: false, reason: 'not_found' };
+
+  const p = await getPool();
+  const versions = (await p.request()
+    .input('rootId', sql.UniqueIdentifier, rootId)
+    .input('userOid', sql.NVarChar, userOid)
+    .query(`
+      SELECT id, parent_id, version
+      FROM estimations
+      WHERE user_oid = @userOid AND (id = @rootId OR parent_id = @rootId)
+      ORDER BY version ASC, created_at ASC
+    `)).recordset;
+
+  const target = versions.find((row) => String(row.id).toLowerCase() === String(versionId).toLowerCase());
+  if (!target) return { ok: false, reason: 'not_found' };
+
+  // Deleting the only version is deleting the estimation. That is a different,
+  // more destructive action with its own confirmation, so refuse rather than
+  // quietly doing it here.
+  if (versions.length === 1) return { ok: false, reason: 'last_version' };
+
+  const isRoot = !target.parent_id;
+  const promoted = isRoot
+    ? versions.find((row) => String(row.id) !== String(target.id))
+    : null;
+
+  const tx = new sql.Transaction(p);
+  await tx.begin();
+  try {
+    if (isRoot) {
+      await new sql.Request(tx)
+        .input('promotedId', sql.UniqueIdentifier, promoted.id)
+        .query('UPDATE estimations SET parent_id = NULL WHERE id = @promotedId');
+
+      await new sql.Request(tx)
+        .input('oldRootId', sql.UniqueIdentifier, rootId)
+        .input('promotedId', sql.UniqueIdentifier, promoted.id)
+        .query(`
+          UPDATE estimations SET parent_id = @promotedId
+          WHERE parent_id = @oldRootId AND id <> @promotedId
+        `);
+
+      await new sql.Request(tx)
+        .input('oldRootId', sql.UniqueIdentifier, rootId)
+        .input('promotedId', sql.UniqueIdentifier, promoted.id)
+        .query(`
+          UPDATE estimation_shares SET estimation_group_id = @promotedId
+          WHERE estimation_group_id = @oldRootId
+        `);
+    }
+
+    // requirements has ON DELETE CASCADE against estimations(id), so the
+    // version's requirements document goes with it.
+    const result = await new sql.Request(tx)
+      .input('id', sql.UniqueIdentifier, target.id)
+      .input('userOid', sql.NVarChar, userOid)
+      .query('DELETE FROM estimations WHERE id = @id AND user_oid = @userOid');
+
+    // If the row vanished between the read and the delete, the promotion above
+    // would leave the group with a new root and nothing removed. Undo it.
+    if (result.rowsAffected[0] === 0) {
+      await tx.rollback();
+      return { ok: false, reason: 'not_found' };
+    }
+
+    await tx.commit();
+    return { ok: true, reason: null, groupId: isRoot ? promoted.id : rootId };
+  } catch (err) {
+    await tx.rollback();
+    throw err;
+  }
+}
+
 async function deleteEstimationAsAdmin(id) {
   const p = await getPool();
   const lookup = await p.request()
@@ -827,6 +911,7 @@ module.exports = {
   shareEstimation,
   unshareEstimation,
   deleteEstimation,
+  deleteEstimationVersion,
   deleteEstimationAsAdmin,
   getRequirements,
   getRequirementsMeta,
