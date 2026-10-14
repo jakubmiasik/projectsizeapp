@@ -408,6 +408,7 @@
       <div class="de-header">
         <button type="button" class="de-back-btn" id="de-back-btn">← Back to Sizing</button>
         <h2 style="margin:0;flex:1">Project Estimate</h2>
+        <button type="button" class="de-save-btn" id="de-export-html-btn">Export HTML</button>
         <button type="button" class="de-save-btn" id="de-save-inline-btn">Save</button>
       </div>
 
@@ -2367,6 +2368,46 @@
       const heroSection = document.querySelector('.hero.container');
       const btnBack = document.getElementById('de-back-btn');
       const btnSave = document.getElementById('de-save-inline-btn');
+      const btnExportHtml = document.getElementById('de-export-html-btn');
+
+      function exportEstimateHtml() {
+        deCalculate();
+        const payload = buildDePayload();
+        const esc = (value) => String(value ?? '').replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[ch]);
+        const client = document.getElementById('client-name')?.value.trim() || 'Project';
+        const title = `${client} — Project Estimate`;
+        const totals = [
+          ['Ingestion', 'de-res-ingestion'], ['Transformation', 'de-res-transform'],
+          ['Gold layer', 'de-res-gold'], ['Base effort', 'de-res-base'],
+          ['Analysis', 'de-res-analysis'], ['Contingency', 'de-res-contingency'],
+          ['Documentation', 'de-res-documentation'], ['UAT', 'de-res-uat'],
+          ['PRG total', 'de-res-prg-total'], ['Work packages', 'de-res-wp'],
+          ['Project total', 'de-res-project-total'],
+        ].map(([label, id]) => `<tr><th>${label}</th><td>${esc(document.getElementById(id)?.textContent)}</td></tr>`).join('');
+        const description = document.getElementById('client-description')?.innerText.trim() || '';
+        const useCase = document.getElementById('use-case-explanation')?.innerText.trim() || '';
+        const notes = document.getElementById('additional-notes')?.innerText.trim() || '';
+        const assumptions = document.getElementById('de-generated-assumptions')?.value || '';
+        const json = esc(JSON.stringify(payload, null, 2));
+        const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(title)}</title><style>
+          :root{color-scheme:light;font:15px/1.55 Arial,sans-serif;color:#202b33;background:#f4f7f7}body{margin:0;padding:32px 18px}.page{max-width:900px;margin:auto;background:white;padding:40px;border:1px solid #dce5e5;border-radius:14px}header{border-bottom:3px solid #087f82;padding-bottom:20px;margin-bottom:24px}h1{margin:0;color:#075e62;font-size:30px}h2{font-size:19px;margin:28px 0 10px;color:#075e62}p{white-space:pre-wrap;margin:.35rem 0}table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:10px;border-bottom:1px solid #e2eaea}th{width:60%;color:#40545a}tr:last-child{font-weight:bold;background:#e8f5f3}pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#f4f7f7;padding:16px;border-radius:8px;font-size:12px}.meta{color:#617279}button{float:right;border:0;border-radius:7px;padding:10px 16px;background:#087f82;color:white;font-weight:bold;cursor:pointer}@media print{body{padding:0;background:#fff}.page{border:0;padding:0;max-width:none}button{display:none}pre{white-space:pre-wrap}}@media(max-width:600px){.page{padding:22px 18px}}
+        </style></head><body><main class="page"><button onclick="window.print()">Print / Save PDF</button><header><div class="meta">Microsoft Fabric Project Sizing</div><h1>${esc(title)}</h1><div class="meta">Prepared ${esc(new Date().toLocaleDateString())}</div></header>
+          ${description ? `<h2>Client / project</h2><p>${esc(description)}</p>` : ''}${useCase ? `<h2>Use case</h2><p>${esc(useCase)}</p>` : ''}
+          <h2>Effort estimate</h2><table><tbody>${totals}</tbody></table>
+          ${assumptions ? `<h2>Scope and assumptions</h2><pre>${esc(assumptions)}</pre>` : ''}${notes ? `<h2>Additional notes</h2><p>${esc(notes)}</p>` : ''}
+          <h2>Estimation inputs</h2><details><summary>Show detailed inputs</summary><pre>${json}</pre></details>
+          <footer class="meta" style="margin-top:28px;border-top:1px solid #e2eaea;padding-top:12px">Generated from Fabric Project Sizing.</footer></main></body></html>`;
+        const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `${client.replace(/[^a-z0-9_-]+/gi, '-').replace(/^-|-$/g, '') || 'project'}-estimate.html`;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        URL.revokeObjectURL(url);
+      }
+      btnExportHtml.addEventListener('click', exportEstimateHtml);
 
       function showDetailedView() {
         if (appSection) appSection.style.display = 'none';
