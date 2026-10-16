@@ -2211,9 +2211,14 @@
               if (window.deApplyOrgRates) window.deApplyOrgRates(adminRatesSaved);
               renderAdminCalibration();
               const count = Object.keys(adminRatesSaved).length;
-              setAdminCalibrationStatus(count ? `Saved · ${count} rate${count === 1 ? '' : 's'} overridden` : 'Saved · every rate uses the built-in default.');
+              const summary = count
+                ? `Calibration saved · ${count} rate${count === 1 ? '' : 's'} overridden`
+                : 'Calibration saved · every rate now uses the built-in default';
+              setAdminCalibrationStatus(summary);
+              AppShell.toast(summary, 'success');
             } catch (err) {
               setAdminCalibrationStatus(err.message, true);
+              AppShell.toast(err.message, 'error');
             } finally {
               button.disabled = false;
             }
