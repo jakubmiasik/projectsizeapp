@@ -7,43 +7,66 @@
    ══════════════════════════════════════════════════════════════ */
 
 /* ──── Design Tokens ──── */
+/* Base palette, shared with the Project Estimate view (/css/estimator-v3.css,
+   whose component rules read these directly). Defined here rather than there
+   so every page gets the same colours in both themes, whether or not it loads
+   the estimator. */
 :root,
 [data-theme="light"] {
-  --color-bg: #f7f6f2;
-  --color-surface: #ffffff;
-  --color-surface-2: #fbfbf9;
-  --color-surface-offset: #f3f0ec;
-  --color-border: #e2e0dc;
-  --color-divider: #eae8e4;
-  --color-text: #1a1a1a;
-  --color-text-muted: #6d685f;
-  --color-text-subtle: #9e998f;
-  --color-primary: #01696f;
-  --color-primary-strong: #014a4f;
-  --color-primary-soft: #dbeeed;
-  --color-primary-hover: #018a92;
-  --color-accent: #e8b923;
-  --color-shadow: rgba(40, 37, 29, .06);
-  --color-danger: #dc3545;
-  --color-success: #198754;
-  --color-warning: #ffc107;
+  --primary: #1f3a5f;
+  --primary-strong: #0f2742;
+  --primary-soft: #e8eef6;
+  --accent: #0c7c59;
+  --accent-soft: #e6f3ee;
+  --amber: #b07d2b;
+  --amber-bg: #fbf3e4;
+  --rose: #b42318;
+  --rose-bg: #fdecea;
+  --sky: #2f6690;
+  --bg: #f4f6f9;
+  --surface: #ffffff;
+  --surface-2: #f8fafc;
+  --ink: #1b2430;
+  --ink-soft: #5b6878;
+  --line: #dfe4ec;
+  --line-soft: #edf0f5;
+  --shadow: 0 1px 2px rgba(16, 24, 40, .05), 0 4px 12px -6px rgba(16, 24, 40, .10);
+
+  /* Shell aliases over the palette above. */
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-surface-offset: var(--primary-soft);
+  --color-border: var(--line);
+  --color-divider: var(--line-soft);
+  --color-text: var(--ink);
+  --color-text-muted: var(--ink-soft);
+  --color-text-subtle: #8a97a8;
+  --color-primary: var(--primary);
+  --color-primary-strong: var(--primary-strong);
+  --color-primary-soft: var(--primary-soft);
+  --color-primary-hover: var(--sky);
+  --color-accent: var(--accent);
+  --color-shadow: rgba(16, 24, 40, .06);
+  --color-danger: var(--rose);
+  --color-success: var(--accent);
+  --color-warning: var(--amber);
 
   --sidebar-width: 260px;
   --sidebar-collapsed: 64px;
   --topbar-height: 56px;
-  --radius-sm: 8px;
-  --radius-md: 12px;
-  --radius-lg: 16px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
   --radius-pill: 999px;
-  --shadow-sm: 0 1px 3px rgba(0, 0, 0, .04), 0 4px 12px rgba(0, 0, 0, .03);
-  --shadow-md: 0 4px 16px rgba(0, 0, 0, .06);
-  --shadow-lg: 0 8px 32px rgba(0, 0, 0, .08);
-  /* Saira (OFL via Google Fonts) — a slightly condensed grotesque, so dense
-     estimate tables fit more per line while staying legible. Loaded as a
-     webfont on both pages and in the exported preview, so the app and the
-     client-facing document match on any machine. */
-  --font-body: "Saira", Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  --font-display: var(--font-body);
+  --shadow-sm: 0 1px 2px rgba(16, 24, 40, .05), 0 4px 12px -6px rgba(16, 24, 40, .10);
+  --shadow-md: 0 4px 16px -6px rgba(16, 24, 40, .14);
+  --shadow-lg: 0 8px 32px -8px rgba(16, 24, 40, .18);
+  /* Inter for body copy, Sora for headings — the pairing the estimator was
+     designed with. Loaded as webfonts on every page and in the exported
+     preview, so the app and the client-facing document match on any machine. */
+  --font-body: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-display: Sora, Inter, system-ui, -apple-system, "Segoe UI", sans-serif;
   /* Bootstrap components read these, so they follow the app font too. This
      sheet loads after Bootstrap, so these win. */
   --bs-body-font-family: var(--font-body);
@@ -53,20 +76,34 @@
 }
 
 /* ──── Dark Mode Tokens ──── */
+/* Only the base palette is restated; every --color-* alias above is a var()
+   reference, so it re-resolves to these values automatically. */
 [data-theme="dark"] {
-  --color-bg: #121212;
-  --color-surface: #1e1e1e;
-  --color-surface-2: #252525;
-  --color-surface-offset: #2a2a2a;
-  --color-border: #3a3a3a;
-  --color-divider: #333333;
-  --color-text: #e8e6e3;
-  --color-text-muted: #a0a0a0;
-  --color-text-subtle: #707070;
-  --color-primary: #2dd4db;
-  --color-primary-strong: #5eead4;
-  --color-primary-soft: rgba(45, 212, 219, .12);
-  --color-primary-hover: #67e8f9;
+  --primary: #8fb3e0;
+  /* A *stronger* primary, not a darker one: in dark mode this token is used for
+     link hover, the primary-button hover fill and gradient ends, all of which
+     sit against dark surfaces and carry dark text. */
+  --primary-strong: #b6cdec;
+  --primary-soft: #1c2a3d;
+  --accent: #4cc39a;
+  --accent-soft: #16302a;
+  --amber: #e0b35c;
+  --amber-bg: #3a2f1a;
+  --rose: #f2877b;
+  --rose-bg: #3a1f1d;
+  --sky: #6f9fd0;
+  --bg: #0e141c;
+  --surface: #151d28;
+  --surface-2: #1a2431;
+  --ink: #e6ebf2;
+  --ink-soft: #9aa7b8;
+  --line: #273345;
+  --line-soft: #1f2a39;
+  --shadow: 0 4px 16px -6px rgba(0, 0, 0, .6);
+
+  --color-text-subtle: #6f7d90;
+  --color-surface-offset: #1f2a39;
+  --color-primary-hover: #a9c7ea;
   --color-shadow: rgba(0, 0, 0, .3);
   --shadow-sm: 0 1px 3px rgba(0, 0, 0, .2), 0 4px 12px rgba(0, 0, 0, .15);
   --shadow-md: 0 4px 16px rgba(0, 0, 0, .25);

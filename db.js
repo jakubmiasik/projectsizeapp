@@ -538,7 +538,48 @@ async function getNextVersion(parentId, userOid) {
   return result.recordset[0]?.next_version || 1;
 }
 
-async function saveEstimation({ userOid, userName, clientName, title, data, parentId = null }) {
+// Requirements documents are keyed by (estimation_id, version) where
+// estimation_id is the *version row* id, not the group root. A new version is
+// a brand new estimations row, so without this copy it would open an empty
+// requirements page. sourceId names the version the user saved from; when it
+// is missing or carries no document we fall back to the newest version in the
+// group that has one. Copying happens entirely inside SQL so a multi-megabyte
+// document never travels through Node.
+async function copyRequirementsFrom({ newId, newVersion, sourceId, rootId, userOid }) {
+  const p = await getPool();
+  const result = await p.request()
+    .input('newId', sql.UniqueIdentifier, newId)
+    .input('newVersion', sql.Int, newVersion)
+    .input('sourceId', sql.UniqueIdentifier, sourceId || null)
+    .input('rootId', sql.UniqueIdentifier, rootId)
+    .input('userOid', sql.NVarChar, userOid)
+    .query(`
+      INSERT INTO requirements (estimation_id, version, data)
+      SELECT TOP 1 @newId, @newVersion, r.data
+      FROM requirements r
+      JOIN estimations e
+        ON e.id = r.estimation_id AND e.version = r.version
+      WHERE e.user_oid = @userOid
+        AND (e.id = @rootId OR e.parent_id = @rootId)
+        AND (@sourceId IS NULL OR e.id = @sourceId)
+        AND NOT EXISTS (
+          SELECT 1 FROM requirements x
+          WHERE x.estimation_id = @newId AND x.version = @newVersion
+        )
+      ORDER BY e.version DESC
+    `);
+  return result.rowsAffected[0] > 0;
+}
+
+async function carryForwardRequirements(opts) {
+  if (await copyRequirementsFrom(opts)) return true;
+  // The named source may simply have no requirements document yet; fall back
+  // to the newest version in the group that does have one.
+  if (opts.sourceId) return copyRequirementsFrom({ ...opts, sourceId: null });
+  return false;
+}
+
+async function saveEstimation({ userOid, userName, clientName, title, data, parentId = null, sourceId = null }) {
   const p = await getPool();
   let resolvedParentId = null;
   let version = 1;
@@ -564,7 +605,24 @@ async function saveEstimation({ userOid, userName, clientName, title, data, pare
       OUTPUT INSERTED.id, INSERTED.title, INSERTED.client_name, INSERTED.version, INSERTED.parent_id, INSERTED.created_at, INSERTED.updated_at
       VALUES (@userOid, @userName, @clientName, @title, @data, @version, @parentId)
     `);
-  return result.recordset[0];
+  const saved = result.recordset[0];
+
+  // A new version inherits the requirements document of the version it was
+  // saved from. Never fatal: the estimation itself is already committed.
+  if (saved && resolvedParentId) {
+    try {
+      await carryForwardRequirements({
+        newId: saved.id,
+        newVersion: saved.version,
+        sourceId,
+        rootId: resolvedParentId,
+        userOid
+      });
+    } catch (err) {
+      console.error('Failed to carry requirements forward to the new version:', err);
+    }
+  }
+  return saved;
 }
 
 async function updateEstimation({ id, userOid, userName, clientName, title, data }) {

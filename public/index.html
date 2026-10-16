@@ -7,10 +7,12 @@
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%2301696f'/%3E%3Ctext x='32' y='42' text-anchor='middle' font-size='28' font-family='Arial' fill='white'%3EF%3C/text%3E%3C/svg%3E" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Saira:wght@400;500;600;700;800&display=swap" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Sora:wght@500;600;700&display=swap" />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
   <!-- Shared design system: tokens, dark mode, sidebar shell, density -->
   <link rel="stylesheet" href="/css/app-shell.css" />
+  <!-- Project Estimate view; scoped to #detailed-estimation-view -->
+  <link rel="stylesheet" href="/css/estimator-v3.css" />
   <script src="/js/app-shell.js"></script>
   <style>
     /* Page-specific scales. Colours, radii and shadows come from app-shell.css
@@ -46,7 +48,10 @@
     .option label::before{content:"";position:absolute;left:1rem;top:1rem;width:1.1rem;height:1.1rem;border-radius:999px;border:2px solid #8e8b84} .option input:checked + label{border-color:var(--color-primary);box-shadow:0 0 0 3px color-mix(in srgb,var(--color-primary) 15%,transparent)} .option input:checked + label::before{background:var(--color-primary);border-color:var(--color-primary)}
     .option-title{display:block;font-weight:700;margin-bottom:.2rem}.sub{display:block;color:var(--color-text-muted);font-size:var(--text-sm);margin-top:.2rem}
     .section-adjustment{display:grid;gap:var(--space-2);padding:var(--space-4);border:1px solid var(--color-divider);border-radius:var(--radius-lg);background:var(--color-surface-offset)} .section-adjustment label{display:flex;align-items:center;justify-content:space-between;gap:var(--space-4)} .multiplier-field{display:inline-flex;align-items:center;gap:.6rem} .multiplier-input,.buffer-input{width:88px;border:1px solid var(--color-border);background:var(--color-surface);border-radius:12px;padding:.55rem .7rem;color:var(--color-text)} .section-adjustment-help,.buffer-note{color:var(--color-text-muted);font-size:var(--text-sm)}
-    .actions{position:sticky;bottom:0;display:flex;gap:var(--space-3);flex-wrap:wrap;padding-top:var(--space-4);padding-bottom:var(--space-2);background:linear-gradient(180deg,rgba(249,248,245,0),var(--color-surface) 28%)} .btn{border:1px solid var(--color-border);background:var(--color-surface-offset);color:var(--color-text);padding:.9rem 1.1rem;border-radius:14px;cursor:pointer;font-weight:700} .btn-primary{background:linear-gradient(135deg,var(--color-primary),var(--color-primary-strong));color:#fff;border-color:transparent}
+    /* Scoped to the sizing questionnaire: the Project Estimate view has its
+       own .actions rows, and a sticky bar with an opaque background would sit
+       on top of them. */
+    #app-section .actions{position:sticky;bottom:0;display:flex;gap:var(--space-3);flex-wrap:wrap;padding-top:var(--space-4);padding-bottom:var(--space-2);background:linear-gradient(180deg,rgba(249,248,245,0),var(--color-surface) 28%)} .btn{border:1px solid var(--color-border);background:var(--color-surface-offset);color:var(--color-text);padding:.9rem 1.1rem;border-radius:14px;cursor:pointer;font-weight:700} .btn-primary{background:linear-gradient(135deg,var(--color-primary),var(--color-primary-strong));color:#fff;border-color:transparent}
     .badge{display:inline-flex;align-items:center;gap:.45rem;padding:.45rem .85rem;border-radius:999px;font-weight:700;font-size:var(--text-sm)} .xs,.s,.m,.l,.xl{background:var(--color-primary-soft);color:var(--color-primary-strong)}
     .score-pair{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--space-3)} .score-card{padding:var(--space-4);border-radius:var(--radius-lg);background:var(--color-surface-offset)} .score-card span{color:var(--color-text-muted);display:block;margin-bottom:.35rem} .score{font-size:var(--text-base);font-weight:800;word-break:break-word}
     .buffer-box{display:grid;gap:var(--space-3);padding:var(--space-4);border-radius:var(--radius-lg);background:var(--color-surface-offset)} .buffer-row{display:grid;grid-template-columns:1fr auto;align-items:center;gap:var(--space-3)}
@@ -407,7 +412,7 @@
     <section class="detailed-estimation-view container" id="detailed-estimation-view">
       <div class="de-header">
         <button type="button" class="de-back-btn" id="de-back-btn">← Back to Sizing</button>
-        <h2 style="margin:0;flex:1">Project Estimate</h2>
+        <div style="flex:1;min-width:0"><h2 style="margin:0">Project Estimate</h2><div class="de-header-client" id="de3-heroClient">&ndash;</div></div>
         <button type="button" class="de-save-btn" id="de-export-html-btn">Export HTML</button>
         <button type="button" class="de-save-btn" id="de-save-inline-btn">Save</button>
       </div>
@@ -416,131 +421,94 @@
         This estimation was shared with you, so Project Estimate is read-only. Use <strong>Save as my copy</strong> to make an editable copy of your own.
       </div>
 
-      <!-- Calibration Parameters -->
-      <div class="de-section">
-        <h3>⚙️ Calibration Parameters</h3>
-        <div class="de-grid">
-          <div class="de-field"><label>Hours per Source</label><input type="number" id="de-hrsPerSource" value="8" step="0.5" min="0"></div>
-          <div class="de-field"><label>Hours per Ingest Object</label><input type="number" id="de-hrsPerIngest" value="4" step="0.5" min="0"></div>
-          <div class="de-field"><label>Hours per Transformation</label><input type="number" id="de-hrsPerTransform" value="6" step="0.5" min="0"></div>
-          <div class="de-field"><label>Hours per Dimension</label><input type="number" id="de-hrsPerDimension" value="6" step="0.5" min="0"></div>
-          <div class="de-field"><label>Hours per Fact</label><input type="number" id="de-hrsPerFact" value="8" step="0.5" min="0"></div>
-          <div class="de-field"><label>Hours per Semantic Model</label><input type="number" id="de-hrsPerSemanticModel" value="10" step="0.5" min="0"></div>
-          <div class="de-field"><label>Hours per KPI/DAX</label><input type="number" id="de-hrsPerKpi" value="3" step="0.5" min="0"></div>
-          <div class="de-field"><label>Hours per Report</label><input type="number" id="de-hrsPerReport" value="12" step="0.5" min="0"></div>
-          <div class="de-field"><label>Tab Impact %</label><input type="number" id="de-tabImpactPct" value="30" step="5" min="0" max="100"></div>
-          <div class="de-field"><label>Analysis %</label><input type="number" id="de-analysisPct" value="15" step="1" min="0" max="100"></div>
-          <div class="de-field"><label>Documentation %</label><input type="number" id="de-documentationPct" value="10" step="1" min="0" max="100"></div>
-          <div class="de-field"><label>Contingency %</label><input type="number" id="de-contingencyPct" value="15" step="1" min="0" max="100"></div>
-          <div class="de-field"><label>UAT %</label><input type="number" id="de-uatPct" value="10" step="1" min="0" max="100"></div>
-        </div>
+      <section class="summary" aria-label="Estimate overview">
+      <div class="stat" style="--c:var(--primary)"><b id="de3-heroTotal">–</b><span>Total hours</span></div>
+      <div class="stat" style="--c:var(--sky)"><b id="de3-statPD">–</b><span>Person-days (8 h)</span></div>
+      <div class="stat" style="--c:var(--accent)"><b id="de3-statWeeks">–</b><span id="de3-statWeeksLbl">Weeks</span></div>
+      <div class="stat" style="--c:var(--amber)"><b id="de3-statSize">–</b><span id="de3-heroSub">T-shirt size</span></div>
+      </section>
+
+      <div class="grid-main"><aside><div class="sticky">
+      <section class="card"><h2>Scenario</h2><label>Start from<select id="de3-presetSelect"></select></label>
+      <div class="actions"><button type="button" class="btn primary" id="de3-loadPreset">Load</button></div><p class="small" style="margin:8px 0 0">Loading a starting point replaces every input on this page. Save the estimation to keep your work.</p></section>
+      <section class="card"><h2>Estimate summary</h2><div id="de3-summary"></div></section>
+      </div></aside>
+
+      <section>
+      <div class="tabs" id="de3-tabs"><button type="button" class="tab active" data-tab="inputs">Scope inputs</button><button type="button" class="tab" data-tab="timeline">Timeline</button><button type="button" class="tab" data-tab="activities">Activity hours</button><button type="button" class="tab" data-tab="calibration">Calibration</button></div>
+
+      <div class="tabpane" id="de3-pane-timeline"><section class="card"><h2>Delivery timeline</h2><div id="de3-gantt"></div></section></div>
+
+      <div class="tabpane active" id="de3-pane-inputs">
+      <section class="card"><h2><span class="num">A</span>Project strategy</h2><div class="form-grid">
+      <label>Client / opportunity<input data-bind="meta.client"></label>
+      <label>Project type<select data-bind="meta.projectType" id="de3-projectType"></select></label>
+      <label>Architecture<select data-bind="meta.architecture"><option>Medallion Lakehouse</option><option>Fabric Warehouse</option><option>Hybrid Lakehouse / Warehouse</option><option>Semantic and reporting only</option><option>Assessment only</option></select></label>
+      <label>Estimate maturity<select data-bind="settings.maturity"><option value="rom">ROM / limited evidence (contingency 20%)</option><option value="planning">Planning estimate (contingency 15%)</option><option value="validated">Validated after Discovery (contingency 10%)</option></select></label>
+      <label>Documentation quality<select data-bind="settings.docQ"><option value="1">Good (×1.00)</option><option value="1.1">Partial (×1.10)</option><option value="1.25">Limited / reverse-engineering (×1.25)</option></select><span class="help">Applied to Discovery and Legacy rebuild.</span></label>
+      <label>PM %<input type="number" data-bind="settings.pmPct"></label>
+      <label>Documentation %<input type="number" data-bind="settings.docPct"></label>
+      <label>Contingency %<input type="number" data-bind="settings.riskPct" id="de3-riskPct"></label>
+      </div>
+      <div class="checks"><label><input type="checkbox" data-bind="settings.envDev"> DEV</label><label><input type="checkbox" data-bind="settings.envTest"> TEST</label><label><input type="checkbox" data-bind="settings.envProd"> PROD</label><label><input type="checkbox" data-bind="settings.envOther"> OTHER</label>
+      <label><input type="checkbox" data-bind="settings.maturityAsMultiplier"> Apply maturity multiplier to delivery effort</label></div>
+      <div class="form-grid" style="margin-top:10px"><label>Platform foundation<select data-bind="foundation"><option value="none">Existing and validated</option><option value="basic">Basic setup</option><option value="production">Production foundation</option><option value="enterprise">Enterprise foundation</option></select></label>
+      <label>Governance level<select data-bind="governance"><option value="none">Not included</option><option value="basic">Basic standards</option><option value="operational">Operational governance</option><option value="enterprise">Enterprise governance design</option></select></label>
+      <label class="otherOnly">OTHER environment name<input data-bind="settings.otherName"></label>
+      <label class="otherOnly">OTHER complexity<select data-bind="settings.otherComplexity"><option value="0.8">Low (0.8)</option><option value="1">Medium (1.0)</option><option value="1.3">High (1.3)</option></select></label></div>
+      <label style="display:block;margin-top:12px">Scope notes<textarea data-bind="meta.notes"></textarea></label></section>
+
+      <section class="card" data-show="discovery"><h2><span class="num">B</span>Discovery and assessment</h2><div class="form-grid">
+      <label>Workshops<input type="number" data-bind="discovery.workshops"></label><label>Sources assessed<input type="number" data-bind="discovery.assessedSources"></label>
+      <label>Objects sampled<input type="number" data-bind="discovery.sampledObjects"><span class="help">Representative sample</span></label>
+      <label>Legacy assets inventoried<input type="number" data-bind="discovery.inventoriedAssets"><span class="help">Full inventory with lineage; do not double count with samples.</span></label>
+      <label>Processes sampled<input type="number" data-bind="discovery.sampledProcesses"></label><label>Reports assessed<input type="number" data-bind="discovery.assessedReports"></label>
+      <label>Architecture complexity<select data-bind="discovery.archComplexity"><option value="0.8">Low</option><option value="1">Medium</option><option value="1.35">High</option></select></label>
+      <label>Security / governance assessment<select data-bind="discovery.assessSecurity"><option value="none">Excluded</option><option value="conceptual">Conceptual</option><option value="detailed">Detailed</option></select></label>
+      <label>PoC validation<select data-bind="discovery.poc"><option value="none">No</option><option value="light">Light validation</option><option value="technical">Technical PoC</option></select></label></div></section>
+
+      <section class="card" data-show="sources"><h2><span class="num">C</span>Sources and ingestion</h2><div class="row src head"><span>Source / group</span><span>Objects</span><span>Connectivity</span><span>Load pattern</span><span></span></div><div id="de3-sourceRows"></div><div class="actions"><button type="button" class="btn secondary" data-add="sources">+ Add source</button></div></section>
+
+      <section class="card" data-show="legacy"><h2><span class="num">D</span>Legacy migration estate</h2><div class="form-grid">
+      <label>Low-complexity ETL assets<input type="number" data-bind="legacy.etlLow"></label><label>Medium ETL assets<input type="number" data-bind="legacy.etlMed"></label><label>High ETL / controllers<input type="number" data-bind="legacy.etlHigh"></label>
+      <label>Simple stored procedures<input type="number" data-bind="legacy.spSimple"></label><label>Complex stored procedures<input type="number" data-bind="legacy.spComplex"></label><label>Views to migrate<input type="number" data-bind="legacy.views"></label>
+      <label>Reusable framework<select data-bind="legacy.framework"><option value="1">No framework benefit</option><option value="0.75">Moderate reuse</option><option value="0.55">Strong metadata / template reuse</option></select></label>
+      <label>Retirement ratio %<input type="number" data-bind="legacy.retirement"><span class="help">Confirmed obsolete assets only</span></label></div></section>
+
+      <section class="card" data-show="models"><h2><span class="num">E</span>Gold data products, semantic models and security</h2><div class="form-grid">
+      <label>Dimensions<input type="number" data-bind="gold.dimensions"></label><label>Facts<input type="number" data-bind="gold.facts"></label><label>Complex business rules<input type="number" data-bind="gold.businessRules"></label><label>Consumption views<input type="number" data-bind="gold.consumptionViews"></label>
+      <label>Gold complexity<select data-bind="gold.complexity"><option value="1">Standard (×1.0)</option><option value="1.5">Complex (×1.5)</option><option value="2.2">Very complex (×2.2)</option></select></label></div>
+      <h3>Semantic models</h3><div class="row model head"><span>Name</span><span>Tables</span><span>Migrated measures</span><span>New measures</span><span>Calc. objects</span><span>Security</span><span>Mode</span><span></span></div><div id="de3-modelRows"></div><div class="actions"><button type="button" class="btn secondary" data-add="models">+ Add semantic model</button></div></section>
+
+      <section class="card" data-show="reports"><h2><span class="num">F</span>Reporting portfolio</h2><div class="row report head"><span>Technology / group</span><span>Reports</span><span>Avg. pages</span><span>Complexity</span><span>Action</span><span></span></div><div id="de3-reportRows"></div><div class="actions"><button type="button" class="btn secondary" data-add="reports">+ Add report group</button></div></section>
+
+      <section class="card" data-show="ops"><h2><span class="num">G</span>Quality, operations and release</h2><div class="form-grid">
+      <label>Objects reconciled<input type="number" data-bind="ops.reconcileObjects"></label><label>Measures validated<input type="number" data-bind="ops.validateMeasures"></label><label>Security scenarios<input type="number" data-bind="ops.securityTests"></label><label>Schedules / orchestrations<input type="number" data-bind="ops.schedules"></label>
+      <label>Monitoring<select data-bind="ops.monitoring"><option value="none">Excluded</option><option value="basic">Basic alerts</option><option value="dashboard">Dashboard + alerts</option><option value="framework">Operational framework</option></select></label>
+      <label>KT sessions<input type="number" data-bind="ops.ktSessions"></label>
+      <label>Purview / catalogue<select data-bind="ops.purview"><option value="none">Excluded</option><option value="scan">Workspace scan</option><option value="lineage">Scan + lineage</option><option value="integration">Governance integration</option></select></label></div>
+      <div class="form-grid" style="margin-top:12px">
+      <label class="testOnly">UAT cycles<input type="number" data-bind="test.uatCycles"></label><label class="testOnly">UAT testers<input type="number" data-bind="test.testers"></label>
+      <label class="prodOnly">Deployment waves / cutovers<input type="number" data-bind="prod.waves"></label><label class="prodOnly">Parallel-run weeks (all waves)<input type="number" data-bind="prod.parallelWeeks"></label>
+      <label class="prodOnly">Hypercare weeks (all waves)<input type="number" data-bind="prod.hypercareWeeks"></label>
+      <label class="prodOnly">Decommissioning plan<select data-bind="prod.decommission"><option value="false">Not included</option><option value="true">Included</option></select></label></div></section>
+
+      <section class="card"><h2><span class="num">H</span>Additional activities <span class="small" style="font-weight:400">outside the predefined scope</span></h2>
+      <p class="small" style="margin-top:0">Hours = quantity × hours per unit. Add an activity to an existing work package (its bar on the timeline grows) or create its own work package, which gets its own bar on the timeline – placed automatically after Discovery and movable by drag &amp; drop. Additional hours are part of delivery effort, so PM, documentation and contingency apply.</p>
+      <div class="row custom head"><span>Activity</span><span>Work package</span><span>New work package name</span><span>Quantity</span><span>Hours per unit</span><span>Hours</span><span></span></div><div id="de3-customRows"></div><div class="actions"><button type="button" class="btn secondary" data-add="custom">+ Add activity</button></div></section>
+
+      <section class="card"><h2><span class="num">I</span>Team and timeline</h2><div class="form-grid two"><label>Productive hours per FTE-week<input type="number" data-bind="settings.hoursPerWeek"><span class="help">e.g. 32 h = 80% utilisation</span></label><div class="note small">Timeline length = total hours ÷ (Σ FTE × productive hours per week). Role hours are split by FTE share.</div></div>
+      <div class="row team head" style="margin-top:10px"><span>Role</span><span>FTE</span><span>Hours</span><span></span></div><div id="de3-teamRows"></div><div class="actions"><button type="button" class="btn secondary" data-add="team">+ Add role</button></div></section>
       </div>
 
-      <!-- Ingestion Layer -->
-      <div class="de-section">
-        <h3>🔌 Ingestion Layer</h3>
-        <table class="de-table" id="de-ingestion-table">
-          <thead><tr><th>Source Name</th><th>Object Count</th><th>Source Complexity</th><th>Quality Factor</th><th></th></tr></thead>
-          <tbody id="de-ingestion-rows"></tbody>
-        </table>
-        <button type="button" class="de-add-btn" id="de-add-ingestion">+ Add Source</button>
-        <div class="de-layer-total" id="de-ingestion-total"></div>
-      </div>
+      <div class="tabpane" id="de3-pane-activities"><section class="card"><h2>Activity hours <span class="small" style="margin-left:auto">quantity × rate × multiplier = calculated · override any line</span></h2>
+      <div class="actions" style="margin-top:0;margin-bottom:8px"><button type="button" class="btn amber" id="de3-clearOverrides">Clear all overrides</button></div><div id="de3-breakdown"></div></section></div>
 
-      <!-- Transformation Layer -->
-      <div class="de-section">
-        <h3>⚙️ Transformation Layer</h3>
-        <table class="de-table" id="de-transform-table">
-          <thead><tr><th>Source Name</th><th>Transformations</th><th>Complexity</th><th></th></tr></thead>
-          <tbody id="de-transform-rows"></tbody>
-        </table>
-        <button type="button" class="de-add-btn" id="de-add-transform">+ Add Source</button>
-        <div class="de-layer-total" id="de-transform-total"></div>
-      </div>
-
-      <!-- Gold Layer - Dimensions -->
-      <div class="de-section">
-        <h3>🥇 Gold Layer</h3>
-        <h4>Dimensions</h4>
-        <table class="de-table" id="de-dimension-table">
-          <thead><tr><th>Count</th><th>Complexity</th><th></th></tr></thead>
-          <tbody id="de-dimension-rows"></tbody>
-        </table>
-        <button type="button" class="de-add-btn" id="de-add-dimension">+ Add Dimension Group</button>
-        <div class="de-layer-total" id="de-dimension-total"></div>
-
-        <h4>Facts</h4>
-        <table class="de-table" id="de-fact-table">
-          <thead><tr><th>Count</th><th>Complexity</th><th></th></tr></thead>
-          <tbody id="de-fact-rows"></tbody>
-        </table>
-        <button type="button" class="de-add-btn" id="de-add-fact">+ Add Fact Group</button>
-        <div class="de-layer-total" id="de-fact-total"></div>
-
-        <h4>Semantic Models</h4>
-        <table class="de-table" id="de-semantic-table">
-          <thead><tr><th>Count</th><th>Complexity</th><th></th></tr></thead>
-          <tbody id="de-semantic-rows"></tbody>
-        </table>
-        <button type="button" class="de-add-btn" id="de-add-semantic">+ Add Semantic Model Group</button>
-        <div class="de-layer-total" id="de-semantic-total"></div>
-
-        <h4>KPIs / DAX Measures</h4>
-        <table class="de-table" id="de-kpi-table">
-          <thead><tr><th>Count</th><th>Complexity</th><th></th></tr></thead>
-          <tbody id="de-kpi-rows"></tbody>
-        </table>
-        <button type="button" class="de-add-btn" id="de-add-kpi">+ Add KPI Group</button>
-        <div class="de-layer-total" id="de-kpi-total"></div>
-
-        <h4>Power BI Reports</h4>
-        <table class="de-table" id="de-report-table">
-          <thead><tr><th>Reports</th><th>Tabs per Report</th><th>Complexity</th><th></th></tr></thead>
-          <tbody id="de-report-rows"></tbody>
-        </table>
-        <button type="button" class="de-add-btn" id="de-add-report">+ Add Report Group</button>
-        <div class="de-layer-total" id="de-report-total"></div>
-      </div>
-
-      <!-- Work Packages -->
-      <div class="de-section">
-        <h3>📋 Work Packages / Additional Tasks</h3>
-        <table class="de-table" id="de-wp-table">
-          <thead><tr><th>Name</th><th>Description</th><th>Owner</th><th>Hours</th><th></th></tr></thead>
-          <tbody id="de-wp-rows"></tbody>
-        </table>
-        <button type="button" class="de-add-btn" id="de-add-wp">+ Add Work Package</button>
-      </div>
-
-      <!-- Assumptions -->
-      <div class="de-section de-assumptions">
-        <h3>📝 Assumptions</h3>
-        <div class="de-field"><label>Ingestion Assumptions</label><textarea id="de-ingestion-assumptions" placeholder="Describe ingestion assumptions..."></textarea></div>
-        <div class="de-field" style="margin-top:var(--space-2)"><label>Transformation Assumptions</label><textarea id="de-transform-assumptions" placeholder="Describe transformation assumptions..."></textarea></div>
-        <div class="de-field" style="margin-top:var(--space-2)"><label>Gold/BI Assumptions</label><textarea id="de-gold-assumptions" placeholder="Describe Gold/BI assumptions..."></textarea></div>
-      </div>
-
-      <!-- Results -->
-      <div class="de-results">
-        <h3>📊 Estimation Results</h3>
-        <div class="de-results-grid">
-          <div class="de-result-card"><div class="de-result-label">Ingestion Hours</div><div class="de-result-value" id="de-res-ingestion">0.0</div></div>
-          <div class="de-result-card"><div class="de-result-label">Transformation Hours</div><div class="de-result-value" id="de-res-transform">0.0</div></div>
-          <div class="de-result-card"><div class="de-result-label">Gold Layer Hours</div><div class="de-result-value" id="de-res-gold">0.0</div></div>
-          <div class="de-result-card"><div class="de-result-label">Base Hours</div><div class="de-result-value" id="de-res-base">0.0</div></div>
-          <div class="de-result-card"><div class="de-result-label">Analysis</div><div class="de-result-value" id="de-res-analysis">0.0</div></div>
-          <div class="de-result-card"><div class="de-result-label">Contingency</div><div class="de-result-value" id="de-res-contingency">0.0</div></div>
-          <div class="de-result-card"><div class="de-result-label">Documentation</div><div class="de-result-value" id="de-res-documentation">0.0</div></div>
-          <div class="de-result-card"><div class="de-result-label">UAT</div><div class="de-result-value" id="de-res-uat">0.0</div></div>
-          <div class="de-result-card"><div class="de-result-label">PRG Total Hours</div><div class="de-result-value" id="de-res-prg-total">0.0</div></div>
-          <div class="de-result-card"><div class="de-result-label">Work Packages Hours</div><div class="de-result-value" id="de-res-wp">0.0</div></div>
-          <div class="de-result-card" style="border:2px solid var(--color-primary)"><div class="de-result-label">Project Total</div><div class="de-result-value" id="de-res-project-total">0.0</div></div>
-        </div>
-        <div style="margin-top:var(--space-3)">
-          <label style="font-size:var(--text-xs);font-weight:600;color:var(--color-text-muted)">Generated Assumptions Summary</label>
-          <textarea id="de-generated-assumptions" readonly style="width:100%;min-height:120px;margin-top:.25rem;padding:.6rem;border:1px solid var(--color-border);border-radius:var(--radius-md);font-size:var(--text-xs);background:var(--color-surface-2);color:var(--color-text);resize:vertical"></textarea>
-        </div>
-      </div>
+      <div class="tabpane" id="de3-pane-calibration"><section class="card"><h2>Calibration – hours per activity unit</h2>
+      <p class="small">Every rate used in the calculation is editable. Rows that differ from the default are highlighted.</p>
+      <div class="actions" style="margin-bottom:8px"><button type="button" class="btn secondary" data-cal="reset">Reset to defaults</button></div>
+      <div id="de3-calibration"></div></section></div>
+      </section></div>
     </section>
 
     <!-- Requirements page is now a separate file at /requirements.html -->
@@ -548,6 +516,10 @@
       </main>
     </div><!-- /.main-content -->
   </div><!-- /.app-layout -->
+
+  <!-- Project Estimate engine. Must load before the inline script below, which
+       boots it through window.FabricEstimatorV3. -->
+  <script src="/js/estimator-v3.js"></script>
 
   <script>
     const sectionIcons = {
@@ -882,13 +854,11 @@
       const notice = document.getElementById('de-readonly-notice');
       if (notice) notice.hidden = !readOnly;
 
-      view.querySelectorAll('input,select,textarea').forEach((el) => {
-        if (el.id === 'de-generated-assumptions') return; // already readonly
-        el.disabled = readOnly;
-      });
-      view.querySelectorAll('.de-add-btn,.de-del-btn').forEach((el) => {
-        el.disabled = readOnly;
-      });
+      // The estimator rebuilds its own controls on every recalculation, so
+      // disabling them here would not survive. It reads the de-readonly class
+      // above instead; ask it to re-apply now, since nothing may recalculate
+      // before the user sees the view.
+      if (window.FabricEstimatorV3) window.FabricEstimatorV3.refreshReadOnly();
     }
 
     function getResourcePlan() {
@@ -1870,7 +1840,10 @@
               await saveEstimationRequest('/api/estimations', 'POST', {
                 title: title.trim(),
                 data: stateData,
-                parentId: loadedEstimation.parent_id || loadedEstimation.id
+                parentId: loadedEstimation.parent_id || loadedEstimation.id,
+                // parentId is the group root; sourceId is the specific version
+                // on screen, whose requirements document the new version inherits.
+                sourceId: loadedEstimation.id
               }, 'New estimation version saved successfully!');
             }
           } catch (err) {
@@ -2362,6 +2335,10 @@
     }
 
     // ==================== DETAILED ESTIMATION ====================
+    // The estimator itself (engine, renderers, Gantt) lives in
+    // /js/estimator-v3.js and talks to this page only through
+    // window.FabricEstimatorV3. Everything here is the glue that makes it a
+    // view of the app: routing, read-only mode, saving and export.
     (function initDetailedEstimation() {
       const deView = document.getElementById('detailed-estimation-view');
       const appSection = document.getElementById('app-section');
@@ -2369,34 +2346,42 @@
       const btnBack = document.getElementById('de-back-btn');
       const btnSave = document.getElementById('de-save-inline-btn');
       const btnExportHtml = document.getElementById('de-export-html-btn');
+      const Estimator = window.FabricEstimatorV3;
+
+      if (Estimator) Estimator.init(deView);
 
       function exportEstimateHtml() {
-        deCalculate();
-        const payload = buildDePayload();
+        if (!Estimator) return;
+        const res = Estimator.getResult();
+        const payload = Estimator.getState();
+        const state = payload.state || {};
+        const client = Estimator.getClientName() || document.getElementById('client-name')?.value || '';
+        const title = client ? `${client} — Project Estimate` : 'Project Estimate';
+        const notes = state.meta?.notes || '';
         const esc = (value) => String(value ?? '').replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[ch]);
-        const client = document.getElementById('client-name')?.value.trim() || 'Project';
-        const title = `${client} — Project Estimate`;
-        const totals = [
-          ['Ingestion', 'de-res-ingestion'], ['Transformation', 'de-res-transform'],
-          ['Gold layer', 'de-res-gold'], ['Base effort', 'de-res-base'],
-          ['Analysis', 'de-res-analysis'], ['Contingency', 'de-res-contingency'],
-          ['Documentation', 'de-res-documentation'], ['UAT', 'de-res-uat'],
-          ['PRG total', 'de-res-prg-total'], ['Work packages', 'de-res-wp'],
-          ['Project total', 'de-res-project-total'],
-        ].map(([label, id]) => `<tr><th>${label}</th><td>${esc(document.getElementById(id)?.textContent)}</td></tr>`).join('');
-        const description = document.getElementById('client-description')?.innerText.trim() || '';
-        const useCase = document.getElementById('use-case-explanation')?.innerText.trim() || '';
-        const notes = document.getElementById('additional-notes')?.innerText.trim() || '';
-        const assumptions = document.getElementById('de-generated-assumptions')?.value || '';
+        const hrs = (n) => Number(n || 0).toLocaleString('en-GB', { maximumFractionDigits: 1 });
+
+        const packages = (res?.wps || [])
+          .map((w) => `<tr><th>${esc(w.name)}</th><td>${hrs(w.hours)} h</td></tr>`)
+          .join('');
+        const totals = res ? [
+          ['Delivery effort', res.delivery],
+          ['Project management', res.pm],
+          ['Documentation', res.doc],
+          ['Contingency', res.risk],
+          ['Total', res.total],
+        ].map(([label, value]) => `<tr><th>${esc(label)}</th><td>${hrs(value)} h</td></tr>`).join('') : '';
         const json = esc(JSON.stringify(payload, null, 2));
+
         const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(title)}</title><style>
-          :root{color-scheme:light;font:15px/1.55 Arial,sans-serif;color:#202b33;background:#f4f7f7}body{margin:0;padding:32px 18px}.page{max-width:900px;margin:auto;background:white;padding:40px;border:1px solid #dce5e5;border-radius:14px}header{border-bottom:3px solid #087f82;padding-bottom:20px;margin-bottom:24px}h1{margin:0;color:#075e62;font-size:30px}h2{font-size:19px;margin:28px 0 10px;color:#075e62}p{white-space:pre-wrap;margin:.35rem 0}table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:10px;border-bottom:1px solid #e2eaea}th{width:60%;color:#40545a}tr:last-child{font-weight:bold;background:#e8f5f3}pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#f4f7f7;padding:16px;border-radius:8px;font-size:12px}.meta{color:#617279}button{float:right;border:0;border-radius:7px;padding:10px 16px;background:#087f82;color:white;font-weight:bold;cursor:pointer}@media print{body{padding:0;background:#fff}.page{border:0;padding:0;max-width:none}button{display:none}pre{white-space:pre-wrap}}@media(max-width:600px){.page{padding:22px 18px}}
+          :root{color-scheme:light;font:15px/1.55 Inter,Arial,sans-serif;color:#1b2430;background:#f4f6f9}body{margin:0;padding:32px 18px}.page{max-width:900px;margin:auto;background:#fff;padding:40px;border:1px solid #dfe4ec;border-radius:14px}header{border-bottom:3px solid #0c7c59;padding-bottom:20px;margin-bottom:24px}h1{margin:0;color:#1f3a5f;font-size:30px}h2{font-size:19px;margin:28px 0 10px;color:#1f3a5f}p{white-space:pre-wrap;margin:.35rem 0}table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:10px;border-bottom:1px solid #edf0f5}th{width:60%;color:#5b6878}tr:last-child{font-weight:bold;background:#e8eef6}pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#f8fafc;padding:16px;border-radius:8px;font-size:12px}.meta{color:#5b6878}button{float:right;border:0;border-radius:7px;padding:10px 16px;background:#1f3a5f;color:#fff;font-weight:bold;cursor:pointer}@media print{body{padding:0;background:#fff}.page{border:0;padding:0;max-width:none}button{display:none}pre{white-space:pre-wrap}}@media(max-width:600px){.page{padding:22px 18px}}
         </style></head><body><main class="page"><button onclick="window.print()">Print / Save PDF</button><header><div class="meta">Microsoft Fabric Project Sizing</div><h1>${esc(title)}</h1><div class="meta">Prepared ${esc(new Date().toLocaleDateString())}</div></header>
-          ${description ? `<h2>Client / project</h2><p>${esc(description)}</p>` : ''}${useCase ? `<h2>Use case</h2><p>${esc(useCase)}</p>` : ''}
+          ${res ? `<div class="meta">${hrs(res.total)} hours &middot; ${hrs(res.total / 8)} person-days &middot; ${esc(res.weeks)} weeks &middot; size ${esc(res.tshirt)}</div>` : ''}
           <h2>Effort estimate</h2><table><tbody>${totals}</tbody></table>
-          ${assumptions ? `<h2>Scope and assumptions</h2><pre>${esc(assumptions)}</pre>` : ''}${notes ? `<h2>Additional notes</h2><p>${esc(notes)}</p>` : ''}
+          ${packages ? `<h2>Work packages</h2><table><tbody>${packages}</tbody></table>` : ''}
+          ${notes ? `<h2>Scope notes</h2><p>${esc(notes)}</p>` : ''}
           <h2>Estimation inputs</h2><details><summary>Show detailed inputs</summary><pre>${json}</pre></details>
-          <footer class="meta" style="margin-top:28px;border-top:1px solid #e2eaea;padding-top:12px">Generated from Fabric Project Sizing.</footer></main></body></html>`;
+          <footer class="meta" style="margin-top:28px;border-top:1px solid #edf0f5;padding-top:12px">Generated from Fabric Project Sizing.</footer></main></body></html>`;
         const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
@@ -2413,9 +2398,9 @@
         if (appSection) appSection.style.display = 'none';
         if (heroSection) heroSection.style.display = 'none';
         deView.classList.add('active');
-        deCalculate();
-        // Rows are rebuilt by loadDePayload, so re-apply on every open rather
-        // than only when the estimation is first loaded.
+        // The view is hidden while the page loads, so the Gantt and the
+        // summary are first laid out here, with real widths available.
+        if (Estimator) Estimator.recalc();
         applyDetailedReadOnly();
         AppShell.setActive('detailed');
       }
@@ -2454,427 +2439,12 @@
         if (saveBtn) saveBtn.click();
       });
 
-      // Complexity options helper
-      function deComplexityOptions(val = '1.5') {
-        return `<option value="1" ${val==='1'?'selected':''}>Low (1.0)</option>
-                <option value="1.5" ${val==='1.5'?'selected':''}>Medium (1.5)</option>
-                <option value="2.2" ${val==='2.2'?'selected':''}>High (2.2)</option>`;
-      }
-
-      function deQualityOptions(val = '1.2') {
-        return `<option value="1" ${val==='1'?'selected':''}>Good (1.0)</option>
-                <option value="1.2" ${val==='1.2'?'selected':''}>Average (1.2)</option>
-                <option value="1.5" ${val==='1.5'?'selected':''}>Poor (1.5)</option>`;
-      }
-
-      function deReportComplexityOptions(val = '1.5') {
-        return `<option value="1" ${val==='1'?'selected':''}>Low (1.0)</option>
-                <option value="1.5" ${val==='1.5'?'selected':''}>Medium (1.5)</option>
-                <option value="2.3" ${val==='2.3'?'selected':''}>High (2.3)</option>`;
-      }
-
-      // Add row helpers
-      function addIngestionRow(data = {}) {
-        const tbody = document.getElementById('de-ingestion-rows');
-        const tr = document.createElement('tr');
-        tr.innerHTML = `<td><input type="text" value="${data.name || ''}" placeholder="Source name" class="de-ing-name"></td>
-          <td><input type="number" min="0" value="${data.objects || 0}" class="de-ing-objects"></td>
-          <td><select class="de-ing-complexity">${deComplexityOptions(String(data.sourceComplexity || 1.5))}</select></td>
-          <td><select class="de-ing-quality">${deQualityOptions(String(data.qualityFactor || 1.2))}</select></td>
-          <td><button type="button" class="de-del-btn">🗑</button></td>`;
-        tr.querySelectorAll('input,select').forEach(el => el.addEventListener('input', deCalculate));
-        tr.querySelector('.de-del-btn').addEventListener('click', () => { tr.remove(); deCalculate(); });
-        tbody.appendChild(tr);
-      }
-
-      function addTransformRow(data = {}) {
-        const tbody = document.getElementById('de-transform-rows');
-        const tr = document.createElement('tr');
-        tr.innerHTML = `<td><input type="text" value="${data.name || ''}" placeholder="Source name" class="de-tr-name"></td>
-          <td><input type="number" min="0" value="${data.transformations || 0}" class="de-tr-count"></td>
-          <td><select class="de-tr-complexity">${deComplexityOptions(String(data.complexity || 1.5))}</select></td>
-          <td><button type="button" class="de-del-btn">🗑</button></td>`;
-        tr.querySelectorAll('input,select').forEach(el => el.addEventListener('input', deCalculate));
-        tr.querySelector('.de-del-btn').addEventListener('click', () => { tr.remove(); deCalculate(); });
-        tbody.appendChild(tr);
-      }
-
-      function addDimensionRow(data = {}) {
-        const tbody = document.getElementById('de-dimension-rows');
-        const tr = document.createElement('tr');
-        tr.innerHTML = `<td><input type="number" min="0" value="${data.count || 0}" class="de-dim-count"></td>
-          <td><select class="de-dim-complexity">${deComplexityOptions(String(data.complexity || 1.5))}</select></td>
-          <td><button type="button" class="de-del-btn">🗑</button></td>`;
-        tr.querySelectorAll('input,select').forEach(el => el.addEventListener('input', deCalculate));
-        tr.querySelector('.de-del-btn').addEventListener('click', () => { tr.remove(); deCalculate(); });
-        tbody.appendChild(tr);
-      }
-
-      function addFactRow(data = {}) {
-        const tbody = document.getElementById('de-fact-rows');
-        const tr = document.createElement('tr');
-        tr.innerHTML = `<td><input type="number" min="0" value="${data.count || 0}" class="de-fact-count"></td>
-          <td><select class="de-fact-complexity">${deComplexityOptions(String(data.complexity || 1.5))}</select></td>
-          <td><button type="button" class="de-del-btn">🗑</button></td>`;
-        tr.querySelectorAll('input,select').forEach(el => el.addEventListener('input', deCalculate));
-        tr.querySelector('.de-del-btn').addEventListener('click', () => { tr.remove(); deCalculate(); });
-        tbody.appendChild(tr);
-      }
-
-      function addSemanticRow(data = {}) {
-        const tbody = document.getElementById('de-semantic-rows');
-        const tr = document.createElement('tr');
-        tr.innerHTML = `<td><input type="number" min="0" value="${data.count || 0}" class="de-sem-count"></td>
-          <td><select class="de-sem-complexity">${deComplexityOptions(String(data.complexity || 1.5))}</select></td>
-          <td><button type="button" class="de-del-btn">🗑</button></td>`;
-        tr.querySelectorAll('input,select').forEach(el => el.addEventListener('input', deCalculate));
-        tr.querySelector('.de-del-btn').addEventListener('click', () => { tr.remove(); deCalculate(); });
-        tbody.appendChild(tr);
-      }
-
-      function addKpiRow(data = {}) {
-        const tbody = document.getElementById('de-kpi-rows');
-        const tr = document.createElement('tr');
-        tr.innerHTML = `<td><input type="number" min="0" value="${data.count || 0}" class="de-kpi-count"></td>
-          <td><select class="de-kpi-complexity">${deComplexityOptions(String(data.complexity || 1.5))}</select></td>
-          <td><button type="button" class="de-del-btn">🗑</button></td>`;
-        tr.querySelectorAll('input,select').forEach(el => el.addEventListener('input', deCalculate));
-        tr.querySelector('.de-del-btn').addEventListener('click', () => { tr.remove(); deCalculate(); });
-        tbody.appendChild(tr);
-      }
-
-      function addReportRow(data = {}) {
-        const tbody = document.getElementById('de-report-rows');
-        const tr = document.createElement('tr');
-        tr.innerHTML = `<td><input type="number" min="0" value="${data.count || 0}" class="de-rpt-count"></td>
-          <td><input type="number" min="1" value="${data.tabs || 1}" class="de-rpt-tabs"></td>
-          <td><select class="de-rpt-complexity">${deReportComplexityOptions(String(data.complexity || 1.5))}</select></td>
-          <td><button type="button" class="de-del-btn">🗑</button></td>`;
-        tr.querySelectorAll('input,select').forEach(el => el.addEventListener('input', deCalculate));
-        tr.querySelector('.de-del-btn').addEventListener('click', () => { tr.remove(); deCalculate(); });
-        tbody.appendChild(tr);
-      }
-
-      function addWpRow(data = {}) {
-        const tbody = document.getElementById('de-wp-rows');
-        const tr = document.createElement('tr');
-        tr.innerHTML = `<td><input type="text" value="${data.name || ''}" placeholder="e.g. Data model design" class="de-wp-name"></td>
-          <td><input type="text" value="${data.description || ''}" placeholder="what is delivered" class="de-wp-desc"></td>
-          <td><input type="text" value="${data.owner || ''}" placeholder="e.g. Data Engineer" class="de-wp-owner"></td>
-          <td><input type="number" min="0" value="${data.hours || 0}" class="de-wp-hours"></td>
-          <td><button type="button" class="de-del-btn">🗑</button></td>`;
-        tr.querySelectorAll('input,select').forEach(el => el.addEventListener('input', deCalculate));
-        tr.querySelector('.de-del-btn').addEventListener('click', () => { tr.remove(); deCalculate(); });
-        tbody.appendChild(tr);
-      }
-
-      // Add row button listeners
-      document.getElementById('de-add-ingestion').addEventListener('click', () => { addIngestionRow(); deCalculate(); });
-      document.getElementById('de-add-transform').addEventListener('click', () => { addTransformRow(); deCalculate(); });
-      document.getElementById('de-add-dimension').addEventListener('click', () => { addDimensionRow(); deCalculate(); });
-      document.getElementById('de-add-fact').addEventListener('click', () => { addFactRow(); deCalculate(); });
-      document.getElementById('de-add-semantic').addEventListener('click', () => { addSemanticRow(); deCalculate(); });
-      document.getElementById('de-add-kpi').addEventListener('click', () => { addKpiRow(); deCalculate(); });
-      document.getElementById('de-add-report').addEventListener('click', () => { addReportRow(); deCalculate(); });
-      document.getElementById('de-add-wp').addEventListener('click', () => { addWpRow(); deCalculate(); });
-
-      // Listen for calibration input changes
-      document.querySelectorAll('#detailed-estimation-view .de-section .de-grid input').forEach(el => {
-        el.addEventListener('input', deCalculate);
-      });
-      document.querySelectorAll('#detailed-estimation-view textarea').forEach(el => {
-        el.addEventListener('input', deCalculate);
-      });
-
-      function getDeNum(id) { return Number(document.getElementById(id)?.value) || 0; }
-      function formatDe(v) { return v.toFixed(1); }
-
-      // Main calculation
-      function deCalculate() {
-        const hrsPerSource = getDeNum('de-hrsPerSource');
-        const hrsPerIngest = getDeNum('de-hrsPerIngest');
-        const hrsPerTransform = getDeNum('de-hrsPerTransform');
-        const hrsPerDimension = getDeNum('de-hrsPerDimension');
-        const hrsPerFact = getDeNum('de-hrsPerFact');
-        const hrsPerSemanticModel = getDeNum('de-hrsPerSemanticModel');
-        const hrsPerKpi = getDeNum('de-hrsPerKpi');
-        const hrsPerReport = getDeNum('de-hrsPerReport');
-        const tabImpactPct = getDeNum('de-tabImpactPct') / 100;
-        const analysisPct = getDeNum('de-analysisPct') / 100;
-        const documentationPct = getDeNum('de-documentationPct') / 100;
-        const contingencyPct = getDeNum('de-contingencyPct') / 100;
-        const uatPct = getDeNum('de-uatPct') / 100;
-
-        // Ingestion
-        const ingestionRows = document.querySelectorAll('#de-ingestion-rows tr');
-        let ingestionHours = 0;
-        ingestionRows.forEach(row => {
-          const objects = Number(row.querySelector('.de-ing-objects')?.value) || 0;
-          const complexity = Number(row.querySelector('.de-ing-complexity')?.value) || 1;
-          const quality = Number(row.querySelector('.de-ing-quality')?.value) || 1;
-          ingestionHours += (hrsPerSource + objects * hrsPerIngest) * complexity * quality;
-        });
-
-        // Transformation
-        const transformRows = document.querySelectorAll('#de-transform-rows tr');
-        let transformHours = 0;
-        transformRows.forEach(row => {
-          const count = Number(row.querySelector('.de-tr-count')?.value) || 0;
-          const complexity = Number(row.querySelector('.de-tr-complexity')?.value) || 1;
-          transformHours += count * hrsPerTransform * complexity;
-        });
-
-        // Dimensions
-        const dimRows = document.querySelectorAll('#de-dimension-rows tr');
-        let dimensionHours = 0;
-        dimRows.forEach(row => {
-          const count = Number(row.querySelector('.de-dim-count')?.value) || 0;
-          const complexity = Number(row.querySelector('.de-dim-complexity')?.value) || 1;
-          dimensionHours += count * hrsPerDimension * complexity;
-        });
-
-        // Facts
-        const factRows = document.querySelectorAll('#de-fact-rows tr');
-        let factHours = 0;
-        factRows.forEach(row => {
-          const count = Number(row.querySelector('.de-fact-count')?.value) || 0;
-          const complexity = Number(row.querySelector('.de-fact-complexity')?.value) || 1;
-          factHours += count * hrsPerFact * complexity;
-        });
-
-        // Semantic
-        const semRows = document.querySelectorAll('#de-semantic-rows tr');
-        let semanticHours = 0;
-        semRows.forEach(row => {
-          const count = Number(row.querySelector('.de-sem-count')?.value) || 0;
-          const complexity = Number(row.querySelector('.de-sem-complexity')?.value) || 1;
-          semanticHours += count * hrsPerSemanticModel * complexity;
-        });
-
-        // KPIs
-        const kpiRows = document.querySelectorAll('#de-kpi-rows tr');
-        let kpiHours = 0;
-        kpiRows.forEach(row => {
-          const count = Number(row.querySelector('.de-kpi-count')?.value) || 0;
-          const complexity = Number(row.querySelector('.de-kpi-complexity')?.value) || 1;
-          kpiHours += count * hrsPerKpi * complexity;
-        });
-
-        // Reports
-        const rptRows = document.querySelectorAll('#de-report-rows tr');
-        let reportHours = 0;
-        rptRows.forEach(row => {
-          const count = Number(row.querySelector('.de-rpt-count')?.value) || 0;
-          const tabs = Math.max(1, Number(row.querySelector('.de-rpt-tabs')?.value) || 1);
-          const complexity = Number(row.querySelector('.de-rpt-complexity')?.value) || 1;
-          const tabMultiplier = 1 + Math.max(0, tabs - 1) * tabImpactPct;
-          reportHours += count * hrsPerReport * complexity * tabMultiplier;
-        });
-
-        const goldHours = dimensionHours + factHours + semanticHours + kpiHours + reportHours;
-        const baseHours = ingestionHours + transformHours + goldHours;
-        // Analysis is driven by every implementation part (ingestion, transformation
-        // and the whole gold layer), which is exactly what baseHours already sums.
-        const analysisHours = baseHours * analysisPct;
-        const contingencyHours = baseHours * contingencyPct;
-        const documentationHours = baseHours * documentationPct;
-        const uatHours = baseHours * uatPct;
-        const totalPrgHours = baseHours + analysisHours + contingencyHours + documentationHours + uatHours;
-
-        // Work packages
-        const wpRows = document.querySelectorAll('#de-wp-rows tr');
-        let wpHours = 0;
-        wpRows.forEach(row => {
-          wpHours += Number(row.querySelector('.de-wp-hours')?.value) || 0;
-        });
-
-        const projectTotal = totalPrgHours + wpHours;
-
-        // Update display
-        document.getElementById('de-res-ingestion').textContent = formatDe(ingestionHours);
-        document.getElementById('de-res-transform').textContent = formatDe(transformHours);
-        document.getElementById('de-res-gold').textContent = formatDe(goldHours);
-        document.getElementById('de-res-base').textContent = formatDe(baseHours);
-        document.getElementById('de-res-analysis').textContent = formatDe(analysisHours);
-        document.getElementById('de-res-contingency').textContent = formatDe(contingencyHours);
-        document.getElementById('de-res-documentation').textContent = formatDe(documentationHours);
-        document.getElementById('de-res-uat').textContent = formatDe(uatHours);
-        document.getElementById('de-res-prg-total').textContent = formatDe(totalPrgHours);
-        document.getElementById('de-res-wp').textContent = formatDe(wpHours);
-        document.getElementById('de-res-project-total').textContent = formatDe(projectTotal);
-
-        // Layer totals
-        document.getElementById('de-ingestion-total').textContent = `Total: ${ingestionRows.length} source(s), ${formatDe(ingestionHours)} hours`;
-        document.getElementById('de-transform-total').textContent = `Total: ${transformRows.length} source(s), ${formatDe(transformHours)} hours`;
-        document.getElementById('de-dimension-total').textContent = `Total: ${formatDe(dimensionHours)} hours`;
-        document.getElementById('de-fact-total').textContent = `Total: ${formatDe(factHours)} hours`;
-        document.getElementById('de-semantic-total').textContent = `Total: ${formatDe(semanticHours)} hours`;
-        document.getElementById('de-kpi-total').textContent = `Total: ${formatDe(kpiHours)} hours`;
-        document.getElementById('de-report-total').textContent = `Total: ${formatDe(reportHours)} hours`;
-
-        // Generated assumptions
-        const assumptionLines = [
-          'Scope overview:',
-          `• Estimate covers ${ingestionRows.length} ingestion source(s) and ${transformRows.length} transformation source stream(s).`,
-          `• Gold layer: ${dimRows.length} dimension group(s), ${factRows.length} fact group(s), ${semRows.length} semantic model group(s), ${kpiRows.length} KPI group(s), ${rptRows.length} report group(s).`,
-          `• Additional work packages: ${wpRows.length} item(s).`,
-          '',
-          'Effort summary:',
-          `• Total calculated effort is ${formatDe(totalPrgHours)} PRG hours including analysis, contingency, documentation, and UAT.`,
-          `• Project total (including work packages): ${formatDe(projectTotal)} hours.`,
-          '',
-          'Input assumptions:',
-          document.getElementById('de-ingestion-assumptions').value ? `• Ingestion: ${document.getElementById('de-ingestion-assumptions').value}` : '• Ingestion: Not specified.',
-          document.getElementById('de-transform-assumptions').value ? `• Transformation: ${document.getElementById('de-transform-assumptions').value}` : '• Transformation: Not specified.',
-          document.getElementById('de-gold-assumptions').value ? `• Gold/BI: ${document.getElementById('de-gold-assumptions').value}` : '• Gold/BI: Not specified.',
-        ];
-        document.getElementById('de-generated-assumptions').value = assumptionLines.join('\n');
-      }
-
-      // Build JSON payload from detailed estimation form
-      function buildDePayload() {
-        const ingestionRows = document.querySelectorAll('#de-ingestion-rows tr');
-        const transformRows = document.querySelectorAll('#de-transform-rows tr');
-        const dimRows = document.querySelectorAll('#de-dimension-rows tr');
-        const factRows = document.querySelectorAll('#de-fact-rows tr');
-        const semRows = document.querySelectorAll('#de-semantic-rows tr');
-        const kpiRows = document.querySelectorAll('#de-kpi-rows tr');
-        const rptRows = document.querySelectorAll('#de-report-rows tr');
-        const wpRows = document.querySelectorAll('#de-wp-rows tr');
-
-        return {
-          calibration: {
-            hrsPerSource: getDeNum('de-hrsPerSource'),
-            hrsPerIngest: getDeNum('de-hrsPerIngest'),
-            hrsPerTransform: getDeNum('de-hrsPerTransform'),
-            hrsPerDimension: getDeNum('de-hrsPerDimension'),
-            hrsPerFact: getDeNum('de-hrsPerFact'),
-            hrsPerSemanticModel: getDeNum('de-hrsPerSemanticModel'),
-            hrsPerKpi: getDeNum('de-hrsPerKpi'),
-            hrsPerReport: getDeNum('de-hrsPerReport'),
-            tabImpactPct: getDeNum('de-tabImpactPct'),
-            analysisPct: getDeNum('de-analysisPct'),
-            documentationPct: getDeNum('de-documentationPct'),
-            contingencyPct: getDeNum('de-contingencyPct'),
-            uatPct: getDeNum('de-uatPct'),
-          },
-          ingestion: {
-            sources: Array.from(ingestionRows).map(row => ({
-              name: row.querySelector('.de-ing-name')?.value || '',
-              objects: Number(row.querySelector('.de-ing-objects')?.value) || 0,
-              sourceComplexity: Number(row.querySelector('.de-ing-complexity')?.value) || 1.5,
-              qualityFactor: Number(row.querySelector('.de-ing-quality')?.value) || 1.2,
-            })),
-          },
-          transformation: {
-            sources: Array.from(transformRows).map(row => ({
-              name: row.querySelector('.de-tr-name')?.value || '',
-              transformations: Number(row.querySelector('.de-tr-count')?.value) || 0,
-              complexity: Number(row.querySelector('.de-tr-complexity')?.value) || 1.5,
-            })),
-          },
-          gold: {
-            dimensions: Array.from(dimRows).map(row => ({
-              count: Number(row.querySelector('.de-dim-count')?.value) || 0,
-              complexity: Number(row.querySelector('.de-dim-complexity')?.value) || 1.5,
-            })),
-            facts: Array.from(factRows).map(row => ({
-              count: Number(row.querySelector('.de-fact-count')?.value) || 0,
-              complexity: Number(row.querySelector('.de-fact-complexity')?.value) || 1.5,
-            })),
-            semanticModels: Array.from(semRows).map(row => ({
-              count: Number(row.querySelector('.de-sem-count')?.value) || 0,
-              complexity: Number(row.querySelector('.de-sem-complexity')?.value) || 1.5,
-            })),
-            kpis: Array.from(kpiRows).map(row => ({
-              count: Number(row.querySelector('.de-kpi-count')?.value) || 0,
-              complexity: Number(row.querySelector('.de-kpi-complexity')?.value) || 1.5,
-            })),
-            reports: Array.from(rptRows).map(row => ({
-              count: Number(row.querySelector('.de-rpt-count')?.value) || 0,
-              tabs: Number(row.querySelector('.de-rpt-tabs')?.value) || 1,
-              complexity: Number(row.querySelector('.de-rpt-complexity')?.value) || 1.5,
-            })),
-          },
-          workPackages: Array.from(wpRows).map(row => ({
-            name: row.querySelector('.de-wp-name')?.value || '',
-            description: row.querySelector('.de-wp-desc')?.value || '',
-            owner: row.querySelector('.de-wp-owner')?.value || '',
-            hours: Number(row.querySelector('.de-wp-hours')?.value) || 0,
-          })),
-          assumptions: {
-            ingestion: document.getElementById('de-ingestion-assumptions')?.value || '',
-            transformation: document.getElementById('de-transform-assumptions')?.value || '',
-            gold: document.getElementById('de-gold-assumptions')?.value || '',
-          },
-        };
-      }
-
-      // Load detailed estimation data into form
-      function loadDePayload(payload) {
-        if (!payload) return;
-
-        // Clear all rows
-        document.getElementById('de-ingestion-rows').innerHTML = '';
-        document.getElementById('de-transform-rows').innerHTML = '';
-        document.getElementById('de-dimension-rows').innerHTML = '';
-        document.getElementById('de-fact-rows').innerHTML = '';
-        document.getElementById('de-semantic-rows').innerHTML = '';
-        document.getElementById('de-kpi-rows').innerHTML = '';
-        document.getElementById('de-report-rows').innerHTML = '';
-        document.getElementById('de-wp-rows').innerHTML = '';
-
-        // Calibration
-        if (payload.calibration) {
-          const fields = ['hrsPerSource','hrsPerIngest','hrsPerTransform','hrsPerDimension','hrsPerFact','hrsPerSemanticModel','hrsPerKpi','hrsPerReport','tabImpactPct','analysisPct','documentationPct','contingencyPct','uatPct'];
-          fields.forEach(f => {
-            const el = document.getElementById('de-' + f);
-            if (el && payload.calibration[f] !== undefined) el.value = payload.calibration[f];
-          });
-          // Estimates saved before Analysis existed have no analysisPct. Falling back
-          // to the 15% default would silently inflate a total the user already signed
-          // off, so those load with 0% and can be raised deliberately.
-          if (payload.calibration.analysisPct === undefined) {
-            document.getElementById('de-analysisPct').value = 0;
-          }
-        }
-
-        // Ingestion
-        (payload.ingestion?.sources || []).forEach(s => addIngestionRow(s));
-        // Transformation
-        (payload.transformation?.sources || []).forEach(s => addTransformRow(s));
-        // Gold
-        (payload.gold?.dimensions || []).forEach(d => addDimensionRow(d));
-        (payload.gold?.facts || []).forEach(f => addFactRow(f));
-        (payload.gold?.semanticModels || []).forEach(s => addSemanticRow(s));
-        (payload.gold?.kpis || []).forEach(k => addKpiRow(k));
-        (payload.gold?.reports || []).forEach(r => addReportRow(r));
-        // Work packages
-        (payload.workPackages || []).forEach(w => addWpRow(w));
-        // Assumptions
-        document.getElementById('de-ingestion-assumptions').value = payload.assumptions?.ingestion || '';
-        document.getElementById('de-transform-assumptions').value = payload.assumptions?.transformation || '';
-        document.getElementById('de-gold-assumptions').value = payload.assumptions?.gold || '';
-
-        deCalculate();
-      }
-
       // Expose functions globally for save/load integration
-      window.deGetPayload = buildDePayload;
-      window.deLoadPayload = loadDePayload;
+      window.deGetPayload = () => (Estimator ? Estimator.getState() : null);
+      window.deLoadPayload = (payload) => { if (Estimator) Estimator.setState(payload); };
       window.deShowView = showDetailedView;
       window.deHideView = hideDetailedView;
       window.deIsActive = () => deView.classList.contains('active');
-
-      // Initialize with default rows
-      addIngestionRow({ name: 'Source A' });
-      addTransformRow({ name: 'Source A' });
-      addDimensionRow();
-      addFactRow();
-      addSemanticRow();
-      addKpiRow();
-      addReportRow();
-      deCalculate();
     })();
     // ==================== END DETAILED ESTIMATION ====================
 

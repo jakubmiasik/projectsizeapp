@@ -467,7 +467,7 @@ app.get('/api/estimations/:id', requireAuth, async (req, res) => {
 // Save a new estimation
 app.post('/api/estimations', requireAuth, async (req, res) => {
   try {
-    const { title, data, parentId } = req.body;
+    const { title, data, parentId, sourceId } = req.body;
     if (!data) return res.status(400).json({ error: 'Missing estimation data' });
 
     const clientName = data.clientName || '';
@@ -479,7 +479,10 @@ app.post('/api/estimations', requireAuth, async (req, res) => {
       clientName,
       title: estimationTitle,
       data,
-      parentId
+      parentId,
+      // Which version the user saved from, so its requirements document can
+      // be carried forward onto the new one.
+      sourceId
     });
     res.status(201).json(estimation);
   } catch (err) {
