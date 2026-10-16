@@ -586,6 +586,14 @@ app.get('/login', (_req, res) => {
   res.redirect('/.auth/login/aad?post_login_redirect_uri=/');
 });
 
+// An unmatched API path must never fall through to the SPA: the client would
+// receive an HTML page with a 200 and fail trying to parse it as JSON, which
+// reads as "Unexpected token '<'" rather than "that route does not exist".
+// This is what a client sees while a deployment is still rolling out.
+app.all('/api/*', (req, res) => {
+  res.status(404).json({ error: `No such API route: ${req.method} ${req.path}` });
+});
+
 // SPA fallback - serve the page (auth check happens client-side)
 app.get('*', (_req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
