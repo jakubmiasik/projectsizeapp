@@ -78,6 +78,11 @@ const RATE_DEFS = [
 ];
 const DEFAULT_RATES = Object.fromEntries(RATE_DEFS.map(r => [r[0], r[5]]));
 const V21_RATES = Object.fromEntries(RATE_DEFS.map(r => [r[0], r[4]]));
+/* Organisation-wide calibration, loaded from the admin panel. Only the rates an
+   administrator actually changed live here, so the engine's own defaults still
+   apply to everything else. */
+let ORG_RATES = {};
+function baseRates() { return Object.assign({}, DEFAULT_RATES, ORG_RATES); }
 
 const LEVELS = {
   foundation: {none: null, basic: 'foundationBasic', production: 'foundationProduction', enterprise: 'foundationEnterprise'},
@@ -101,7 +106,7 @@ const TSHIRT = [['XS', 100], ['S', 250], ['M', 500], ['L', 1600], ['XL', Infinit
 function n(v) { const x = Number(v); return isFinite(x) ? x : 0; }
 
 function compute(s) {
-  const R = Object.assign({}, DEFAULT_RATES, s.rates || {});
+  const R = Object.assign({}, baseRates(), s.rates || {});
   const lv = (group, key) => { const rk = LEVELS[group][key]; return rk ? n(R[rk]) : 0; };
   const docQ = n(s.settings.docQ) || 1;
   const wps = [];
@@ -263,31 +268,11 @@ function baseState(over) {
     gold: {dimensions: 0, facts: 0, businessRules: 0, consumptionViews: 0, complexity: 1}, models: [], reports: [],
     ops: {reconcileObjects: 0, validateMeasures: 0, securityTests: 0, schedules: 2, monitoring: 'basic', ktSessions: 2, purview: 'none'},
     test: {uatCycles: 1, testers: 5}, prod: {waves: 1, parallelWeeks: 0, hypercareWeeks: 2, decommission: false},
-    team: [{role: 'Data Engineer', fte: 0.8}, {role: 'Data Engineer', fte: 0.8}], rates: {}, overrides: {}, schedule: {}, order: [], custom: [],
+    team: [{role: 'Data Engineer', fte: 0.8}, {role: 'Data Engineer', fte: 0.8}], rates: {}, overrides: {}, schedule: {}, order: [], removed: [], custom: [],
   }, over);
 }
 const PRESETS = {};
-PRESETS.vb = {label: 'V&B – Progressive migration to Microsoft Fabric', state: baseState({
-  meta: {client: 'V&B – Progressive migration to Microsoft Fabric', projectType: 'platformMigration', architecture: 'Medallion Lakehouse',
-    notes: 'SoW v0.6 caps: L0 inventory + Synapse diagnostic; L1 foundation + CA Vinobeer pilot; V1 Sales/Margin; V2 Purchasing/Supply; V3 Stock/Logistics; V4 HR/Finance. 5 cutovers, parallel run 4 weeks/wave (2 for pilot), 10 business days hypercare per cutover. Synapse counts derived from SoW caps – replace with D8 actuals ([N], PC-09). Excluded: F64 attachment of 15 workspaces, Purview, GDPR file, adoption.'},
-  settings: Object.assign({}, baseState().settings, {docQ: 1.10, maturity: 'planning', pmPct: 10, docPct: 10, riskPct: 15}),
-  foundation: 'production', governance: 'operational',
-  discovery: {workshops: 15, assessedSources: 5, sampledObjects: 50, inventoriedAssets: 0, sampledProcesses: 15, assessedReports: 19, archComplexity: 1, assessSecurity: 'detailed', poc: 'none'},
-  sources: [{name: 'Prisma SOFT (Azure replica)', objects: 30, connect: 1, load: 1.25}, {name: 'Loginnov (POS)', objects: 6, connect: 1, load: 1.25},
-    {name: 'Excel budget / forecast', objects: 2, connect: 1.35, load: 0.8}, {name: 'Isacompta (accounting)', objects: 4, connect: 1, load: 1.25}, {name: 'HR source (TBD, PC-05)', objects: 4, connect: 1.35, load: 1.25}],
-  legacy: {etlLow: 46, etlMed: 21, etlHigh: 5, spSimple: 0, spComplex: 0, views: 0, framework: 0.55, retirement: 0},
-  gold: {dimensions: 12, facts: 9, businessRules: 4, consumptionViews: 0, complexity: 1},
-  models: [{name: 'CA Vinobeer (PoV sm_ventes_vino)', tables: 5, measuresMig: 20, measuresNew: 0, calcs: 0, security: 'static', mode: 0.65},
-    {name: 'V1 Sales / Margin', tables: 9, measuresMig: 20, measuresNew: 10, calcs: 0, security: 'static', mode: 1},
-    {name: 'V2 Purchasing / Supply', tables: 5, measuresMig: 15, measuresNew: 5, calcs: 0, security: 'static', mode: 1},
-    {name: 'V3 Stock / Logistics', tables: 6, measuresMig: 15, measuresNew: 10, calcs: 2, security: 'static', mode: 1},
-    {name: 'V4 Finance', tables: 4, measuresMig: 15, measuresNew: 5, calcs: 0, security: 'hierarchy', mode: 1},
-    {name: 'V4 HR (sensitive)', tables: 4, measuresMig: 10, measuresNew: 5, calcs: 0, security: 'hierarchy', mode: 1}],
-  reports: [{name: 'Power BI like-for-like (rebound, SoW caps 1+6+4+4+4)', count: 19, pages: 3, complexity: 1, action: 0.25}],
-  ops: {reconcileObjects: 21, validateMeasures: 130, securityTests: 24, schedules: 5, monitoring: 'dashboard', ktSessions: 4, purview: 'none'},
-  test: {uatCycles: 5, testers: 6}, prod: {waves: 5, parallelWeeks: 18, hypercareWeeks: 10, decommission: true},
-  team: [{role: 'Engagement Lead & Lead Fabric Architect', fte: 0.2}, {role: 'Project Manager', fte: 0.15}, {role: 'Senior Data Architect', fte: 0.2}, {role: 'Data & BI Engineer', fte: 0.1}, {role: 'xDC Data / Power BI Engineers', fte: 1.0}]})};
-PRESETS.blank = {label: 'Blank – Data Platform Migration', state: baseState({meta: {client: '', projectType: 'platformMigration', architecture: 'Medallion Lakehouse', notes: ''},
+PRESETS.blank = {label: 'Blank estimation', state: baseState({meta: {client: '', projectType: 'platformMigration', architecture: 'Medallion Lakehouse', notes: ''},
   sources: [{name: 'Source 1', objects: 10, connect: 1, load: 1}], models: [{name: 'Model 1', tables: 10, measuresMig: 0, measuresNew: 20, calcs: 0, security: 'static', mode: 1}],
   reports: [{name: 'Power BI reports', count: 5, pages: 3, complexity: 1, action: 1}]})};
 if (typeof module !== 'undefined') module.exports = {PRESETS, baseState};
@@ -359,7 +344,11 @@ function schedule(res, s) {
   const discEnd = auto.discovery ? auto.discovery.start + auto.discovery.dur : 1;
   /* additional work packages: placed after Discovery, duration at 0.5 FTE */
   res.wps.filter(w => !GANTT_TEMPLATE[w.key]).forEach(w => { auto[w.key] = {start: discEnd, dur: Math.max(1, Math.ceil(w.hours / (0.5 * hpw)))}; });
-  let rows = res.wps.map((w, idx) => {
+  /* Work packages the user took off the timeline. Their hours are untouched in
+     the estimate – only the bar is gone, which is what a 0 h package needs. */
+  const rm = new Set(s.removed || []);
+  const removed = res.wps.filter(w => rm.has(w.key)).map(w => ({key: w.key, name: w.name, hours: w.hours}));
+  let rows = res.wps.filter(w => !rm.has(w.key)).map((w, idx) => {
     const a = auto[w.key], o = ov[w.key] || {};
     const moved = Number(o.start) > 0 && Math.round(Number(o.start)) !== a.start;
     const extended = Number(o.dur) > a.dur;            // duration can only be extended, never shortened
@@ -372,7 +361,7 @@ function schedule(res, s) {
   rows.sort((a, b) => pos(a) - pos(b));
   const total = Math.max(1, ...rows.map(r => r.end));
   const mgmt = res.pm + res.doc + res.risk;
-  return {rows, total, mgmt, avgFte: res.total / (total * hpw)};
+  return {rows, removed, total, mgmt, avgFte: res.total / (total * hpw)};
 }
 /* Move a work package: shift = weeks left/right (start never below week 1, duration unchanged); targetKey = row to drop on */
 function applyGanttMove(s, sch, key, shift, targetKey, placeAfter) {
@@ -405,15 +394,16 @@ function renderGantt(res, s, sch) {
   const colorOf = r => r.additional ? '#7a5c99' : (WP_COLORS[r.key] || '#5c6f82');
   const bar = (r, color, drag) => `<div class="g-bar${drag ? ' drag' : ''}"${drag ? ` data-key="${esc(r.key)}"` : ''} style="left:${pct(r.start - 1)};width:${pct(r.dur)};background:${color}" title="${esc(r.name)}: weeks ${r.start}–${r.end}, ${fmt(r.hours)} h${drag ? ' – drag to move' : ''}"><span>${fmt(r.hours)} h</span></div>`;
   const badges = r => (r.additional ? '<i class="badge add">Additional</i>' : '') + (r.moved ? '<i class="badge mv">Moved</i>' : '') + (r.extended ? '<i class="badge ex">Extended</i>' : '');
-  const rows = sch.rows.map(r => `<div class="g-row" data-key="${esc(r.key)}"><div class="g-label" title="Drag to reorder"><b><span class="grip">⋮⋮</span>${esc(r.name)}${badges(r)}</b><span>W${r.start}–W${r.end} · ${fmt(r.dur)} wk · ${fmt(r.fte, 2)} FTE</span></div><div class="g-track" style="--weeks:${T}">${bar(r, colorOf(r), true)}</div></div>`).join('');
+  const rows = sch.rows.map(r => `<div class="g-row" data-key="${esc(r.key)}"><div class="g-label" title="Drag to reorder"><b><span class="grip">⋮⋮</span>${esc(r.name)}${badges(r)}</b><span>W${r.start}–W${r.end} · ${fmt(r.dur)} wk · ${fmt(r.fte, 2)} FTE</span><button type="button" class="g-del" data-wpdel="${esc(r.key)}" title="Remove ${esc(r.name)} from the timeline" aria-label="Remove ${esc(r.name)} from the timeline">×</button></div><div class="g-track" style="--weeks:${T}">${bar(r, colorOf(r), true)}</div></div>`).join('');
   const mg = {name: 'Project management, documentation & contingency', start: 1, dur: T, end: T, hours: sch.mgmt};
   const mgRow = sch.mgmt > 0 ? `<div class="g-row g-mgmt"><div class="g-label"><b>${esc(mg.name)}</b><span>W1–W${T} · runs across the engagement</span></div><div class="g-track" style="--weeks:${T}">${bar(mg, 'repeating-linear-gradient(135deg,#94a3b8 0 6px,#a8b5c6 6px 12px)', false)}</div></div>` : '';
-  const chart = `<div class="g-hint small">Drag a bar <b>left / right</b> to change its start week, or drag a bar or its name <b>up / down</b> to change the order. Moving never changes hours or duration.</div><div class="gantt" id="ganttChart"><div class="g-row g-head"><div class="g-label">Work package</div><div class="g-track g-axis" style="--weeks:${T}">${axis}</div></div>${rows}${mgRow}</div>`;
+  const chart = `<div class="g-hint small">Drag a bar <b>left / right</b> to change its start week, or drag a bar or its name <b>up / down</b> to change the order. Moving never changes hours or duration. Use <b>×</b> to take a work package off the timeline – its hours stay in the estimate.</div><div class="gantt" id="ganttChart"><div class="g-row g-head"><div class="g-label">Work package</div><div class="g-track g-axis" style="--weeks:${T}">${axis}</div></div>${rows}${mgRow}</div>`;
+  const removed = (sch.removed || []).length ? `<div class="g-removed small"><span>Off the timeline:</span>${sch.removed.map(r => `<button type="button" class="chip" data-wprestore="${esc(r.key)}" title="Put ${esc(r.name)} back on the timeline">${esc(r.name)} · ${fmt(r.hours)} h <b>+</b></button>`).join('')}<button type="button" class="btn ghost mini" data-wprestore="*">Restore all</button></div>` : '';
   const table = `<details class="sched"><summary><span>Adjust schedule</span><span class="small">order, start week and duration · blank = automatic · duration can be extended, not shortened</span></summary>
     <table class="grid"><thead><tr><th>Order</th><th>Work package</th><th class="r">Start week</th><th class="r">Duration (weeks, min.)</th><th class="r">End week</th><th class="r">Hours</th><th class="r">Avg FTE</th></tr></thead><tbody>
     ${sch.rows.map((r, i) => { const o = (s.schedule || {})[r.key] || {}; return `<tr class="${r.moved || r.extended ? 'ovr' : ''}"><td class="nowrap"><button class="btn mini" data-move="${esc(r.key)}|-1"${i === 0 ? ' disabled' : ''} title="Move up">↑</button><button class="btn mini" data-move="${esc(r.key)}|1"${i === sch.rows.length - 1 ? ' disabled' : ''} title="Move down">↓</button></td><td>${esc(r.name)}${badges(r)}</td><td class="r"><input type="number" min="1" data-sched="${esc(r.key)}.start" value="${r.moved ? r.start : ''}" placeholder="${r.autoStart}"></td><td class="r"><input type="number" min="${r.autoDur}" data-sched="${esc(r.key)}.dur" data-min="${r.autoDur}" value="${r.extended ? r.dur : ''}" placeholder="${r.autoDur}"></td><td class="r">${r.end}</td><td class="r">${fmt(r.hours)}</td><td class="r">${fmt(r.fte, 2)}</td></tr>`; }).join('')}
     </tbody></table><div class="actions"><button class="btn ghost" data-action="reset-schedule">Reset schedule and order</button></div></details>`;
-  return chart + `<div class="g-foot small">Total duration <b>${T} weeks</b> · average team <b>${fmt(sch.avgFte, 2)} FTE</b> at ${fmt(Number(s.settings.hoursPerWeek) || 40)} productive h/week. Automatic timeline is derived from team capacity; additional work packages are placed after Discovery at 0.5 FTE.</div>` + table;
+  return chart + removed + `<div class="g-foot small">Total duration <b>${T} weeks</b> · average team <b>${fmt(sch.avgFte, 2)} FTE</b> at ${fmt(Number(s.settings.hoursPerWeek) || 40)} productive h/week. Automatic timeline is derived from team capacity; additional work packages are placed after Discovery at 0.5 FTE.</div>` + table;
 }
 
 function renderBreakdown(res) {
@@ -424,9 +414,10 @@ function renderBreakdown(res) {
 }
 function renderCalibration(s) {
   const groups = [...new Set(RATE_DEFS.map(r => r[1]))];
-  const R = Object.assign({}, DEFAULT_RATES, s.rates);
+  const BASE = baseRates();
+  const R = Object.assign({}, BASE, s.rates);
   return groups.map(g => `<details class="cal" ${g === 'Discovery' ? 'open' : ''}><summary>${esc(g)}</summary><table class="grid"><thead><tr><th>Activity</th><th>Unit</th><th class="r">Rate in use</th><th class="r">Default</th></tr></thead><tbody>
-    ${RATE_DEFS.filter(r => r[1] === g).map(r => { const cur = R[r[0]]; const chg = Number(cur) !== Number(r[5]); return `<tr class="${chg ? 'ovr' : ''}"><td>${esc(r[2])}</td><td class="small">${esc(r[3])}</td><td class="r"><input class="rate" type="number" step="0.01" data-rate="${r[0]}" value="${esc(cur)}"></td><td class="r muted">${r[5]}</td></tr>`; }).join('')}
+    ${RATE_DEFS.filter(r => r[1] === g).map(r => { const cur = R[r[0]]; const def = BASE[r[0]]; const chg = Number(cur) !== Number(def); return `<tr class="${chg ? 'ovr' : ''}"><td>${esc(r[2])}</td><td class="small">${esc(r[3])}</td><td class="r"><input class="rate" type="number" step="0.01" data-rate="${r[0]}" value="${esc(cur)}"></td><td class="r muted">${esc(def)}</td></tr>`; }).join('')}
     </tbody></table></details>`).join('');
 }
 if (typeof module !== 'undefined') module.exports = {renderSources, renderModels, renderReports, renderTeam, renderSummary, renderCustom, schedule, applyGanttMove, moveOrder, renderGantt, renderBreakdown, renderCalibration};
@@ -529,7 +520,7 @@ function applyReadOnly() {
   });
 }
 function loadState(st) {
-  S = clone(st); S.rates = S.rates || {}; S.overrides = S.overrides || {}; S.schedule = S.schedule || {}; S.order = S.order || []; S.custom = S.custom || [];
+  S = clone(st); S.rates = S.rates || {}; S.overrides = S.overrides || {}; S.schedule = S.schedule || {}; S.order = S.order || []; S.removed = S.removed || []; S.custom = S.custom || [];
   bindStatic(); applyVisibility(); RES = compute(S); renderTables(); update({calibration: true});
 }
 
@@ -538,8 +529,6 @@ function init(rootEl) {
   ROOT = rootEl || document.getElementById('detailed-estimation-view');
   if (!ROOT) return;
   $('de3-projectType').innerHTML = Object.entries(TYPES).map(([k, t]) => `<option value="${k}">${t.name}</option>`).join('');
-  $('de3-presetSelect').innerHTML = Object.entries(PRESETS).map(([k, p]) => `<option value="${k}">${p.label}</option>`).join('');
-  $('de3-presetSelect').value = 'blank';
   ROOT.addEventListener('input', e => {
     const el = e.target;
     if (el.dataset.bind) {
@@ -548,8 +537,9 @@ function init(rootEl) {
       if (/^(meta\.projectType|settings\.env)/.test(el.dataset.bind)) { applyVisibility(); RES = compute(S); $('de3-customRows').innerHTML = renderCustom(S, RES); }
       update();
     } else if (el.dataset.rate) {
-      S.rates[el.dataset.rate] = el.value === '' ? DEFAULT_RATES[el.dataset.rate] : Number(el.value);
-      el.closest('tr').classList.toggle('ovr', Number(S.rates[el.dataset.rate]) !== Number(DEFAULT_RATES[el.dataset.rate]));
+      const base = baseRates();
+      S.rates[el.dataset.rate] = el.value === '' ? base[el.dataset.rate] : Number(el.value);
+      el.closest('tr').classList.toggle('ovr', Number(S.rates[el.dataset.rate]) !== Number(base[el.dataset.rate]));
       update();
     }
   });
@@ -577,7 +567,9 @@ function init(rootEl) {
     if (b.dataset.del) { const [k, i] = b.dataset.del.split('.'); S[k].splice(Number(i), 1); Object.keys(S.overrides).filter(x => /^(p\.|g\.sm\.|r\.|c\.)/.test(x)).forEach(x => delete S.overrides[x]); RES = compute(S); renderTables(); update(); }
     if (b.dataset.add) { S[b.dataset.add].push(clone(NEW_ROW[b.dataset.add])); RES = compute(S); renderTables(); update(); }
     if (b.dataset.cal === 'reset') { S.rates = {}; update({calibration: true}); }
-    if (b.dataset.action === 'reset-schedule') { S.schedule = {}; S.order = []; update(); }
+    if (b.dataset.wpdel) { S.removed = (S.removed || []).concat(S.removed.includes(b.dataset.wpdel) ? [] : [b.dataset.wpdel]); update(); }
+    if (b.dataset.wprestore) { S.removed = b.dataset.wprestore === '*' ? [] : (S.removed || []).filter(k => k !== b.dataset.wprestore); update(); }
+    if (b.dataset.action === 'reset-schedule') { S.schedule = {}; S.order = []; S.removed = []; update(); }
     if (b.dataset.move) { const [k, d] = splitLast(b.dataset.move, '|'); if (moveOrder(S, SCH, k, Number(d))) update(); }
     if (b.dataset.tabJump) { const t = (ROOT || document).querySelector('[data-tab="' + b.dataset.tabJump + '"]'); if (t) t.click(); }
     if (b.dataset.tab) {
@@ -585,7 +577,7 @@ function init(rootEl) {
       qsa('.tabpane').forEach(p => p.classList.toggle('active', p.id === 'de3-pane-' + b.dataset.tab));
     }
   });
-  $('de3-loadPreset').onclick = () => { if (!isReadOnly()) loadState(PRESETS[$('de3-presetSelect').value].state); };
+  $('de3-loadPreset').onclick = () => { if (!isReadOnly()) loadState(PRESETS.blank.state); };
   $('de3-clearOverrides').onclick = () => { if (!isReadOnly()) { S.overrides = {}; update(); } };
   initGanttDrag();
   loadState(PRESETS.blank.state);
@@ -602,6 +594,7 @@ function initGanttDrag() {
   const clearMarks = () => document.querySelectorAll('#de3-gantt .g-row.drop-before, #de3-gantt .g-row.drop-after').forEach(r => r.classList.remove('drop-before', 'drop-after'));
   document.addEventListener('pointerdown', e => {
     if (e.button !== 0 || isReadOnly()) return;
+    if (e.target.closest && e.target.closest('#de3-gantt button')) return;   // the remove control is a click, not a drag
     const bar = e.target.closest && e.target.closest('#de3-gantt .g-bar.drag');
     const lab = !bar && e.target.closest && e.target.closest('#de3-gantt .g-row[data-key] .g-label');
     if (!bar && !lab) return;
@@ -673,5 +666,15 @@ window.FabricEstimatorV3 = {
   getResult() { return RES ? {total: RES.total, delivery: RES.delivery, pm: RES.pm, doc: RES.doc, risk: RES.risk, weeks: SCH ? SCH.total : 0, tshirt: RES.tshirt, wps: RES.wps.map(w => ({name: w.name, hours: w.hours}))} : null; },
   getClientName() { return S.meta.client || ''; },
   setClientName(name) { if (!ROOT) return; S.meta.client = name || ''; bindStatic(); update(); },
+  /* Organisation calibration, owned by the admin panel. The rate card itself
+     is static, so the admin UI reads the definitions from here rather than
+     keeping a second copy. */
+  getRateDefs() { return RATE_DEFS.map(r => ({key: r[0], group: r[1], label: r[2], unit: r[3], builtIn: r[5]})); },
+  getOrgRates() { return Object.assign({}, ORG_RATES); },
+  setOrgRates(rates) {
+    ORG_RATES = {};
+    Object.entries(rates || {}).forEach(([k, v]) => { if (DEFAULT_RATES[k] !== undefined && isFinite(Number(v))) ORG_RATES[k] = Number(v); });
+    if (ROOT) update({calibration: true});
+  },
 };
 })();

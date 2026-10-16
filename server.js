@@ -258,6 +258,40 @@ app.delete('/api/admin/estimations/:id', requireAuth, requireAdmin, async (req, 
   }
 });
 
+// ==================== CALIBRATION DEFAULTS API ====================
+
+// Every signed-in user reads the organisation calibration, because a new
+// estimation starts from it; only an administrator may change it.
+app.get('/api/rate-defaults', requireAuth, async (_req, res) => {
+  try {
+    res.json(await db.getRateDefaults());
+  } catch (err) {
+    console.error('Failed to load rate defaults:', err);
+    res.status(500).json({ error: 'Failed to load calibration defaults' });
+  }
+});
+
+app.put('/api/rate-defaults', requireAuth, requireAdmin, async (req, res) => {
+  const rates = req.body?.rates;
+  if (!rates || typeof rates !== 'object' || Array.isArray(rates)) {
+    return res.status(400).json({ error: 'rates must be an object' });
+  }
+  const clean = {};
+  for (const [key, value] of Object.entries(rates)) {
+    const num = Number(value);
+    if (!/^[A-Za-z0-9_]{1,64}$/.test(key)) return res.status(400).json({ error: `Invalid rate key: ${key}` });
+    if (!Number.isFinite(num) || num < 0) return res.status(400).json({ error: `Invalid rate for ${key}` });
+    clean[key] = num;
+  }
+  try {
+    const saved = await db.saveRateDefaults(clean, { userOid: req.user?.oid, userName: req.user?.name });
+    res.json(saved);
+  } catch (err) {
+    console.error('Failed to save rate defaults:', err);
+    res.status(500).json({ error: 'Failed to save calibration defaults' });
+  }
+});
+
 // ==================== REQUIREMENTS API ====================
 
 app.get('/api/requirements/:estimationId/:version', requireAuth, async (req, res) => {

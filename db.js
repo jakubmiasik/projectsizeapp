@@ -175,6 +175,15 @@ async function initialize() {
 
     IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_requirements_estimation_id')
     CREATE INDEX IX_requirements_estimation_id ON requirements(estimation_id, version);
+
+    IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='rate_defaults' AND xtype='U')
+    CREATE TABLE rate_defaults (
+      rate_key NVARCHAR(64) PRIMARY KEY,
+      rate FLOAT NOT NULL,
+      updated_at DATETIME2 DEFAULT GETUTCDATE(),
+      updated_by_oid NVARCHAR(100) NULL,
+      updated_by_name NVARCHAR(200) NULL
+    );
   `);
   console.log('Database initialized');
 }
@@ -943,6 +952,51 @@ async function deleteRequirements(estimationId, version) {
     .query('DELETE FROM requirements WHERE estimation_id = @estimationId AND version = @version');
 }
 
+/* Organisation-wide calibration. Only the rates that differ from the engine's
+   built-in defaults are stored, so a later change to the engine's own numbers
+   still reaches every rate an administrator never touched. */
+async function getRateDefaults() {
+  const p = await getPool();
+  const result = await p.request()
+    .query('SELECT rate_key, rate, updated_at, updated_by_name FROM rate_defaults');
+  const rates = {};
+  let updatedAt = null;
+  let updatedBy = null;
+  for (const row of result.recordset) {
+    rates[row.rate_key] = Number(row.rate);
+    if (!updatedAt || row.updated_at > updatedAt) {
+      updatedAt = row.updated_at;
+      updatedBy = row.updated_by_name || null;
+    }
+  }
+  return { rates, updatedAt, updatedBy };
+}
+
+async function saveRateDefaults(rates, { userOid = null, userName = null } = {}) {
+  const p = await getPool();
+  const entries = Object.entries(rates || {})
+    .filter(([key, value]) => key && Number.isFinite(Number(value)));
+  const tx = new sql.Transaction(p);
+  await tx.begin();
+  try {
+    await new sql.Request(tx).query('DELETE FROM rate_defaults');
+    for (const [key, value] of entries) {
+      await new sql.Request(tx)
+        .input('key', sql.NVarChar(64), key)
+        .input('rate', sql.Float, Number(value))
+        .input('oid', sql.NVarChar(100), userOid)
+        .input('name', sql.NVarChar(200), userName)
+        .query(`INSERT INTO rate_defaults (rate_key, rate, updated_by_oid, updated_by_name)
+                VALUES (@key, @rate, @oid, @name)`);
+    }
+    await tx.commit();
+  } catch (err) {
+    await tx.rollback();
+    throw err;
+  }
+  return getRateDefaults();
+}
+
 module.exports = {
   initialize,
   healthCheck,
@@ -974,5 +1028,7 @@ module.exports = {
   getRequirements,
   getRequirementsMeta,
   saveRequirements,
-  deleteRequirements
+  deleteRequirements,
+  getRateDefaults,
+  saveRateDefaults
 };

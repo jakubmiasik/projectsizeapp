@@ -130,6 +130,16 @@
     .admin-add-row .admin-dropdown{display:block}
     .admin-add-row .admin-dropdown-toggle{height:100%;width:100%;justify-content:space-between}
     #admin-user-results{margin-bottom:var(--space-4)}
+    .admin-cal-group{border:1px solid var(--color-border);border-radius:var(--radius-md);margin-bottom:var(--space-2);background:var(--color-surface)}
+    .admin-cal-group>summary{padding:.6rem .9rem;font-weight:600;font-size:var(--text-sm);cursor:pointer}
+    .admin-cal-table{width:100%;border-collapse:collapse;font-size:var(--text-xs)}
+    .admin-cal-table th,.admin-cal-table td{padding:.4rem .9rem;border-top:1px solid var(--color-border);text-align:left}
+    .admin-cal-table th{color:var(--color-text-muted);font-weight:600}
+    .admin-cal-table .r{text-align:right}
+    .admin-cal-table .muted{color:var(--color-text-muted)}
+    .admin-cal-table tr.changed{background:var(--color-primary-soft)}
+    .admin-cal-table input{width:7rem;border:1px solid var(--color-border);background:var(--color-surface);border-radius:6px;padding:.25rem .45rem;color:var(--color-text);font:inherit;text-align:right}
+    .admin-cal-table input:focus{outline:none;border-color:var(--color-primary-strong);box-shadow:0 0 0 3px var(--color-primary-soft)}
     .admin-input{border:1px solid var(--color-border);background:var(--color-surface);border-radius:8px;padding:.5rem .7rem;color:var(--color-text);font-size:var(--text-sm);transition:border-color .2s}
     .admin-input:focus{outline:none;border-color:var(--color-primary-strong);box-shadow:0 0 0 3px var(--color-primary-soft)}
     .admin-add-btn{display:inline-flex;align-items:center;justify-content:center;border:none;background:linear-gradient(135deg,var(--color-primary),var(--color-primary-strong));color:#fff;border-radius:8px;padding:.5rem 1rem;font-weight:600;font-size:var(--text-sm);cursor:pointer;transition:transform .15s,box-shadow .15s}
@@ -413,7 +423,6 @@
       <div class="de-header">
         <button type="button" class="de-back-btn" id="de-back-btn">← Back to Sizing</button>
         <div style="flex:1;min-width:0"><h2 style="margin:0">Project Estimate</h2><div class="de-header-client" id="de3-heroClient">&ndash;</div></div>
-        <button type="button" class="de-save-btn" id="de-export-html-btn">Export HTML</button>
         <button type="button" class="de-save-btn" id="de-save-inline-btn">Save</button>
       </div>
 
@@ -429,8 +438,8 @@
       </section>
 
       <div class="grid-main"><aside><div class="sticky">
-      <section class="card"><h2>Scenario</h2><label>Start from<select id="de3-presetSelect"></select></label>
-      <div class="actions"><button type="button" class="btn primary" id="de3-loadPreset">Load</button></div><p class="small" style="margin:8px 0 0">Loading a starting point replaces every input on this page. Save the estimation to keep your work.</p></section>
+      <section class="card"><h2>Scenario</h2><p class="small" style="margin:0 0 8px">Start from a blank estimation.</p>
+      <div class="actions"><button type="button" class="btn primary" id="de3-loadPreset">Load blank estimation</button></div><p class="small" style="margin:8px 0 0">Loading a starting point replaces every input on this page. Save the estimation to keep your work.</p></section>
       <section class="card"><h2>Estimate summary</h2><div id="de3-summary"></div></section>
       </div></aside>
 
@@ -1115,6 +1124,12 @@
       if (state.detailedEstimation && window.deLoadPayload) {
         window.deLoadPayload(state.detailedEstimation);
       }
+      // Client / opportunity is captured once on the sizing page, so it is the
+      // name the estimate opens with. Estimates saved before the v3 estimator
+      // carry no client of their own at all.
+      if (state.clientName && window.dePrefillClient) {
+        window.dePrefillClient(state.clientName);
+      }
       calculate();
     }
 
@@ -1350,6 +1365,16 @@
 
         // The account menu now lives in the sidebar footer.
         AppShell.setUser({ name: user.name, email: user.email, onSignOut: goToLogout });
+
+        // Every estimation starts from the organisation calibration, so it has
+        // to reach the estimator before the first estimate is opened. A failure
+        // here is not fatal – the engine's built-in rates still apply.
+        fetch('/api/rate-defaults')
+          .then((r) => (r.ok ? r.json() : null))
+          .then((payload) => {
+            if (payload && window.deApplyOrgRates) window.deApplyOrgRates(payload.rates || {});
+          })
+          .catch((err) => console.warn('Calibration defaults unavailable:', err));
 
         const overlay = document.getElementById('load-modal');
         const listEl = document.getElementById('estimation-list');
@@ -1749,11 +1774,74 @@
           });
           document.getElementById('admin-tab-users').style.display = tabName === 'users' ? '' : 'none';
           document.getElementById('admin-tab-estimations').style.display = tabName === 'estimations' ? '' : 'none';
+          document.getElementById('admin-tab-calibration').style.display = tabName === 'calibration' ? '' : 'none';
           if (tabName === 'estimations' && !adminState.estimationsLoaded) {
             refreshAdminEstimations().catch((err) => {
               adminEstimationsListEl.innerHTML = `<li style="padding:1rem;color:#c0392b">Error: ${escapeHtml(err.message)}</li>`;
             });
           }
+          if (tabName === 'calibration') {
+            renderAdminCalibration();
+            loadAdminCalibration()
+              .then(renderAdminCalibration)
+              .catch((err) => setAdminCalibrationStatus(err.message, true));
+          }
+        }
+
+        // ---- Organisation calibration (admin-owned default rates) ----
+        // The rate card itself lives in the estimator, so this reads the
+        // definitions from there instead of keeping a second copy that could
+        // drift out of step with the engine.
+        let adminRatesSaved = {};
+
+        function adminRateDefs() {
+          return window.FabricEstimatorV3 ? window.FabricEstimatorV3.getRateDefs() : [];
+        }
+
+        function renderAdminCalibration() {
+          const root = document.getElementById('admin-calibration-groups');
+          const defs = adminRateDefs();
+          if (!defs.length) {
+            root.innerHTML = '<p class="modal-copy">The estimator did not load, so the rate card is unavailable.</p>';
+            return;
+          }
+          const groups = [...new Set(defs.map((d) => d.group))];
+          root.innerHTML = groups.map((group) => `
+            <details class="admin-cal-group"${group === groups[0] ? ' open' : ''}>
+              <summary>${escapeHtml(group)}</summary>
+              <table class="admin-cal-table">
+                <thead><tr><th>Activity</th><th>Unit</th><th class="r">Default rate</th><th class="r">Built-in</th></tr></thead>
+                <tbody>${defs.filter((d) => d.group === group).map((d) => {
+                  const override = adminRatesSaved[d.key];
+                  const changed = override !== undefined && Number(override) !== Number(d.builtIn);
+                  return `<tr class="${changed ? 'changed' : ''}">
+                    <td>${escapeHtml(d.label)}</td>
+                    <td class="muted">${escapeHtml(d.unit)}</td>
+                    <td class="r"><input type="number" step="0.01" min="0" data-admin-rate="${escapeHtml(d.key)}" value="${override === undefined ? '' : escapeHtml(String(override))}" placeholder="${escapeHtml(String(d.builtIn))}"></td>
+                    <td class="r muted">${escapeHtml(String(d.builtIn))}</td>
+                  </tr>`;
+                }).join('')}</tbody>
+              </table>
+            </details>`).join('');
+        }
+
+        function setAdminCalibrationStatus(message, isError) {
+          const el = document.getElementById('admin-calibration-status');
+          el.textContent = message || '';
+          el.style.color = isError ? '#c0392b' : '';
+        }
+
+        async function loadAdminCalibration() {
+          const res = await fetch('/api/rate-defaults');
+          if (!res.ok) throw new Error('Failed to load calibration defaults');
+          const payload = await res.json();
+          adminRatesSaved = payload.rates || {};
+          if (window.deApplyOrgRates) window.deApplyOrgRates(adminRatesSaved);
+          const count = Object.keys(adminRatesSaved).length;
+          setAdminCalibrationStatus(count
+            ? `${count} rate${count === 1 ? '' : 's'} overridden${payload.updatedBy ? ` · last changed by ${payload.updatedBy}` : ''}`
+            : 'No overrides – every rate uses the built-in default.');
+          return adminRatesSaved;
         }
 
         function renderAdminEstimationDetails(estimation, meta) {
@@ -2078,6 +2166,53 @@
             });
           });
 
+          document.getElementById('admin-calibration-groups').addEventListener('input', (event) => {
+            const input = event.target.closest('[data-admin-rate]');
+            if (!input) return;
+            const def = adminRateDefs().find((d) => d.key === input.dataset.adminRate);
+            const value = input.value.trim();
+            const changed = value !== '' && Number.isFinite(Number(value)) &&
+              Number(value) !== Number(def ? def.builtIn : NaN);
+            input.closest('tr').classList.toggle('changed', changed);
+          });
+
+          document.getElementById('admin-calibration-save').addEventListener('click', async (event) => {
+            const button = event.currentTarget;
+            const rates = {};
+            document.querySelectorAll('#admin-calibration-groups [data-admin-rate]').forEach((input) => {
+              const value = input.value.trim();
+              if (value !== '' && Number.isFinite(Number(value))) rates[input.dataset.adminRate] = Number(value);
+            });
+            button.disabled = true;
+            setAdminCalibrationStatus('Saving…');
+            try {
+              const res = await fetch('/api/rate-defaults', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ rates })
+              });
+              if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || 'Failed to save calibration defaults');
+              const payload = await res.json();
+              adminRatesSaved = payload.rates || {};
+              if (window.deApplyOrgRates) window.deApplyOrgRates(adminRatesSaved);
+              renderAdminCalibration();
+              const count = Object.keys(adminRatesSaved).length;
+              setAdminCalibrationStatus(count ? `Saved · ${count} rate${count === 1 ? '' : 's'} overridden` : 'Saved · every rate uses the built-in default.');
+            } catch (err) {
+              setAdminCalibrationStatus(err.message, true);
+            } finally {
+              button.disabled = false;
+            }
+          });
+
+          document.getElementById('admin-calibration-reset').addEventListener('click', () => {
+            document.querySelectorAll('#admin-calibration-groups [data-admin-rate]').forEach((input) => {
+              input.value = '';
+              input.closest('tr').classList.remove('changed');
+            });
+            setAdminCalibrationStatus('Cleared – choose Save defaults to apply.');
+          });
+
           // Manage Access searches the Entra directory so an admin normally
           // picks a real person rather than typing an address with a typo in
           // it. A typed-out address is still offered when the directory has
@@ -2338,66 +2473,35 @@
     // The estimator itself (engine, renderers, Gantt) lives in
     // /js/estimator-v3.js and talks to this page only through
     // window.FabricEstimatorV3. Everything here is the glue that makes it a
-    // view of the app: routing, read-only mode, saving and export.
+    // view of the app: routing, read-only mode and saving.
     (function initDetailedEstimation() {
       const deView = document.getElementById('detailed-estimation-view');
       const appSection = document.getElementById('app-section');
       const heroSection = document.querySelector('.hero.container');
       const btnBack = document.getElementById('de-back-btn');
       const btnSave = document.getElementById('de-save-inline-btn');
-      const btnExportHtml = document.getElementById('de-export-html-btn');
       const Estimator = window.FabricEstimatorV3;
 
       if (Estimator) Estimator.init(deView);
 
-      function exportEstimateHtml() {
-        if (!Estimator) return;
-        const res = Estimator.getResult();
-        const payload = Estimator.getState();
-        const state = payload.state || {};
-        const client = Estimator.getClientName() || document.getElementById('client-name')?.value || '';
-        const title = client ? `${client} — Project Estimate` : 'Project Estimate';
-        const notes = state.meta?.notes || '';
-        const esc = (value) => String(value ?? '').replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[ch]);
-        const hrs = (n) => Number(n || 0).toLocaleString('en-GB', { maximumFractionDigits: 1 });
-
-        const packages = (res?.wps || [])
-          .map((w) => `<tr><th>${esc(w.name)}</th><td>${hrs(w.hours)} h</td></tr>`)
-          .join('');
-        const totals = res ? [
-          ['Delivery effort', res.delivery],
-          ['Project management', res.pm],
-          ['Documentation', res.doc],
-          ['Contingency', res.risk],
-          ['Total', res.total],
-        ].map(([label, value]) => `<tr><th>${esc(label)}</th><td>${hrs(value)} h</td></tr>`).join('') : '';
-        const json = esc(JSON.stringify(payload, null, 2));
-
-        const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(title)}</title><style>
-          :root{color-scheme:light;font:15px/1.55 Inter,Arial,sans-serif;color:#1b2430;background:#f4f6f9}body{margin:0;padding:32px 18px}.page{max-width:900px;margin:auto;background:#fff;padding:40px;border:1px solid #dfe4ec;border-radius:14px}header{border-bottom:3px solid #0c7c59;padding-bottom:20px;margin-bottom:24px}h1{margin:0;color:#1f3a5f;font-size:30px}h2{font-size:19px;margin:28px 0 10px;color:#1f3a5f}p{white-space:pre-wrap;margin:.35rem 0}table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:10px;border-bottom:1px solid #edf0f5}th{width:60%;color:#5b6878}tr:last-child{font-weight:bold;background:#e8eef6}pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#f8fafc;padding:16px;border-radius:8px;font-size:12px}.meta{color:#5b6878}button{float:right;border:0;border-radius:7px;padding:10px 16px;background:#1f3a5f;color:#fff;font-weight:bold;cursor:pointer}@media print{body{padding:0;background:#fff}.page{border:0;padding:0;max-width:none}button{display:none}pre{white-space:pre-wrap}}@media(max-width:600px){.page{padding:22px 18px}}
-        </style></head><body><main class="page"><button onclick="window.print()">Print / Save PDF</button><header><div class="meta">Microsoft Fabric Project Sizing</div><h1>${esc(title)}</h1><div class="meta">Prepared ${esc(new Date().toLocaleDateString())}</div></header>
-          ${res ? `<div class="meta">${hrs(res.total)} hours &middot; ${hrs(res.total / 8)} person-days &middot; ${esc(res.weeks)} weeks &middot; size ${esc(res.tshirt)}</div>` : ''}
-          <h2>Effort estimate</h2><table><tbody>${totals}</tbody></table>
-          ${packages ? `<h2>Work packages</h2><table><tbody>${packages}</tbody></table>` : ''}
-          ${notes ? `<h2>Scope notes</h2><p>${esc(notes)}</p>` : ''}
-          <h2>Estimation inputs</h2><details><summary>Show detailed inputs</summary><pre>${json}</pre></details>
-          <footer class="meta" style="margin-top:28px;border-top:1px solid #edf0f5;padding-top:12px">Generated from Fabric Project Sizing.</footer></main></body></html>`;
-        const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `${client.replace(/[^a-z0-9_-]+/gi, '-').replace(/^-|-$/g, '') || 'project'}-estimate.html`;
-        document.body.appendChild(link);
-        link.click();
-        link.remove();
-        URL.revokeObjectURL(url);
+      // The estimate keeps its own Client / opportunity once it has one, so the
+      // sizing page's client only fills an empty field – it never overwrites a
+      // name the user typed here.
+      function prefillClient(name) {
+        const clean = String(name || '').trim();
+        if (!clean || !Estimator || Estimator.getClientName()) return;
+        Estimator.setClientName(clean);
       }
-      btnExportHtml.addEventListener('click', exportEstimateHtml);
+
+      // Organisation calibration is owned by the admin panel; a new estimation
+      // starts from it, so it has to be in place before the first render.
+      window.deApplyOrgRates = (rates) => { if (Estimator) Estimator.setOrgRates(rates); };
 
       function showDetailedView() {
         if (appSection) appSection.style.display = 'none';
         if (heroSection) heroSection.style.display = 'none';
         deView.classList.add('active');
+        prefillClient(document.getElementById('client-name')?.value);
         // The view is hidden while the page loads, so the Gantt and the
         // summary are first laid out here, with real widths available.
         if (Estimator) Estimator.recalc();
@@ -2443,6 +2547,7 @@
       window.deGetPayload = () => (Estimator ? Estimator.getState() : null);
       window.deLoadPayload = (payload) => { if (Estimator) Estimator.setState(payload); };
       window.deShowView = showDetailedView;
+      window.dePrefillClient = prefillClient;
       window.deHideView = hideDetailedView;
       window.deIsActive = () => deView.classList.contains('active');
     })();
@@ -2512,6 +2617,7 @@
         <div class="admin-tabs">
           <button class="admin-tab active" data-tab="users">Users</button>
           <button class="admin-tab" data-tab="estimations">All Estimations</button>
+          <button class="admin-tab" data-tab="calibration">Calibration</button>
         </div>
         <div id="admin-tab-users" class="admin-tab-content">
           <div style="margin-bottom:var(--space-3)">
@@ -2536,6 +2642,16 @@
         <div id="admin-tab-estimations" class="admin-tab-content" style="display:none">
           <h4>All Estimations (all users)</h4>
           <ul id="admin-estimations-list" class="estimation-list"></ul>
+        </div>
+        <div id="admin-tab-calibration" class="admin-tab-content" style="display:none">
+          <h4>Estimation calibration</h4>
+          <p class="modal-copy">These rates are the organisation defaults every estimation falls back to. An estimation keeps its own value only for a rate someone overrode on its Calibration tab — every other rate follows this card, so a change here also reaches saved estimations the next time they are opened. Leave a field empty to fall back to the built-in rate.</p>
+          <div id="admin-calibration-status" class="muted" style="font-size:var(--text-xs);margin-bottom:var(--space-3)"></div>
+          <div id="admin-calibration-groups"></div>
+          <div class="modal-actions" style="margin-top:var(--space-4)">
+            <button type="button" class="btn btn-primary" id="admin-calibration-save">Save defaults</button>
+            <button type="button" class="btn" id="admin-calibration-reset">Reset all to built-in</button>
+          </div>
         </div>
       </div>
     </div>
