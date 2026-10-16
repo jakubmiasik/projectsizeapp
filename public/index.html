@@ -1831,10 +1831,24 @@
           el.style.color = isError ? '#c0392b' : '';
         }
 
+        // A response is only JSON if the server says so. Anything else is an
+        // infrastructure answer (a login page, a proxy error, the SPA fallback
+        // during a deployment) and must be reported as such instead of
+        // surfacing a parser error the reader cannot act on.
+        async function readJsonResponse(res, what) {
+          const type = res.headers.get('content-type') || '';
+          if (!type.includes('application/json')) {
+            throw new Error(res.status === 404 || res.ok
+              ? `${what} is not available yet – if the app was just updated, reload the page in a minute.`
+              : `${what} failed (${res.status}).`);
+          }
+          return res.json();
+        }
+
         async function loadAdminCalibration() {
           const res = await fetch('/api/rate-defaults');
-          if (!res.ok) throw new Error('Failed to load calibration defaults');
-          const payload = await res.json();
+          const payload = await readJsonResponse(res, 'The calibration defaults');
+          if (!res.ok) throw new Error(payload.error || 'Failed to load calibration defaults');
           adminRatesSaved = payload.rates || {};
           if (window.deApplyOrgRates) window.deApplyOrgRates(adminRatesSaved);
           const count = Object.keys(adminRatesSaved).length;
@@ -2191,8 +2205,8 @@
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ rates })
               });
-              if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || 'Failed to save calibration defaults');
-              const payload = await res.json();
+              const payload = await readJsonResponse(res, 'Saving the calibration defaults');
+              if (!res.ok) throw new Error(payload.error || 'Failed to save calibration defaults');
               adminRatesSaved = payload.rates || {};
               if (window.deApplyOrgRates) window.deApplyOrgRates(adminRatesSaved);
               renderAdminCalibration();
