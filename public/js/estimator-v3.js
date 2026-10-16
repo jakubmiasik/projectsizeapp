@@ -291,8 +291,11 @@ const MODE = [[1, 'New build'], [0.65, 'Reuse / migrate'], [1.2, 'Redesign']];
 const RCOMPLEX = [[0.75, 'Low'], [1, 'Medium'], [1.25, 'Medium-high'], [1.5, 'High']];
 const RACTION = [[0.25, 'Repoint'], [0.6, 'Migrate as-is'], [1, 'Rebuild'], [1.3, 'Redesign']];
 const WP_COLORS = {discovery: '#1f3a5f', platform: '#2f6690', legacy: '#4a6fa5', gold: '#16697a', reports: '#3d8a8a', quality: '#5c6f82', uat: '#b07d2b', prod: '#8c4b4b', other: '#6b5b95'};
-/* Relative position of each work package on the timeline (fraction of total duration) */
+/* Relative order of the standard work packages on the timeline. Durations are
+   never taken from here – they come from each package's hours and its FTE. */
 const GANTT_TEMPLATE = {discovery: [0, .12], platform: [.08, .30], legacy: [.20, .72], gold: [.22, .80], reports: [.35, .85], quality: [.25, .92], uat: [.55, .92], prod: [.60, 1], other: [.85, 1]};
+/* People assumed to work on one package when nothing else is said. */
+const DEFAULT_WP_FTE = 1;
 
 function renderSources(s) {
   return s.sources.map((r, i) => `<div class="row src">${txtIn(`sources.${i}.name`, r.name, 'SQL, API, SaaS...')}${numIn(`sources.${i}.objects`, r.objects)}${sel(`sources.${i}.connect`, r.connect, CONNECT)}${sel(`sources.${i}.load`, r.load, LOAD)}<button class="btn danger" data-del="sources.${i}" title="Remove">×</button></div>`).join('');
@@ -333,32 +336,42 @@ function renderCustom(s, res) {
 /* ---------- Gantt ---------- */
 function schedule(res, s) {
   const hpw = Number(s.settings.hoursPerWeek) || 40;
-  const std = res.wps.filter(w => GANTT_TEMPLATE[w.key]);
-  const fr = std.map(w => GANTT_TEMPLATE[w.key]);
-  const lo = fr.length ? Math.min(...fr.map(f => f[0])) : 0, hi = fr.length ? Math.max(...fr.map(f => f[1])) : 1;
-  const span = (hi - lo) || 1;
-  const T = Math.max(4, Math.round(res.weeks));
   const ov = s.schedule || {};
-  const auto = {};
-  std.forEach(w => { const f = GANTT_TEMPLATE[w.key]; auto[w.key] = {start: Math.round((f[0] - lo) / span * T) + 1, dur: Math.max(1, Math.round((f[1] - f[0]) / span * T))}; });
-  const discEnd = auto.discovery ? auto.discovery.start + auto.discovery.dur : 1;
-  /* additional work packages: placed after Discovery, duration at 0.5 FTE */
-  res.wps.filter(w => !GANTT_TEMPLATE[w.key]).forEach(w => { auto[w.key] = {start: discEnd, dur: Math.max(1, Math.ceil(w.hours / (0.5 * hpw)))}; });
   /* Work packages the user took off the timeline. Their hours are untouched in
      the estimate – only the bar is gone, which is what a 0 h package needs. */
   const rm = new Set(s.removed || []);
   const removed = res.wps.filter(w => rm.has(w.key)).map(w => ({key: w.key, name: w.name, hours: w.hours}));
-  let rows = res.wps.filter(w => !rm.has(w.key)).map((w, idx) => {
-    const a = auto[w.key], o = ov[w.key] || {};
-    const moved = Number(o.start) > 0 && Math.round(Number(o.start)) !== a.start;
-    const extended = Number(o.dur) > a.dur;            // duration can only be extended, never shortened
-    const start = Number(o.start) > 0 ? Math.max(1, Math.round(Number(o.start))) : a.start;
-    const dur = extended ? Math.round(Number(o.dur)) : a.dur;
-    return {key: w.key, name: w.name, hours: w.hours, start, dur, end: start + dur - 1, autoStart: a.start, autoDur: a.dur, moved, extended, additional: !!w.custom, idx, fte: w.hours / (dur * hpw)};
-  });
   const ord = s.order || [];
-  const pos = r => { const i = ord.indexOf(r.key); return i >= 0 ? i : 1000 + r.idx; };
+  const tpl = k => GANTT_TEMPLATE[k] ? GANTT_TEMPLATE[k][0] : 9;
+  let rows = res.wps.filter(w => !rm.has(w.key)).map((w, idx) => {
+    const o = ov[w.key] || {};
+    const planFte = Number(o.fte) > 0 ? Number(o.fte) : DEFAULT_WP_FTE;
+    const autoDur = Math.max(1, Math.ceil(w.hours / (planFte * hpw)));
+    const resized = Number(o.dur) > 0 && Math.round(Number(o.dur)) !== autoDur;
+    const dur = resized ? Math.max(1, Math.round(Number(o.dur))) : autoDur;
+    return {key: w.key, name: w.name, hours: w.hours, dur, autoDur, resized, planFte, additional: !!w.custom, idx};
+  });
+  const pos = r => { const i = ord.indexOf(r.key); return i >= 0 ? i : 1000 + tpl(r.key) * 10 + r.idx / 1000; };
   rows.sort((a, b) => pos(a) - pos(b));
+  /* Place every bar as early as the team's capacity allows: a week can never
+     carry more FTE than the team has. That is what makes the duration of the
+     whole engagement follow the resources that are actually available. */
+  const cap = Math.max(0.1, Number(res.fte) || 1);
+  const used = [];
+  const load = r => Math.min(r.planFte, cap);
+  const fits = (st, r) => { for (let w = st; w < st + r.dur; w++) if ((used[w] || 0) + load(r) > cap + 1e-9) return false; return true; };
+  const occupy = (st, r) => { for (let w = st; w < st + r.dur; w++) used[w] = (used[w] || 0) + load(r); };
+  rows.forEach(r => {
+    let st = 1;
+    while (st < 5000 && !fits(st, r)) st++;
+    r.autoStart = st;
+    const o = ov[r.key] || {};
+    r.moved = Number(o.start) > 0 && Math.round(Number(o.start)) !== r.autoStart;
+    r.start = Number(o.start) > 0 ? Math.max(1, Math.round(Number(o.start))) : r.autoStart;
+    r.end = r.start + r.dur - 1;
+    r.fte = r.dur > 0 ? r.hours / (r.dur * hpw) : 0;
+    occupy(r.start, r);
+  });
   const total = Math.max(1, ...rows.map(r => r.end));
   const mgmt = res.pm + res.doc + res.risk;
   return {rows, removed, total, mgmt, avgFte: res.total / (total * hpw)};
@@ -393,17 +406,17 @@ function renderGantt(res, s, sch) {
   }
   const colorOf = r => r.additional ? '#7a5c99' : (WP_COLORS[r.key] || '#5c6f82');
   const bar = (r, color, drag) => `<div class="g-bar${drag ? ' drag' : ''}"${drag ? ` data-key="${esc(r.key)}"` : ''} style="left:${pct(r.start - 1)};width:${pct(r.dur)};background:${color}" title="${esc(r.name)}: weeks ${r.start}–${r.end}, ${fmt(r.hours)} h${drag ? ' – drag to move' : ''}"><span>${fmt(r.hours)} h</span></div>`;
-  const badges = r => (r.additional ? '<i class="badge add">Additional</i>' : '') + (r.moved ? '<i class="badge mv">Moved</i>' : '') + (r.extended ? '<i class="badge ex">Extended</i>' : '');
+  const badges = r => (r.additional ? '<i class="badge add">Additional</i>' : '') + (r.moved ? '<i class="badge mv">Moved</i>' : '') + (r.resized ? '<i class="badge ex">Custom length</i>' : '');
   const rows = sch.rows.map(r => `<div class="g-row" data-key="${esc(r.key)}"><div class="g-label" title="Drag to reorder"><b><span class="grip">⋮⋮</span>${esc(r.name)}${badges(r)}</b><span>W${r.start}–W${r.end} · ${fmt(r.dur)} wk · ${fmt(r.fte, 2)} FTE</span><button type="button" class="g-del" data-wpdel="${esc(r.key)}" title="Remove ${esc(r.name)} from the timeline" aria-label="Remove ${esc(r.name)} from the timeline">×</button></div><div class="g-track" style="--weeks:${T}">${bar(r, colorOf(r), true)}</div></div>`).join('');
   const mg = {name: 'Project management, documentation & contingency', start: 1, dur: T, end: T, hours: sch.mgmt};
   const mgRow = sch.mgmt > 0 ? `<div class="g-row g-mgmt"><div class="g-label"><b>${esc(mg.name)}</b><span>W1–W${T} · runs across the engagement</span></div><div class="g-track" style="--weeks:${T}">${bar(mg, 'repeating-linear-gradient(135deg,#94a3b8 0 6px,#a8b5c6 6px 12px)', false)}</div></div>` : '';
   const chart = `<div class="g-hint small">Drag a bar <b>left / right</b> to change its start week, or drag a bar or its name <b>up / down</b> to change the order. Moving never changes hours or duration. Use <b>×</b> to take a work package off the timeline – its hours stay in the estimate.</div><div class="gantt" id="ganttChart"><div class="g-row g-head"><div class="g-label">Work package</div><div class="g-track g-axis" style="--weeks:${T}">${axis}</div></div>${rows}${mgRow}</div>`;
   const removed = (sch.removed || []).length ? `<div class="g-removed small"><span>Off the timeline:</span>${sch.removed.map(r => `<button type="button" class="chip" data-wprestore="${esc(r.key)}" title="Put ${esc(r.name)} back on the timeline">${esc(r.name)} · ${fmt(r.hours)} h <b>+</b></button>`).join('')}<button type="button" class="btn ghost mini" data-wprestore="*">Restore all</button></div>` : '';
-  const table = `<details class="sched"><summary><span>Adjust schedule</span><span class="small">order, start week and duration · blank = automatic · duration can be extended, not shortened</span></summary>
-    <table class="grid"><thead><tr><th>Order</th><th>Work package</th><th class="r">Start week</th><th class="r">Duration (weeks, min.)</th><th class="r">End week</th><th class="r">Hours</th><th class="r">Avg FTE</th></tr></thead><tbody>
-    ${sch.rows.map((r, i) => { const o = (s.schedule || {})[r.key] || {}; return `<tr class="${r.moved || r.extended ? 'ovr' : ''}"><td class="nowrap"><button class="btn mini" data-move="${esc(r.key)}|-1"${i === 0 ? ' disabled' : ''} title="Move up">↑</button><button class="btn mini" data-move="${esc(r.key)}|1"${i === sch.rows.length - 1 ? ' disabled' : ''} title="Move down">↓</button></td><td>${esc(r.name)}${badges(r)}</td><td class="r"><input type="number" min="1" data-sched="${esc(r.key)}.start" value="${r.moved ? r.start : ''}" placeholder="${r.autoStart}"></td><td class="r"><input type="number" min="${r.autoDur}" data-sched="${esc(r.key)}.dur" data-min="${r.autoDur}" value="${r.extended ? r.dur : ''}" placeholder="${r.autoDur}"></td><td class="r">${r.end}</td><td class="r">${fmt(r.hours)}</td><td class="r">${fmt(r.fte, 2)}</td></tr>`; }).join('')}
+  const table = `<details class="sched"><summary><span>Adjust schedule</span><span class="small">order, people, start week and duration · blank = automatic</span></summary>
+    <table class="grid"><thead><tr><th>Order</th><th>Work package</th><th class="r">People (FTE)</th><th class="r">Start week</th><th class="r">Duration (weeks)</th><th class="r">End week</th><th class="r">Hours</th><th class="r">Actual FTE</th></tr></thead><tbody>
+    ${sch.rows.map((r, i) => { const o = (s.schedule || {})[r.key] || {}; return `<tr class="${r.moved || r.resized ? 'ovr' : ''}"><td class="nowrap"><button class="btn mini" data-move="${esc(r.key)}|-1"${i === 0 ? ' disabled' : ''} title="Move up">↑</button><button class="btn mini" data-move="${esc(r.key)}|1"${i === sch.rows.length - 1 ? ' disabled' : ''} title="Move down">↓</button></td><td>${esc(r.name)}${badges(r)}</td><td class="r"><input type="number" min="0.1" step="0.1" data-sched="${esc(r.key)}.fte" value="${Number(o.fte) > 0 ? r.planFte : ''}" placeholder="${DEFAULT_WP_FTE}" title="People working on this package – drives the automatic duration"></td><td class="r"><input type="number" min="1" data-sched="${esc(r.key)}.start" value="${r.moved ? r.start : ''}" placeholder="${r.autoStart}"></td><td class="r"><input type="number" min="1" data-sched="${esc(r.key)}.dur" value="${r.resized ? r.dur : ''}" placeholder="${r.autoDur}" title="Override the number of weeks for this package"></td><td class="r">${r.end}</td><td class="r">${fmt(r.hours)}</td><td class="r">${fmt(r.fte, 2)}</td></tr>`; }).join('')}
     </tbody></table><div class="actions"><button class="btn ghost" data-action="reset-schedule">Reset schedule and order</button></div></details>`;
-  return chart + removed + `<div class="g-foot small">Total duration <b>${T} weeks</b> · average team <b>${fmt(sch.avgFte, 2)} FTE</b> at ${fmt(Number(s.settings.hoursPerWeek) || 40)} productive h/week. Automatic timeline is derived from team capacity; additional work packages are placed after Discovery at 0.5 FTE.</div>` + table;
+  return chart + removed + `<div class="g-foot small">Total duration <b>${T} weeks</b> · average team <b>${fmt(sch.avgFte, 2)} FTE</b> at ${fmt(Number(s.settings.hoursPerWeek) || 40)} productive h/week. Each bar is as long as its hours need at the people assigned to it (${DEFAULT_WP_FTE} FTE unless you change it), and packages only run in parallel while the team has capacity for them.</div>` + table;
 }
 
 function renderBreakdown(res) {
@@ -545,13 +558,14 @@ function init(rootEl) {
   });
   ROOT.addEventListener('change', e => {
     const el = e.target;
+    if (isReadOnly()) return;
     if (el.dataset.ov) { if (el.value === '') delete S.overrides[el.dataset.ov]; else S.overrides[el.dataset.ov] = Number(el.value); update(); }
     if (el.dataset.sched) {
       const [k, f] = splitLast(el.dataset.sched, '.');
       S.schedule[k] = S.schedule[k] || {};
-      const v = Number(el.value), min = Number(el.dataset.min || 1);
-      /* duration below the calculated minimum is not accepted – it falls back to the automatic duration */
-      if (el.value === '' || v <= 0 || (f === 'dur' && v <= min)) delete S.schedule[k][f]; else S.schedule[k][f] = Math.round(v);
+      const v = Number(el.value);
+      if (el.value === '' || !(v > 0)) delete S.schedule[k][f];
+      else S.schedule[k][f] = f === 'fte' ? Math.round(v * 100) / 100 : Math.round(v);
       if (!Object.keys(S.schedule[k]).length) delete S.schedule[k];
       update();
     }
@@ -663,7 +677,7 @@ window.FabricEstimatorV3 = {
      recalculation. */
   refreshReadOnly() { if (ROOT) applyReadOnly(); },
   // Totals the page needs for the HTML export and the saved summary.
-  getResult() { return RES ? {total: RES.total, delivery: RES.delivery, pm: RES.pm, doc: RES.doc, risk: RES.risk, weeks: SCH ? SCH.total : 0, tshirt: RES.tshirt, wps: RES.wps.map(w => ({name: w.name, hours: w.hours}))} : null; },
+  getResult() { return RES ? {total: RES.total, delivery: RES.delivery, pm: RES.pm, doc: RES.doc, risk: RES.risk, weeks: SCH ? SCH.total : 0, fte: RES.fte, tshirt: RES.tshirt, wps: RES.wps.map(w => ({key: w.key, name: w.name, hours: w.hours}))} : null; },
   getClientName() { return S.meta.client || ''; },
   setClientName(name) { if (!ROOT) return; S.meta.client = name || ''; bindStatic(); update(); },
   /* Organisation calibration, owned by the admin panel. The rate card itself
