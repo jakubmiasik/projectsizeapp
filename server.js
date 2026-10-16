@@ -288,7 +288,9 @@ app.put('/api/rate-defaults', requireAuth, requireAdmin, async (req, res) => {
     res.json(saved);
   } catch (err) {
     console.error('Failed to save rate defaults:', err);
-    res.status(500).json({ error: 'Failed to save calibration defaults' });
+    // Admin-only route, so the real reason is worth surfacing: without it an
+    // administrator sees a failure with nothing to act on.
+    res.status(500).json({ error: `Failed to save calibration defaults: ${err.message}` });
   }
 });
 
