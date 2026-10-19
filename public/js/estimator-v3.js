@@ -27,6 +27,7 @@ const RATE_DEFS = [
  ['foundationEnterprise','Platform','Foundation – enterprise','h',100,116,'Energy Saving Trust platform foundation 116h'],
  ['srcConnector','Ingestion','Source connector (x connectivity)','h / source',12,12,'v2.1 retained; ePlus 16h/source (ODBC/SFTP), KB calibration 1–8h'],
  ['ingestObj','Ingestion','Ingestion object (x connectivity x load)','h / object',1.2,1.0,'ePlus 156h / 225 objects with metadata framework (0.7h); Forteq ~2.3h'],
+ ['transformObj','Transformation','Transformation (x type x complexity)','h / transformation',2,2,'Medium-complexity Silver-layer transformation (notebook / dataflow incl. unit test); new in v3'],
  ['etlLow','Legacy','Low-complexity ETL asset','h / asset',0.8,0.8,'ePlus 150h / 200 key-mapping packages (0.75h)'],
  ['etlMed','Legacy','Medium ETL asset','h / asset',2.2,2.0,'ePlus 400h / 200 fact/dimension packages'],
  ['etlHigh','Legacy','High ETL / controller','h / asset',7,7,'v2.1 retained'],
@@ -54,7 +55,7 @@ const RATE_DEFS = [
  ['monitoringBasic','Quality','Monitoring – basic alerts','h',16,10,'ePlus failure notifications'],
  ['monitoringDashboard','Quality','Monitoring – dashboard + alerts','h',32,20,'ePlus monitoring & alerting 20h'],
  ['monitoringFramework','Quality','Monitoring – operational framework','h',56,44,'ePlus orchestration & monitoring WP 44h'],
- ['ktSession','Quality','Knowledge-transfer session','h / session',6,6,'v2.1 retained; ePlus KT 24h'],
+ ['ktSession','Production','Knowledge-transfer session','h / session',6,6,'v2.1 retained; ePlus KT 24h'],
  ['purviewScan','Quality','Purview – workspace scan','h',16,16,'v2.1 retained'],
  ['purviewLineage','Quality','Purview – scan + lineage','h',40,40,'Milwaukee scanning + lineage 40h'],
  ['purviewIntegration','Quality','Purview – governance integration','h',72,74,'Milwaukee Purview governance scope 74h'],
@@ -145,6 +146,16 @@ function compute(s) {
       line(w, 'p.obj.' + i, 'Ingestion objects: ' + nm, src.objects, R.ingestObj, n(src.connect) * n(src.load), 'x connectivity ' + src.connect + ' x load ' + src.load);
     });
   }
+  let transformCount = 0;
+  if (s.show.transform) {
+    const w = wp('transform', 'Transformation Layer', 'Cleansing, conforming, business rules and history handling between ingestion and Gold');
+    (s.transforms || []).forEach((t, i) => {
+      transformCount += n(t.count);
+      const src = sourceName(s, t.source);
+      line(w, 't.' + i, 'Transformations: ' + (t.name || 'Group ' + (i + 1)) + ' (' + src + ')', t.count, R.transformObj, n(t.type || 1) * n(t.complexity || 1),
+        'x type ' + n(t.type || 1) + ' x complexity ' + n(t.complexity || 1) + ' · source: ' + src);
+    });
+  }
   if (s.show.legacy) {
     const L = s.legacy || {};
     const f = Math.max(0, 1 - n(L.retirement) / 100) * n(L.framework || 1) * docQ;
@@ -184,13 +195,15 @@ function compute(s) {
   }
   if (s.show.ops) {
     const O = s.ops || {};
-    const w = wp('quality', 'Quality & Operations', 'Reconciliation, security validation, orchestration, monitoring, governance and knowledge transfer');
+    const w = wp('quality', 'Quality & Operations', 'Reconciliation, security validation, orchestration, monitoring and governance');
     line(w, 'q.recon', 'Objects reconciled', O.reconcileObjects, R.reconcileObj, 1);
     line(w, 'q.measures', 'Measures validated', O.validateMeasures, R.measureValidate, 1);
     line(w, 'q.sec', 'Security scenarios tested', O.securityTests, R.securityTest, 1);
     line(w, 'q.sched', 'Schedules / orchestrations', O.schedules, R.schedule, 1);
     line(w, 'q.mon', 'Monitoring (' + O.monitoring + ')', 1, lv('monitoring', O.monitoring), 1);
-    line(w, 'q.kt', 'Knowledge-transfer sessions', O.ktSessions, R.ktSession, 1);
+    /* KT is a launch activity, so it lives under Production Launch & Hypercare.
+       Without a PROD environment there is no such package, so it stays here. */
+    if (!s.settings.envProd) line(w, 'q.kt', 'Knowledge-transfer sessions', O.ktSessions, R.ktSession, 1);
     line(w, 'q.purview', 'Purview / catalogue (' + O.purview + ')', 1, lv('purview', O.purview), 1);
     line(w, 'q.gov', 'Governance (' + s.governance + ')', 1, lv('governance', s.governance), 1);
   }
@@ -218,12 +231,14 @@ function compute(s) {
     addLater(w);
   }
   if (s.settings.envProd) {
-    const w = wp('prod', 'Production Launch & Hypercare', 'PROD setup, deployment waves, cutover, parallel run, hypercare and decommissioning plan');
+    const w = wp('prod', 'Production Launch & Hypercare', 'PROD setup, deployment waves, cutover, parallel run, hypercare, knowledge transfer and decommissioning plan');
     line(w, 'pr.setup', 'PROD environment setup', 1, R.prodSetup, 1);
     line(w, 'pr.waves', 'Deployment waves', P.waves, R.prodWave, 1);
     line(w, 'pr.cutover', 'Cutover planning', 1, R.cutover, 1);
     line(w, 'pr.parallel', 'Parallel-run weeks (all waves)', P.parallelWeeks, R.parallelWeek, 1);
     line(w, 'pr.hypercare', 'Hypercare weeks (all waves)', P.hypercareWeeks, R.hypercareWeek, 1);
+    // Keeps the 'q.kt' id so overrides saved before KT moved here still apply.
+    if (s.show.ops) line(w, 'q.kt', 'Knowledge-transfer sessions', (s.ops || {}).ktSessions, R.ktSession, 1);
     line(w, 'pr.decom', 'Decommissioning plan', P.decommission ? 1 : 0, R.decommission, 1);
     addLater(w);
   }
@@ -252,19 +267,25 @@ function compute(s) {
     perReport: reportCount ? total / reportCount : null,
   };
   const tshirt = TSHIRT.find(t => total <= t[1])[0];
-  return {wps, build, delivery, pm, doc, risk, total, weeks, fte, roles, ratios, tshirt, ingestObjects, goldObjects, reportCount, matMult};
+  return {wps, build, delivery, pm, doc, risk, total, weeks, fte, roles, ratios, tshirt, ingestObjects, transformCount, goldObjects, reportCount, matMult};
+}
+/* A transformation group points at a source by its row index; '' means it spans several sources. */
+function sourceName(s, idx) {
+  if (idx === '' || idx === null || idx === undefined) return 'Multiple sources';
+  const src = (s.sources || [])[Number(idx)];
+  return src ? (src.name || 'Source ' + (Number(idx) + 1)) : 'Multiple sources';
 }
 if (typeof module !== 'undefined') module.exports = {compute, RATE_DEFS, DEFAULT_RATES, V21_RATES, LEVELS, MATURITY, BENCH, TSHIRT};
 
 /* ===== Presets ===== */
-const SHOW_ALL = {discovery: true, sources: true, legacy: true, models: true, reports: true, ops: true};
+const SHOW_ALL = {discovery: true, sources: true, transform: true, legacy: true, models: true, reports: true, ops: true};
 function baseState(over) {
   return Object.assign({
     meta: {client: '', projectType: 'platformMigration', architecture: 'Medallion Lakehouse', notes: ''},
     settings: {docQ: 1.0, maturity: 'planning', maturityAsMultiplier: false, pmPct: 10, docPct: 10, riskPct: 15, envDev: true, envTest: true, envProd: true, envOther: false, otherName: 'Training / Pre-production', otherComplexity: 1, hoursPerWeek: 32},
     show: Object.assign({}, SHOW_ALL), foundation: 'production', governance: 'operational',
     discovery: {workshops: 5, assessedSources: 4, sampledObjects: 0, inventoriedAssets: 0, sampledProcesses: 0, assessedReports: 0, archComplexity: 1, assessSecurity: 'detailed', poc: 'none'},
-    sources: [], legacy: {etlLow: 0, etlMed: 0, etlHigh: 0, spSimple: 0, spComplex: 0, views: 0, framework: 1, retirement: 0},
+    sources: [], transforms: [], legacy: {etlLow: 0, etlMed: 0, etlHigh: 0, spSimple: 0, spComplex: 0, views: 0, framework: 1, retirement: 0},
     gold: {dimensions: 0, facts: 0, businessRules: 0, consumptionViews: 0, complexity: 1}, models: [], reports: [],
     ops: {reconcileObjects: 0, validateMeasures: 0, securityTests: 0, schedules: 2, monitoring: 'basic', ktSessions: 2, purview: 'none'},
     test: {uatCycles: 1, testers: 5}, prod: {waves: 1, parallelWeeks: 0, hypercareWeeks: 2, decommission: false},
@@ -273,7 +294,7 @@ function baseState(over) {
 }
 const PRESETS = {};
 PRESETS.blank = {label: 'Blank estimation', state: baseState({meta: {client: '', projectType: 'platformMigration', architecture: 'Medallion Lakehouse', notes: ''},
-  sources: [{name: 'Source 1', objects: 10, connect: 1, load: 1}], models: [{name: 'Model 1', tables: 10, measuresMig: 0, measuresNew: 20, calcs: 0, security: 'static', mode: 1}],
+  sources: [{name: 'Source 1', objects: 10, connect: 1, load: 1}], transforms: [{name: 'Cleansing & conformance', source: 0, count: 10, type: 1, complexity: 1}], models: [{name: 'Model 1', tables: 10, measuresMig: 0, measuresNew: 20, calcs: 0, security: 'static', mode: 1}],
   reports: [{name: 'Power BI reports', count: 5, pages: 3, complexity: 1, action: 1}]})};
 if (typeof module !== 'undefined') module.exports = {PRESETS, baseState};
 
@@ -290,15 +311,21 @@ const SECURITY = [['none', 'None'], ['static', 'Static RLS'], ['dynamic', 'Dynam
 const MODE = [[1, 'New build'], [0.65, 'Reuse / migrate'], [1.2, 'Redesign']];
 const RCOMPLEX = [[0.75, 'Low'], [1, 'Medium'], [1.25, 'Medium-high'], [1.5, 'High']];
 const RACTION = [[0.25, 'Repoint'], [0.6, 'Migrate as-is'], [1, 'Rebuild'], [1.3, 'Redesign']];
-const WP_COLORS = {discovery: '#1f3a5f', platform: '#2f6690', legacy: '#4a6fa5', gold: '#16697a', reports: '#3d8a8a', quality: '#5c6f82', uat: '#b07d2b', prod: '#8c4b4b', other: '#6b5b95'};
+const TTYPE = [[0.8, 'Cleansing / standardisation'], [1, 'Conforming / joins / dedup'], [1.1, 'Aggregation / snapshot'], [1.3, 'Business rules / derivations'], [1.5, 'History / SCD']];
+const TCOMPLEX = [[0.6, 'Low'], [1, 'Medium'], [1.6, 'High'], [2.4, 'Very high']];
+const WP_COLORS = {discovery: '#1f3a5f', platform: '#2f6690', transform: '#3b7d9c', legacy: '#4a6fa5', gold: '#16697a', reports: '#3d8a8a', quality: '#5c6f82', uat: '#b07d2b', prod: '#8c4b4b', other: '#6b5b95'};
 /* Relative order of the standard work packages on the timeline. Durations are
    never taken from here – they come from each package's hours and its FTE. */
-const GANTT_TEMPLATE = {discovery: [0, .12], platform: [.08, .30], legacy: [.20, .72], gold: [.22, .80], reports: [.35, .85], quality: [.25, .92], uat: [.55, .92], prod: [.60, 1], other: [.85, 1]};
+const GANTT_TEMPLATE = {discovery: [0, .12], platform: [.08, .30], transform: [.15, .60], legacy: [.20, .72], gold: [.22, .80], reports: [.35, .85], quality: [.25, .92], uat: [.55, .92], prod: [.60, 1], other: [.85, 1]};
 /* People assumed to work on one package when nothing else is said. */
 const DEFAULT_WP_FTE = 1;
 
 function renderSources(s) {
   return s.sources.map((r, i) => `<div class="row src">${txtIn(`sources.${i}.name`, r.name, 'SQL, API, SaaS...')}${numIn(`sources.${i}.objects`, r.objects)}${sel(`sources.${i}.connect`, r.connect, CONNECT)}${sel(`sources.${i}.load`, r.load, LOAD)}<button class="btn danger" data-del="sources.${i}" title="Remove">×</button></div>`).join('');
+}
+function renderTransforms(s) {
+  const srcOpts = [['', 'Multiple sources']].concat((s.sources || []).map((src, i) => [i, src.name || 'Source ' + (i + 1)]));
+  return (s.transforms || []).map((t, i) => `<div class="row trans">${txtIn(`transforms.${i}.name`, t.name, 'Cleansing, customer merge...')}${sel(`transforms.${i}.source`, t.source === undefined ? '' : t.source, srcOpts)}${numIn(`transforms.${i}.count`, t.count)}${sel(`transforms.${i}.type`, t.type, TTYPE)}${sel(`transforms.${i}.complexity`, t.complexity, TCOMPLEX)}<button class="btn danger" data-del="transforms.${i}" title="Remove">×</button></div>`).join('') || '<p class="small">No transformations yet.</p>';
 }
 function renderModels(s) {
   return s.models.map((m, i) => `<div class="row model">${txtIn(`models.${i}.name`, m.name, 'Model name')}${numIn(`models.${i}.tables`, m.tables)}${numIn(`models.${i}.measuresMig`, m.measuresMig)}${numIn(`models.${i}.measuresNew`, m.measuresNew)}${numIn(`models.${i}.calcs`, m.calcs)}${sel(`models.${i}.security`, m.security, SECURITY)}${sel(`models.${i}.mode`, m.mode, MODE)}<button class="btn danger" data-del="models.${i}" title="Remove">×</button></div>`).join('');
@@ -433,18 +460,18 @@ function renderCalibration(s) {
     ${RATE_DEFS.filter(r => r[1] === g).map(r => { const cur = R[r[0]]; const def = BASE[r[0]]; const chg = Number(cur) !== Number(def); return `<tr class="${chg ? 'ovr' : ''}"><td>${esc(r[2])}</td><td class="small">${esc(r[3])}</td><td class="r"><input class="rate" type="number" step="0.01" data-rate="${r[0]}" value="${esc(cur)}"></td><td class="r muted">${esc(def)}</td></tr>`; }).join('')}
     </tbody></table></details>`).join('');
 }
-if (typeof module !== 'undefined') module.exports = {renderSources, renderModels, renderReports, renderTeam, renderSummary, renderCustom, schedule, applyGanttMove, moveOrder, renderGantt, renderBreakdown, renderCalibration};
+if (typeof module !== 'undefined') module.exports = {renderSources, renderTransforms, renderModels, renderReports, renderTeam, renderSummary, renderCustom, schedule, applyGanttMove, moveOrder, renderGantt, renderBreakdown, renderCalibration};
 
 /* ===== App glue ===== */
 const TYPES = {
   discovery: {name: 'Discovery & Assessment', show: ['discovery']},
-  pov: {name: 'Proof of Value / Pilot', show: ['discovery', 'sources', 'models', 'ops']},
-  greenfield: {name: 'Greenfield Fabric Implementation', show: ['discovery', 'sources', 'models', 'reports', 'ops']},
-  platformMigration: {name: 'Data Platform Migration / Rebuild', show: ['discovery', 'sources', 'legacy', 'models', 'reports', 'ops']},
+  pov: {name: 'Proof of Value / Pilot', show: ['discovery', 'sources', 'transform', 'models', 'ops']},
+  greenfield: {name: 'Greenfield Fabric Implementation', show: ['discovery', 'sources', 'transform', 'models', 'reports', 'ops']},
+  platformMigration: {name: 'Data Platform Migration / Rebuild', show: ['discovery', 'sources', 'transform', 'legacy', 'models', 'reports', 'ops']},
   biMigration: {name: 'BI / Reporting Migration', show: ['discovery', 'sources', 'models', 'reports', 'ops']},
-  hybrid: {name: 'Discovery + Conditional Deployment', show: ['discovery', 'sources', 'legacy', 'models', 'reports', 'ops']},
+  hybrid: {name: 'Discovery + Conditional Deployment', show: ['discovery', 'sources', 'transform', 'legacy', 'models', 'reports', 'ops']},
 };
-const NEW_ROW = {sources: {name: '', objects: 10, connect: 1, load: 1}, models: {name: '', tables: 10, measuresMig: 0, measuresNew: 20, calcs: 0, security: 'static', mode: 1},
+const NEW_ROW = {sources: {name: '', objects: 10, connect: 1, load: 1}, transforms: {name: '', source: '', count: 10, type: 1, complexity: 1}, models: {name: '', tables: 10, measuresMig: 0, measuresNew: 20, calcs: 0, security: 'static', mode: 1},
   reports: {name: '', count: 5, pages: 3, complexity: 1, action: 1}, team: {role: 'Data Engineer', fte: 0.8},
   custom: {name: '', wp: 'new', group: 'Additional activities', qty: 1, rate: 8}};
 const clone = o => JSON.parse(JSON.stringify(o));
@@ -475,10 +502,10 @@ function writeVal(el, v) {
   }
   el.value = v === undefined || v === null ? '' : v;
 }
-function bindStatic() { qsa('[data-bind]').forEach(el => { if (!el.closest('#de3-sourceRows,#de3-modelRows,#de3-reportRows,#de3-teamRows,#de3-customRows')) writeVal(el, getPath(S, el.dataset.bind)); }); }
+function bindStatic() { qsa('[data-bind]').forEach(el => { if (!el.closest('#de3-sourceRows,#de3-transformRows,#de3-modelRows,#de3-reportRows,#de3-teamRows,#de3-customRows')) writeVal(el, getPath(S, el.dataset.bind)); }); }
 function applyVisibility() {
   const show = (TYPES[S.meta.projectType] || TYPES.platformMigration).show;
-  S.show = {discovery: false, sources: false, legacy: false, models: false, reports: false, ops: false};
+  S.show = {discovery: false, sources: false, transform: false, legacy: false, models: false, reports: false, ops: false};
   show.forEach(k => { S.show[k] = true; });
   qsa('[data-show]').forEach(c => c.classList.toggle('hidden', !S.show[c.dataset.show]));
   qsa('.testOnly').forEach(c => c.classList.toggle('hidden', !S.settings.envTest));
@@ -486,7 +513,7 @@ function applyVisibility() {
   qsa('.otherOnly').forEach(c => c.classList.toggle('hidden', !S.settings.envOther));
 }
 function renderTables() {
-  $('de3-sourceRows').innerHTML = renderSources(S); $('de3-modelRows').innerHTML = renderModels(S); $('de3-reportRows').innerHTML = renderReports(S); $('de3-teamRows').innerHTML = renderTeam(S, RES);
+  $('de3-sourceRows').innerHTML = renderSources(S); $('de3-transformRows').innerHTML = renderTransforms(S); $('de3-modelRows').innerHTML = renderModels(S); $('de3-reportRows').innerHTML = renderReports(S); $('de3-teamRows').innerHTML = renderTeam(S, RES);
   $('de3-customRows').innerHTML = renderCustom(S, RES || compute(S));
 }
 const splitLast = (str, ch) => { const p = str.lastIndexOf(ch); return [str.slice(0, p), str.slice(p + 1)]; };
@@ -533,7 +560,7 @@ function applyReadOnly() {
   });
 }
 function loadState(st) {
-  S = clone(st); S.rates = S.rates || {}; S.overrides = S.overrides || {}; S.schedule = S.schedule || {}; S.order = S.order || []; S.removed = S.removed || []; S.custom = S.custom || [];
+  S = clone(st); S.rates = S.rates || {}; S.overrides = S.overrides || {}; S.schedule = S.schedule || {}; S.order = S.order || []; S.removed = S.removed || []; S.custom = S.custom || []; S.transforms = S.transforms || [];
   bindStatic(); applyVisibility(); RES = compute(S); renderTables(); update({calibration: true});
 }
 
@@ -547,6 +574,7 @@ function init(rootEl) {
     if (el.dataset.bind) {
       setPath(S, el.dataset.bind, readVal(el));
       if (el.dataset.bind === 'settings.maturity') { S.settings.riskPct = MATURITY[S.settings.maturity].risk; writeVal($('de3-riskPct'), S.settings.riskPct); }
+      if (/^sources\.\d+\.name$/.test(el.dataset.bind)) $('de3-transformRows').innerHTML = renderTransforms(S);   // the source pickers show these names
       if (/^(meta\.projectType|settings\.env)/.test(el.dataset.bind)) { applyVisibility(); RES = compute(S); $('de3-customRows').innerHTML = renderCustom(S, RES); }
       update();
     } else if (el.dataset.rate) {
@@ -578,7 +606,7 @@ function init(rootEl) {
   ROOT.addEventListener('click', e => {
     const b = e.target.closest('button'); if (!b) return;
     if (isReadOnly() && !b.dataset.tab && !b.dataset.tabJump) return;
-    if (b.dataset.del) { const [k, i] = b.dataset.del.split('.'); S[k].splice(Number(i), 1); Object.keys(S.overrides).filter(x => /^(p\.|g\.sm\.|r\.|c\.)/.test(x)).forEach(x => delete S.overrides[x]); RES = compute(S); renderTables(); update(); }
+    if (b.dataset.del) { const [k, i] = b.dataset.del.split('.'); S[k].splice(Number(i), 1); if (k === 'sources') unlinkSource(Number(i)); Object.keys(S.overrides).filter(x => /^(p\.|t\.|g\.sm\.|r\.|c\.)/.test(x)).forEach(x => delete S.overrides[x]); RES = compute(S); renderTables(); update(); }
     if (b.dataset.add) { S[b.dataset.add].push(clone(NEW_ROW[b.dataset.add])); RES = compute(S); renderTables(); update(); }
     if (b.dataset.cal === 'reset') { S.rates = {}; update({calibration: true}); }
     if (b.dataset.wpdel) { S.removed = (S.removed || []).concat(S.removed.includes(b.dataset.wpdel) ? [] : [b.dataset.wpdel]); update(); }
@@ -600,6 +628,15 @@ function init(rootEl) {
 /* A shared estimation is read-only. Disabled inputs already block typing, but
    buttons and the Gantt drag are driven by click/pointer handlers, so they have
    to check the flag the page sets on the view. */
+/* Transformation groups point at sources by index, so removing a source has to
+   re-point the groups below it and send the ones on it to "Multiple sources". */
+function unlinkSource(i) {
+  (S.transforms || []).forEach(t => {
+    if (t.source === '' || t.source === null || t.source === undefined) return;
+    const v = Number(t.source);
+    if (v === i) t.source = ''; else if (v > i) t.source = v - 1;
+  });
+}
 function isReadOnly() { return Boolean(ROOT && ROOT.classList.contains('de-readonly')); }
 
 /* ---------- Gantt drag & drop: bars left/right (start week) and up/down (order); hours and duration never change ---------- */

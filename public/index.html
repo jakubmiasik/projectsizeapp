@@ -478,23 +478,27 @@
 
       <section class="card" data-show="sources"><h2><span class="num">C</span>Sources and ingestion</h2><div class="row src head"><span>Source / group</span><span>Objects</span><span>Connectivity</span><span>Load pattern</span><span></span></div><div id="de3-sourceRows"></div><div class="actions"><button type="button" class="btn secondary" data-add="sources">+ Add source</button></div></section>
 
-      <section class="card" data-show="legacy"><h2><span class="num">D</span>Legacy migration estate</h2><div class="form-grid">
+      <section class="card" data-show="transform"><h2><span class="num">D</span>Transformation layer</h2>
+      <p class="small" style="margin-top:0">What has to be transformed between ingestion and Gold: cleansing, conforming, business rules and history. Group transformations by the source they come from, or pick <b>Multiple sources</b> for ones that combine several. Hours = transformations × rate × type × complexity. Legacy ETL rebuilt as-is belongs in the legacy estate.</p>
+      <div class="row trans head"><span>Transformation group</span><span>Data source</span><span>Transformations</span><span>Type</span><span>Complexity</span><span></span></div><div id="de3-transformRows"></div><div class="actions"><button type="button" class="btn secondary" data-add="transforms">+ Add transformation group</button></div></section>
+
+      <section class="card" data-show="legacy"><h2><span class="num">E</span>Legacy migration estate</h2><div class="form-grid">
       <label>Low-complexity ETL assets<input type="number" data-bind="legacy.etlLow"></label><label>Medium ETL assets<input type="number" data-bind="legacy.etlMed"></label><label>High ETL / controllers<input type="number" data-bind="legacy.etlHigh"></label>
       <label>Simple stored procedures<input type="number" data-bind="legacy.spSimple"></label><label>Complex stored procedures<input type="number" data-bind="legacy.spComplex"></label><label>Views to migrate<input type="number" data-bind="legacy.views"></label>
       <label>Reusable framework<select data-bind="legacy.framework"><option value="1">No framework benefit</option><option value="0.75">Moderate reuse</option><option value="0.55">Strong metadata / template reuse</option></select></label>
       <label>Retirement ratio %<input type="number" data-bind="legacy.retirement"><span class="help">Confirmed obsolete assets only</span></label></div></section>
 
-      <section class="card" data-show="models"><h2><span class="num">E</span>Gold data products, semantic models and security</h2><div class="form-grid">
+      <section class="card" data-show="models"><h2><span class="num">F</span>Gold data products, semantic models and security</h2><div class="form-grid">
       <label>Dimensions<input type="number" data-bind="gold.dimensions"></label><label>Facts<input type="number" data-bind="gold.facts"></label><label>Complex business rules<input type="number" data-bind="gold.businessRules"></label><label>Consumption views<input type="number" data-bind="gold.consumptionViews"></label>
       <label>Gold complexity<select data-bind="gold.complexity"><option value="1">Standard (×1.0)</option><option value="1.5">Complex (×1.5)</option><option value="2.2">Very complex (×2.2)</option></select></label></div>
       <h3>Semantic models</h3><div class="row model head"><span>Name</span><span>Tables</span><span>Migrated measures</span><span>New measures</span><span>Calc. objects</span><span>Security</span><span>Mode</span><span></span></div><div id="de3-modelRows"></div><div class="actions"><button type="button" class="btn secondary" data-add="models">+ Add semantic model</button></div></section>
 
-      <section class="card" data-show="reports"><h2><span class="num">F</span>Reporting portfolio</h2><div class="row report head"><span>Technology / group</span><span>Reports</span><span>Avg. pages</span><span>Complexity</span><span>Action</span><span></span></div><div id="de3-reportRows"></div><div class="actions"><button type="button" class="btn secondary" data-add="reports">+ Add report group</button></div></section>
+      <section class="card" data-show="reports"><h2><span class="num">G</span>Reporting portfolio</h2><div class="row report head"><span>Technology / group</span><span>Reports</span><span>Avg. pages</span><span>Complexity</span><span>Action</span><span></span></div><div id="de3-reportRows"></div><div class="actions"><button type="button" class="btn secondary" data-add="reports">+ Add report group</button></div></section>
 
-      <section class="card" data-show="ops"><h2><span class="num">G</span>Quality, operations and release</h2><div class="form-grid">
+      <section class="card" data-show="ops"><h2><span class="num">H</span>Quality, operations and release</h2><div class="form-grid">
       <label>Objects reconciled<input type="number" data-bind="ops.reconcileObjects"></label><label>Measures validated<input type="number" data-bind="ops.validateMeasures"></label><label>Security scenarios<input type="number" data-bind="ops.securityTests"></label><label>Schedules / orchestrations<input type="number" data-bind="ops.schedules"></label>
       <label>Monitoring<select data-bind="ops.monitoring"><option value="none">Excluded</option><option value="basic">Basic alerts</option><option value="dashboard">Dashboard + alerts</option><option value="framework">Operational framework</option></select></label>
-      <label>KT sessions<input type="number" data-bind="ops.ktSessions"></label>
+      <label>KT sessions<input type="number" data-bind="ops.ktSessions"><span class="help prodOnly">Counted under Production Launch &amp; Hypercare</span></label>
       <label>Purview / catalogue<select data-bind="ops.purview"><option value="none">Excluded</option><option value="scan">Workspace scan</option><option value="lineage">Scan + lineage</option><option value="integration">Governance integration</option></select></label></div>
       <div class="form-grid" style="margin-top:12px">
       <label class="testOnly">UAT cycles<input type="number" data-bind="test.uatCycles"></label><label class="testOnly">UAT testers<input type="number" data-bind="test.testers"></label>
@@ -502,11 +506,11 @@
       <label class="prodOnly">Hypercare weeks (all waves)<input type="number" data-bind="prod.hypercareWeeks"></label>
       <label class="prodOnly">Decommissioning plan<select data-bind="prod.decommission"><option value="false">Not included</option><option value="true">Included</option></select></label></div></section>
 
-      <section class="card"><h2><span class="num">H</span>Additional activities <span class="small" style="font-weight:400">outside the predefined scope</span></h2>
+      <section class="card"><h2><span class="num">I</span>Additional activities <span class="small" style="font-weight:400">outside the predefined scope</span></h2>
       <p class="small" style="margin-top:0">Hours = quantity × hours per unit. Add an activity to an existing work package (its bar on the timeline grows) or create its own work package, which gets its own bar on the timeline – placed automatically after Discovery and movable by drag &amp; drop. Additional hours are part of delivery effort, so PM, documentation and contingency apply.</p>
       <div class="row custom head"><span>Activity</span><span>Work package</span><span>New work package name</span><span>Quantity</span><span>Hours per unit</span><span>Hours</span><span></span></div><div id="de3-customRows"></div><div class="actions"><button type="button" class="btn secondary" data-add="custom">+ Add activity</button></div></section>
 
-      <section class="card"><h2><span class="num">I</span>Team and timeline</h2><div class="form-grid two"><label>Productive hours per FTE-week<input type="number" data-bind="settings.hoursPerWeek"><span class="help">e.g. 32 h = 80% utilisation</span></label><div class="note small">Timeline length = total hours ÷ (Σ FTE × productive hours per week). Role hours are split by FTE share.</div></div>
+      <section class="card"><h2><span class="num">J</span>Team and timeline</h2><div class="form-grid two"><label>Productive hours per FTE-week<input type="number" data-bind="settings.hoursPerWeek"><span class="help">e.g. 32 h = 80% utilisation</span></label><div class="note small">Timeline length = total hours ÷ (Σ FTE × productive hours per week). Role hours are split by FTE share.</div></div>
       <div class="row team head" style="margin-top:10px"><span>Role</span><span>FTE</span><span>Hours</span><span></span></div><div id="de3-teamRows"></div><div class="actions"><button type="button" class="btn secondary" data-add="team">+ Add role</button></div></section>
       </div>
 
