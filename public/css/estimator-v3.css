@@ -37,6 +37,7 @@
 #detailed-estimation-view .help,#detailed-estimation-view .small{font-size:.74rem;color:var(--ink-soft);font-weight:400}
 #detailed-estimation-view .row{display:grid;gap:8px;padding:6px 0;border-bottom:1px solid var(--line-soft);align-items:center}
 #detailed-estimation-view .row.src{grid-template-columns:1.4fr .6fr .9fr .9fr 36px}
+#detailed-estimation-view .row.trans{grid-template-columns:1.3fr 1fr .55fr 1.3fr .7fr 36px}
 #detailed-estimation-view .row.model{grid-template-columns:1.3fr .5fr .55fr .55fr .5fr .9fr .8fr 36px}
 #detailed-estimation-view .row.report{grid-template-columns:1.4fr .5fr .5fr .8fr .8fr 36px}
 #detailed-estimation-view .row.team{grid-template-columns:1.6fr .5fr .6fr 36px}
@@ -150,7 +151,7 @@
 }
 @media(max-width:700px){
   #detailed-estimation-view .form-grid,#detailed-estimation-view .two{grid-template-columns:1fr}
-  #detailed-estimation-view .row.src,#detailed-estimation-view .row.model,#detailed-estimation-view .row.report,#detailed-estimation-view .row.team{grid-template-columns:1fr}
+  #detailed-estimation-view .row.src,#detailed-estimation-view .row.trans,#detailed-estimation-view .row.model,#detailed-estimation-view .row.report,#detailed-estimation-view .row.team{grid-template-columns:1fr}
   #detailed-estimation-view .head{display:none}
   #detailed-estimation-view .g-row{grid-template-columns:130px 1fr}
 }
