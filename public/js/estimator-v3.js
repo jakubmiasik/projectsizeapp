@@ -661,7 +661,11 @@ const SCOPE_SECTIONS = [
   ['techValidation', 'Technology validation', 'Product capabilities and limits checked against documentation, and what is still an assumption.'],
 ];
 const SCOPE_CMDS = [['bold', '', '<b>B</b>', 'Bold'], ['italic', '', '<i>I</i>', 'Italic'], ['underline', '', '<u>U</u>', 'Underline'], ['formatBlock', 'H3', 'H', 'Heading'], ['formatBlock', 'P', '¶', 'Paragraph'],
+  ['justifyLeft', '', '⇤', 'Align left'], ['justifyCenter', '', '⇔', 'Centre'], ['justifyRight', '', '⇥', 'Align right'], ['justifyFull', '', '☰', 'Justify'],
   ['insertUnorderedList', '', '• List', 'Bullet list'], ['insertOrderedList', '', '1. List', 'Numbered list'], ['removeFormat', '', '✕', 'Clear formatting']];
+const SCOPE_WIDTHS = [['', 'Full width'], ['75', '¾ width'], ['66', '⅔ width'], ['50', '½ width'], ['33', '⅓ width']];
+/* A collapsible work-package block with the headings a scope document uses. */
+const WP_BLOCK = `<details class="wp" open><summary><span>WPx – Work package name</span></summary><h3>Stakeholders</h3><ul><li>…</li></ul><h3>Requirements / activities</h3><ul><li>…</li></ul><h3>Dependencies</h3><ul><li>…</li></ul><h3>Assumptions</h3><ul><li>…</li></ul><h3>Out of scope</h3><ul><li>…</li></ul><h3>Deliverables</h3><ul><li>…</li></ul></details><p><br></p>`;
 const SCOPE_FONTS = [['', 'Default size'], ['12px', 'Small text'], ['14px', 'Normal text'], ['16px', 'Large text'], ['18px', 'Extra large text']];
 /* Sections open read-only; only the ones someone chose to edit are editable.
    Held by section object so moving or removing sections keeps it right. */
@@ -672,7 +676,11 @@ const defaultScope = () => SCOPE_SECTIONS.map(d => ({key: d[0], title: d[1], htm
    estimate shows it to other people, so it is reduced to an allow-list of
    tags, attributes and cosmetic styles – on paste and again on every render. */
 const RICH_TAGS = new Set(['P', 'BR', 'DIV', 'SPAN', 'STRONG', 'B', 'EM', 'I', 'U', 'S', 'STRIKE', 'SUB', 'SUP', 'A', 'UL', 'OL', 'LI', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6',
-  'BLOCKQUOTE', 'CODE', 'PRE', 'HR', 'IMG', 'TABLE', 'THEAD', 'TBODY', 'TFOOT', 'TR', 'TD', 'TH', 'CAPTION', 'MARK', 'SMALL']);
+  'BLOCKQUOTE', 'CODE', 'PRE', 'HR', 'IMG', 'TABLE', 'THEAD', 'TBODY', 'TFOOT', 'TR', 'TD', 'TH', 'CAPTION', 'MARK', 'SMALL', 'DETAILS', 'SUMMARY']);
+/* Classes the page itself styles: collapsible work-package panels (details.wp)
+   and the small tags such as "new in v2" (i.badge.add) in the scope documents
+   the estimator produces. Every other class is dropped. */
+const RICH_CLASSES = new Set(['wp', 'badge', 'add', 'mv', 'ex']);
 const RICH_STYLES = new Set(['color', 'background-color', 'font-weight', 'font-style', 'text-decoration', 'text-decoration-line', 'text-align']);
 // Column widths set by dragging a table border survive, as plain px or %.
 const WIDTH_TAGS = new Set(['TABLE', 'TD', 'TH']);
@@ -696,6 +704,8 @@ function sanitizeRich(html) {
       if (nm === 'href' && el.tagName === 'A') { if (/^(https?:|mailto:|#)/i.test(v)) { el.setAttribute('target', '_blank'); el.setAttribute('rel', 'noopener noreferrer'); } else el.removeAttribute('href'); return; }
       if (nm === 'src' && el.tagName === 'IMG') { if (!/^(https:|data:image\/(png|jpe?g|gif|webp);)/i.test(v)) el.remove(); return; }
       if ((nm === 'colspan' || nm === 'rowspan') && /^\d{1,3}$/.test(v)) return;
+      if (nm === 'class') { const c = v.split(/\s+/).filter(x => RICH_CLASSES.has(x)).join(' '); if (c) el.setAttribute('class', c); else el.removeAttribute('class'); return; }
+      if (nm === 'open' && el.tagName === 'DETAILS') return;
       if (nm === 'alt' || nm === 'title' || (nm === 'target' && el.tagName === 'A') || (nm === 'rel' && el.tagName === 'A')) return;
       el.removeAttribute(a.name);
     });
@@ -711,15 +721,19 @@ function renderScope(s) {
   const cards = secs.map((x, i) => {
     const def = SCOPE_SECTIONS.find(d => d[0] === x.key), ed = EDITING.has(x);
     const font = SCOPE_FONTS.some(f => f[0] && f[0] === x.fontSize) ? x.fontSize : '';
+    const width = SCOPE_WIDTHS.some(f => f[0] && f[0] === x.width) ? x.width : '';
     const head = ed
       ? `<input class="scope-title" data-scope-title="${i}" value="${esc(x.title)}" placeholder="Section title" aria-label="Section title">
         <span class="scope-tools"><button type="button" class="btn mini" data-scope-move="${i}|-1"${i === 0 ? ' disabled' : ''} title="Move up">↑</button><button type="button" class="btn mini" data-scope-move="${i}|1"${i === secs.length - 1 ? ' disabled' : ''} title="Move down">↓</button><button type="button" class="btn danger mini" data-scope-del="${i}" title="Remove this section">×</button><button type="button" class="btn primary mini" data-scope-done="${i}" title="Stop editing this section">Done</button></span>`
       : `<h3 class="scope-name">${esc(x.title || 'Untitled section')}</h3><span class="scope-tools"><button type="button" class="btn mini scope-edit" data-scope-edit="${i}" title="Edit this section" aria-label="Edit ${esc(x.title || 'section')}">✎ Edit</button></span>`;
     const toolbar = ed ? `<div class="scope-toolbar">${SCOPE_CMDS.map(c => `<button type="button" class="btn mini" data-scope-cmd="${c[0]}" data-scope-val="${c[1]}" title="${c[3]}">${c[2]}</button>`).join('')}
       <select data-scope-font="${i}" aria-label="Text size of this section">${SCOPE_FONTS.map(f => opt(f[0], f[1], font)).join('')}</select>
+      <select data-scope-width="${i}" aria-label="Width of this section">${SCOPE_WIDTHS.map(f => opt(f[0], f[1], width)).join('')}</select>
+      <button type="button" class="btn mini" data-scope-wp="${i}" title="Insert a collapsible work package with stakeholders, activities, dependencies, assumptions, out of scope and deliverables">▸ Work package</button>
+      <button type="button" class="btn mini" data-scope-tag="${i}" title="Mark the selected text as a small tag, e.g. new in v2">Tag</button>
       <button type="button" class="btn mini" data-scope-fit="${i}" title="Remove the column widths set on this section's tables">↔ Fit tables</button>
       <span class="small tb-hint">Drag a table's column border to change its width.</span></div>` : '';
-    return `<section class="card scope-sec${ed ? ' is-editing' : ''}"><div class="scope-head"><span class="num">${i + 1}</span>${head}</div>${toolbar}
+    return `<section class="card scope-sec${ed ? ' is-editing' : ''}"${width ? ` style="--sw:${width}"` : ''}><div class="scope-head"><span class="num">${i + 1}</span>${head}</div>${toolbar}
       <div class="scope-editor ${ed ? 'editing' : 'viewing'}" contenteditable="${ed ? 'true' : 'false'}" data-scope-html="${i}"${font ? ` style="font-size:${font}"` : ''} data-placeholder="${esc(ed ? (def ? def[2] : 'Paste or type the content of this section.') : 'Nothing here yet – choose Edit to add content.')}">${sanitizeRich(x.html)}</div></section>`;
   }).join('');
   return cards + `<div class="scope-add"><select id="de3-scopeAddKey" aria-label="Section to add">${missing.map(d => opt(d[0], d[1])).join('')}${opt('custom', 'Custom section')}</select><button type="button" class="btn secondary" data-action="scope-add">+ Add section</button></div>`;
@@ -847,6 +861,14 @@ function init(rootEl) {
   // The toolbar acts on the editor's selection, so it must not take focus.
   ROOT.addEventListener('mousedown', e => { if (e.target.closest('[data-scope-cmd]')) e.preventDefault(); });
   initColumnResize();
+  ROOT.addEventListener('keydown', e => {
+    if ((e.key === ' ' || e.key === 'Enter') && e.target.closest && e.target.closest('.scope-editor.editing') && window.getSelection().anchorNode && window.getSelection().anchorNode.parentElement && window.getSelection().anchorNode.parentElement.closest('summary')) {
+      e.preventDefault();
+      if (e.key === ' ') document.execCommand('insertText', false, ' ');
+    }
+  });
+  // In an editor a click on a panel title is for typing, not for folding.
+  ROOT.addEventListener('click', e => { if (e.target.closest && e.target.closest('.scope-editor.editing summary')) e.preventDefault(); }, true);
   ROOT.addEventListener('paste', e => {
     const ed = e.target.closest && e.target.closest('[data-scope-html]');
     if (!ed || isLocked() || !e.clipboardData) return;
@@ -887,6 +909,11 @@ function init(rootEl) {
   ROOT.addEventListener('change', e => {
     const el = e.target;
     if (isLocked()) return;
+    if (el.dataset.scopeWidth !== undefined) {
+      const sc = S.scope[Number(el.dataset.scopeWidth)];
+      if (sc) { if (el.value) sc.width = el.value; else delete sc.width; }
+      const card = el.closest('.scope-sec'); if (el.value) card.style.setProperty('--sw', el.value); else card.style.removeProperty('--sw');
+    }
     if (el.dataset.scopeFont !== undefined) {
       const sc = S.scope[Number(el.dataset.scopeFont)];
       if (sc) { if (el.value) sc.fontSize = el.value; else delete sc.fontSize; }
@@ -950,6 +977,13 @@ function init(rootEl) {
       if (sc) { if (b.dataset.scopeEdit !== undefined) EDITING.add(sc); else EDITING.delete(sc); }
       renderScopePane();
       if (sc && EDITING.has(sc)) { const ed = (ROOT || document).querySelector(`#de3-scope [data-scope-html="${S.scope.indexOf(sc)}"]`); if (ed) ed.focus(); }
+    }
+    if (b.dataset.scopeWp !== undefined || b.dataset.scopeTag !== undefined) {
+      const ed = b.closest('.scope-sec').querySelector('[data-scope-html]');
+      if (!ed.contains(document.activeElement) && document.activeElement !== ed) ed.focus();
+      if (b.dataset.scopeWp !== undefined) document.execCommand('insertHTML', false, WP_BLOCK);
+      else { const t = String(window.getSelection() || '').trim() || 'new'; document.execCommand('insertHTML', false, `<i class="badge add">${esc(t)}</i>&nbsp;`); }
+      syncScopeHtml(ed);
     }
     if (b.dataset.scopeFit !== undefined) {
       const ed = b.closest('.scope-sec').querySelector('[data-scope-html]');
