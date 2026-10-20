@@ -95,6 +95,7 @@
     .share-remove-btn{border:1px solid var(--color-border);background:var(--color-surface);color:var(--color-text-muted);border-radius:8px;padding:.35rem .55rem;cursor:pointer}
     .share-remove-btn:hover{color:#c0392b;border-color:#c0392b}
     .modal-field{display:grid;gap:var(--space-2)}
+    #dialog-modal .modal-actions{margin-top:var(--space-4)}
     .modal-input{width:100%;border:1px solid var(--color-border);background:var(--color-surface);border-radius:12px;padding:.7rem .85rem;color:var(--color-text)}
     .modal-input:focus{outline:none;border-color:var(--color-primary-strong);box-shadow:0 0 0 3px var(--color-primary-soft)}
     .generic-modal-message{white-space:pre-wrap}
@@ -1150,7 +1151,7 @@
       calculate();
     }
 
-    function showDialog({ message, title = 'Notice', mode = 'alert', defaultValue = '', confirmText = 'OK', cancelText = 'Cancel' }) {
+    function showDialog({ message, title = 'Notice', mode = 'alert', defaultValue = '', confirmText = 'OK', cancelText = 'Cancel', placeholder = '' }) {
       return new Promise((resolve) => {
         const overlay = document.getElementById('dialog-modal');
         const titleEl = document.getElementById('dialog-modal-title');
@@ -1169,6 +1170,7 @@
         confirmBtn.textContent = confirmText;
         cancelBtn.textContent = cancelText;
         inputEl.value = defaultValue;
+        inputEl.placeholder = placeholder;
 
         const cleanup = () => {
           overlay.removeEventListener('click', onOverlayClick);
