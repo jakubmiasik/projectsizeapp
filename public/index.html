@@ -429,7 +429,7 @@
     <section class="detailed-estimation-view container" id="detailed-estimation-view">
       <div class="de-header">
         <button type="button" class="de-back-btn" id="de-back-btn">← Back to Sizing</button>
-        <div style="flex:1;min-width:0"><h2 style="margin:0">Project Estimate</h2><div class="de-header-client" id="de3-heroClient">&ndash;</div></div>
+        <div style="flex:1;min-width:0"><h2 style="margin:0">Project Estimate</h2><div class="de-header-client"><span id="de3-heroClient">&ndash;</span><span class="de3-status draft" id="de3-statusPill">Draft</span></div></div>
         <button type="button" class="de-save-btn" id="de-save-inline-btn">Save</button>
       </div>
 
@@ -445,6 +445,7 @@
       </section>
 
       <div class="grid-main"><aside><div class="sticky">
+      <section class="card endorse" id="de3-endorse"></section>
       <section class="card"><h2>Scenario</h2><p class="small" style="margin:0 0 8px">Start from a blank estimation.</p>
       <div class="actions"><button type="button" class="btn primary" id="de3-loadPreset">Load blank estimation</button></div><p class="small" style="margin:8px 0 0">Loading a starting point replaces every input on this page. Save the estimation to keep your work.</p></section>
       <section class="card"><h2>Estimate summary</h2><div id="de3-summary"></div></section>
@@ -454,7 +455,7 @@
       <div class="tabs" id="de3-tabs"><button type="button" class="tab active" data-tab="scope">Scope</button><button type="button" class="tab" data-tab="inputs">Scope inputs</button><button type="button" class="tab" data-tab="timeline">Timeline</button><button type="button" class="tab" data-tab="activities">Activity hours</button><button type="button" class="tab" data-tab="calibration">Calibration</button></div>
 
       <div class="tabpane active" id="de3-pane-scope"><section class="card"><h2>Scope</h2>
-      <p class="small" style="margin:0">The written scope behind the numbers. Paste content from Word, Outlook, Excel or another estimate straight into a section – headings, lists, tables and links are kept, other formatting is cleaned up. Rename, reorder or remove sections, and add predefined or custom ones at the bottom. The Scope tab is saved with the estimation.</p></section>
+      <p class="small" style="margin:0">The written scope behind the numbers. Choose <b>✎ Edit</b> on a section to change it, then paste content from Word, Outlook, Excel or another estimate – headings, lists, tables and links are kept, other formatting is cleaned up. While editing you can set the text size, drag table column borders, rename, reorder or remove the section; add predefined or custom sections at the bottom. Sections go back to reading mode when you save. The Scope tab is saved with the estimation.</p></section>
       <div id="de3-scope"></div></div>
 
       <div class="tabpane" id="de3-pane-timeline"><section class="card"><h2>Delivery timeline</h2><div id="de3-gantt"></div></section></div>
@@ -1381,6 +1382,8 @@
 
         // The account menu now lives in the sidebar footer.
         AppShell.setUser({ name: user.name, email: user.email, onSignOut: goToLogout });
+        // Endorsement steps on the estimate record who made them.
+        window.FabricEstimatorV3?.setCurrentUser({ name: user.name, email: user.email });
 
         // Every estimation starts from the organisation calibration, so it has
         // to reach the estimator before the first estimate is opened. A failure
@@ -1504,6 +1507,7 @@
             body: JSON.stringify(payload)
           }, 'Save failed');
           setLoadedEstimationState(estimation);
+          window.FabricEstimatorV3?.closeScopeEditing();
           await showAlert(successMessage, 'Saved');
         }
 

@@ -219,3 +219,39 @@
   #detailed-estimation-view #de3-cxGuide{grid-template-columns:1fr}
   #detailed-estimation-view .row.custom{grid-template-columns:1fr}
 }
+/* ---- endorsement ---- */
+#detailed-estimation-view .de3-status{display:inline-block;margin-left:8px;padding:1px 8px;border-radius:4px;font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;border:1px solid currentColor;vertical-align:1px}
+#detailed-estimation-view .de3-status.draft{color:var(--ink-soft)}
+#detailed-estimation-view .de3-status.proposed{color:var(--amber);background:var(--amber-bg)}
+#detailed-estimation-view .de3-status.final{color:#fff;background:var(--accent);border-color:var(--accent)}
+#detailed-estimation-view .stages{display:flex;list-style:none;margin:0;padding:0;gap:4px}
+#detailed-estimation-view .stages li{flex:1;display:flex;align-items:center;gap:6px;padding:6px 8px;border:1px solid var(--line);border-radius:4px;font-size:.78rem;font-weight:600;color:var(--ink-soft);background:var(--surface-2)}
+#detailed-estimation-view .stages li span{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:50%;background:var(--line);color:var(--ink);font-size:.68rem}
+#detailed-estimation-view .stages li.done{color:var(--ink)}
+#detailed-estimation-view .stages li.done span{background:var(--accent);color:#fff}
+#detailed-estimation-view .stages li.now{color:var(--primary);border-color:var(--primary);background:var(--primary-soft)}
+#detailed-estimation-view .stages li.now span{background:var(--primary);color:#fff}
+#detailed-estimation-view .stage-desc{margin:8px 0 0}
+#detailed-estimation-view #de3-endorseNote{min-height:44px;font-size:.78rem}
+#detailed-estimation-view .stage-log{margin-top:8px}
+#detailed-estimation-view .stage-log ul{margin:6px 0 0;padding:0;list-style:none;font-size:.74rem;color:var(--ink-soft)}
+#detailed-estimation-view .stage-log li{padding:5px 0;border-top:1px solid var(--line-soft)}
+#detailed-estimation-view .stage-log li b{color:var(--ink)}
+#detailed-estimation-view .stage-log li div{color:var(--ink);white-space:pre-wrap}
+#detailed-estimation-view .btn:disabled{opacity:.45;cursor:default}
+/* ---- Scope: reading and editing modes ---- */
+#detailed-estimation-view .card h3.scope-name{flex:1;margin:0;font-size:.98rem;text-transform:none;letter-spacing:0;color:var(--ink);font-weight:600;padding:4px 0}
+#detailed-estimation-view .scope-head .scope-tools{margin-left:auto}
+#detailed-estimation-view .scope-edit{opacity:.75}
+#detailed-estimation-view .scope-sec:hover .scope-edit,#detailed-estimation-view .scope-edit:focus-visible{opacity:1}
+#detailed-estimation-view .scope-editor.viewing{border-color:transparent;padding:6px 0 0;min-height:0;background:transparent;box-shadow:none;cursor:default}
+#detailed-estimation-view .scope-editor.viewing:empty::before{font-style:italic}
+#detailed-estimation-view .scope-editor.viewing[contenteditable="false"]{background:transparent}
+#detailed-estimation-view .scope-sec.is-editing{border-color:var(--primary)}
+#detailed-estimation-view .scope-toolbar select{width:auto;margin:0 0 0 4px;padding:1px 6px;font-size:.74rem}
+#detailed-estimation-view .scope-toolbar .tb-hint{margin-left:auto;align-self:center;padding-right:4px}
+#detailed-estimation-view .scope-editor table[style*="width"]{table-layout:fixed;width:auto}
+#detailed-estimation-view .scope-editor.col-resize,#detailed-estimation-view .scope-editor.col-resize td,#detailed-estimation-view .scope-editor.col-resize th{cursor:col-resize}
+#detailed-estimation-view .scope-editor.editing td,#detailed-estimation-view .scope-editor.editing th{position:relative}
+#detailed-estimation-view .scope-editor.editing td:hover,#detailed-estimation-view .scope-editor.editing th:hover{box-shadow:inset -2px 0 0 color-mix(in srgb,var(--primary) 35%,transparent)}
+#detailed-estimation-view .scope-editor td,#detailed-estimation-view .scope-editor th{overflow-wrap:break-word}

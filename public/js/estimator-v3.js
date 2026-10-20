@@ -510,6 +510,7 @@ const CX = {
   other: ['OTHER environment complexity', [['Low', '×0.8', 'A copy of TEST with the same deployment pipeline.'], ['Medium', '×1.0', 'Its own capacity, connections and data refresh.'], ['High', '×1.3', 'Separate tenant or network, data masking or a training data set to prepare.']]],
 };
 const INFO = {
+  'sec.endorse': 'Where the estimate stands. Draft while it is worked on, Proposed when it is submitted for endorsement, Final once endorsed – a Final estimate is locked. Each step records who moved it, when and an optional comment. No effect on hours.',
   'sec.strategy': 'How the engagement is framed. Project type decides which sections below are included; maturity, documentation quality and the PM / documentation / contingency percentages scale the whole estimate.',
   'sec.discovery': 'Effort to understand the current estate and design the target before building. Hours mostly scale with documentation quality.',
   'sec.sources': 'One row per source system or group of similar sources. Each row costs one connector plus an amount per object, both scaled by connectivity and load pattern.',
@@ -661,6 +662,10 @@ const SCOPE_SECTIONS = [
 ];
 const SCOPE_CMDS = [['bold', '', '<b>B</b>', 'Bold'], ['italic', '', '<i>I</i>', 'Italic'], ['underline', '', '<u>U</u>', 'Underline'], ['formatBlock', 'H3', 'H', 'Heading'], ['formatBlock', 'P', '¶', 'Paragraph'],
   ['insertUnorderedList', '', '• List', 'Bullet list'], ['insertOrderedList', '', '1. List', 'Numbered list'], ['removeFormat', '', '✕', 'Clear formatting']];
+const SCOPE_FONTS = [['', 'Default size'], ['12px', 'Small text'], ['14px', 'Normal text'], ['16px', 'Large text'], ['18px', 'Extra large text']];
+/* Sections open read-only; only the ones someone chose to edit are editable.
+   Held by section object so moving or removing sections keeps it right. */
+let EDITING = new Set();
 const defaultScope = () => SCOPE_SECTIONS.map(d => ({key: d[0], title: d[1], html: ''}));
 
 /* Pasted content comes from Word, Excel, Outlook and web pages, and a shared
@@ -669,8 +674,15 @@ const defaultScope = () => SCOPE_SECTIONS.map(d => ({key: d[0], title: d[1], htm
 const RICH_TAGS = new Set(['P', 'BR', 'DIV', 'SPAN', 'STRONG', 'B', 'EM', 'I', 'U', 'S', 'STRIKE', 'SUB', 'SUP', 'A', 'UL', 'OL', 'LI', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6',
   'BLOCKQUOTE', 'CODE', 'PRE', 'HR', 'IMG', 'TABLE', 'THEAD', 'TBODY', 'TFOOT', 'TR', 'TD', 'TH', 'CAPTION', 'MARK', 'SMALL']);
 const RICH_STYLES = new Set(['color', 'background-color', 'font-weight', 'font-style', 'text-decoration', 'text-decoration-line', 'text-align']);
-function cleanStyle(v) {
-  return String(v || '').split(';').map(d => { const i = d.indexOf(':'); if (i < 0) return ''; const p = d.slice(0, i).trim().toLowerCase(), val = d.slice(i + 1).trim(); return RICH_STYLES.has(p) && !/url\s*\(|expression\s*\(|[{}<>]/i.test(val) ? `${p}: ${val}` : ''; }).filter(Boolean).join('; ');
+// Column widths set by dragging a table border survive, as plain px or %.
+const WIDTH_TAGS = new Set(['TABLE', 'TD', 'TH']);
+function cleanStyle(v, tag) {
+  return String(v || '').split(';').map(d => {
+    const i = d.indexOf(':'); if (i < 0) return '';
+    const p = d.slice(0, i).trim().toLowerCase(), val = d.slice(i + 1).trim();
+    if (p === 'width') return WIDTH_TAGS.has(tag) && /^\d{1,4}(\.\d+)?(px|%)$/.test(val) ? `width: ${val}` : '';
+    return RICH_STYLES.has(p) && !/url\s*\(|expression\s*\(|[{}<>]/i.test(val) ? `${p}: ${val}` : '';
+  }).filter(Boolean).join('; ');
 }
 function sanitizeRich(html) {
   const raw = String(html || ''); if (!raw.trim()) return '';
@@ -680,7 +692,7 @@ function sanitizeRich(html) {
     if (!RICH_TAGS.has(el.tagName)) { const p = el.parentNode; while (el.firstChild) p.insertBefore(el.firstChild, el); p.removeChild(el); return; }
     [...el.attributes].forEach(a => {
       const nm = a.name.toLowerCase(), v = a.value.trim();
-      if (nm === 'style') { const st = cleanStyle(v); if (st) el.setAttribute('style', st); else el.removeAttribute('style'); return; }
+      if (nm === 'style') { const st = cleanStyle(v, el.tagName); if (st) el.setAttribute('style', st); else el.removeAttribute('style'); return; }
       if (nm === 'href' && el.tagName === 'A') { if (/^(https?:|mailto:|#)/i.test(v)) { el.setAttribute('target', '_blank'); el.setAttribute('rel', 'noopener noreferrer'); } else el.removeAttribute('href'); return; }
       if (nm === 'src' && el.tagName === 'IMG') { if (!/^(https:|data:image\/(png|jpe?g|gif|webp);)/i.test(v)) el.remove(); return; }
       if ((nm === 'colspan' || nm === 'rowspan') && /^\d{1,3}$/.test(v)) return;
@@ -697,14 +709,22 @@ function renderScope(s) {
   const used = new Set(secs.map(x => x.key).filter(Boolean));
   const missing = SCOPE_SECTIONS.filter(d => !used.has(d[0]));
   const cards = secs.map((x, i) => {
-    const def = SCOPE_SECTIONS.find(d => d[0] === x.key);
-    return `<section class="card scope-sec"><div class="scope-head"><span class="num">${i + 1}</span><input class="scope-title" data-scope-title="${i}" value="${esc(x.title)}" placeholder="Section title" aria-label="Section title">
-      <span class="scope-tools"><button type="button" class="btn mini" data-scope-move="${i}|-1"${i === 0 ? ' disabled' : ''} title="Move up">↑</button><button type="button" class="btn mini" data-scope-move="${i}|1"${i === secs.length - 1 ? ' disabled' : ''} title="Move down">↓</button><button type="button" class="btn danger mini" data-scope-del="${i}" title="Remove this section">×</button></span></div>
-      <div class="scope-toolbar">${SCOPE_CMDS.map(c => `<button type="button" class="btn mini" data-scope-cmd="${c[0]}" data-scope-val="${c[1]}" title="${c[3]}">${c[2]}</button>`).join('')}</div>
-      <div class="scope-editor" contenteditable="true" data-scope-html="${i}" data-placeholder="${esc(def ? def[2] : 'Paste or type the content of this section.')}">${sanitizeRich(x.html)}</div></section>`;
+    const def = SCOPE_SECTIONS.find(d => d[0] === x.key), ed = EDITING.has(x);
+    const font = SCOPE_FONTS.some(f => f[0] && f[0] === x.fontSize) ? x.fontSize : '';
+    const head = ed
+      ? `<input class="scope-title" data-scope-title="${i}" value="${esc(x.title)}" placeholder="Section title" aria-label="Section title">
+        <span class="scope-tools"><button type="button" class="btn mini" data-scope-move="${i}|-1"${i === 0 ? ' disabled' : ''} title="Move up">↑</button><button type="button" class="btn mini" data-scope-move="${i}|1"${i === secs.length - 1 ? ' disabled' : ''} title="Move down">↓</button><button type="button" class="btn danger mini" data-scope-del="${i}" title="Remove this section">×</button><button type="button" class="btn primary mini" data-scope-done="${i}" title="Stop editing this section">Done</button></span>`
+      : `<h3 class="scope-name">${esc(x.title || 'Untitled section')}</h3><span class="scope-tools"><button type="button" class="btn mini scope-edit" data-scope-edit="${i}" title="Edit this section" aria-label="Edit ${esc(x.title || 'section')}">✎ Edit</button></span>`;
+    const toolbar = ed ? `<div class="scope-toolbar">${SCOPE_CMDS.map(c => `<button type="button" class="btn mini" data-scope-cmd="${c[0]}" data-scope-val="${c[1]}" title="${c[3]}">${c[2]}</button>`).join('')}
+      <select data-scope-font="${i}" aria-label="Text size of this section">${SCOPE_FONTS.map(f => opt(f[0], f[1], font)).join('')}</select>
+      <button type="button" class="btn mini" data-scope-fit="${i}" title="Remove the column widths set on this section's tables">↔ Fit tables</button>
+      <span class="small tb-hint">Drag a table's column border to change its width.</span></div>` : '';
+    return `<section class="card scope-sec${ed ? ' is-editing' : ''}"><div class="scope-head"><span class="num">${i + 1}</span>${head}</div>${toolbar}
+      <div class="scope-editor ${ed ? 'editing' : 'viewing'}" contenteditable="${ed ? 'true' : 'false'}" data-scope-html="${i}"${font ? ` style="font-size:${font}"` : ''} data-placeholder="${esc(ed ? (def ? def[2] : 'Paste or type the content of this section.') : 'Nothing here yet – choose Edit to add content.')}">${sanitizeRich(x.html)}</div></section>`;
   }).join('');
   return cards + `<div class="scope-add"><select id="de3-scopeAddKey" aria-label="Section to add">${missing.map(d => opt(d[0], d[1])).join('')}${opt('custom', 'Custom section')}</select><button type="button" class="btn secondary" data-action="scope-add">+ Add section</button></div>`;
 }
+function renderScopePane() { $('de3-scope').innerHTML = renderScope(S); applyReadOnly(); }
 function syncScopeHtml(ed) { const i = Number(ed.dataset.scopeHtml); if (S.scope[i]) S.scope[i].html = ed.innerHTML; }
 function insertClean(ed, data) {
   const html = data.getData('text/html'), text = data.getData('text/plain');
@@ -790,10 +810,11 @@ function update(opts) {
    Gantt's nudge arrows at the ends of the timeline), and a blanket
    `disabled = false` would silently switch those back on. */
 function applyReadOnly() {
-  const ro = isReadOnly();
-  qsa('[data-scope-html]').forEach(el => { el.contentEditable = ro ? 'false' : 'true'; });
+  const ro = isLocked(), shared = isReadOnly();
+  qsa('[data-scope-html]').forEach(el => { el.contentEditable = !ro && EDITING.has(S.scope[Number(el.dataset.scopeHtml)]) ? 'true' : 'false'; });
   qsa('input,select,textarea,button').forEach(el => {
     if (el.closest('.de-header') || el.classList.contains('tab')) return;
+    if (!shared && el.closest('#de3-endorse')) return;   // a Final estimate can still be moved back to Draft
     if (ro) {
       if (!el.disabled) { el.disabled = true; el.dataset.roDisabled = '1'; }
     } else if (el.dataset.roDisabled) {
@@ -806,7 +827,9 @@ function loadState(st) {
   S = clone(st); S.rates = S.rates || {}; S.overrides = S.overrides || {}; S.schedule = S.schedule || {}; S.order = S.order || []; S.removed = S.removed || []; S.custom = S.custom || []; S.transforms = S.transforms || [];
   S.rateNotes = S.rateNotes || {}; S.wpNames = S.wpNames || {};
   if (!Array.isArray(S.scope)) S.scope = defaultScope();   // estimates saved before the Scope tab
-  bindStatic(); applyVisibility(); RES = compute(S); renderTables(); $('de3-scope').innerHTML = renderScope(S); update({calibration: true});
+  if (!S.endorsement || !STAGES[S.endorsement.status]) S.endorsement = {status: 'draft', history: []};
+  EDITING = new Set();
+  bindStatic(); applyVisibility(); RES = compute(S); renderTables(); $('de3-scope').innerHTML = renderScope(S); renderEndorsement(); update({calibration: true});
 }
 
 function init(rootEl) {
@@ -823,16 +846,17 @@ function init(rootEl) {
   window.addEventListener('scroll', hideTip, true);
   // The toolbar acts on the editor's selection, so it must not take focus.
   ROOT.addEventListener('mousedown', e => { if (e.target.closest('[data-scope-cmd]')) e.preventDefault(); });
+  initColumnResize();
   ROOT.addEventListener('paste', e => {
     const ed = e.target.closest && e.target.closest('[data-scope-html]');
-    if (!ed || isReadOnly() || !e.clipboardData) return;
+    if (!ed || isLocked() || !e.clipboardData) return;
     e.preventDefault(); insertClean(ed, e.clipboardData);
   });
   ROOT.addEventListener('drop', e => {
     const ed = e.target.closest && e.target.closest('[data-scope-html]');
     if (!ed || !e.dataTransfer) return;
     e.preventDefault();
-    if (isReadOnly()) return;
+    if (isLocked()) return;
     const at = document.caretRangeFromPoint && document.caretRangeFromPoint(e.clientX, e.clientY);
     ed.focus();
     if (at) { const sl = window.getSelection(); sl.removeAllRanges(); sl.addRange(at); }
@@ -862,7 +886,12 @@ function init(rootEl) {
   });
   ROOT.addEventListener('change', e => {
     const el = e.target;
-    if (isReadOnly()) return;
+    if (isLocked()) return;
+    if (el.dataset.scopeFont !== undefined) {
+      const sc = S.scope[Number(el.dataset.scopeFont)];
+      if (sc) { if (el.value) sc.fontSize = el.value; else delete sc.fontSize; }
+      const ed = el.closest('.scope-sec').querySelector('[data-scope-html]'); ed.style.fontSize = el.value;
+    }
     if (el.dataset.wpname) {
       const v = el.value.trim();
       if (v) S.wpNames[el.dataset.wpname] = v; else delete S.wpNames[el.dataset.wpname];
@@ -887,7 +916,8 @@ function init(rootEl) {
   ROOT.addEventListener('click', e => {
     if (e.target.closest('.de-info')) { e.preventDefault(); return; }   // inside a label it would otherwise toggle or focus the field
     const b = e.target.closest('button'); if (!b) return;
-    if (isReadOnly() && !b.dataset.tab && !b.dataset.tabJump) return;
+    if (b.dataset.endorse) { if (!isReadOnly()) endorse(b.dataset.endorse); return; }
+    if (isLocked() && !b.dataset.tab && !b.dataset.tabJump) return;
     if (b.dataset.del) { const [k, i] = b.dataset.del.split('.'); S[k].splice(Number(i), 1); if (k === 'sources') unlinkSource(Number(i)); Object.keys(S.overrides).filter(x => /^(p\.|t\.|g\.sm\.|r\.|c\.)/.test(x)).forEach(x => delete S.overrides[x]); RES = compute(S); renderTables(); update(); }
     if (b.dataset.add) { S[b.dataset.add].push(clone(NEW_ROW[b.dataset.add])); RES = compute(S); renderTables(); update(); }
     if (b.dataset.cal === 'reset') { S.rates = {}; S.rateNotes = {}; update({calibration: true}); }
@@ -903,16 +933,28 @@ function init(rootEl) {
     if (b.dataset.action === 'scope-add') {
       const k = $('de3-scopeAddKey').value, def = SCOPE_SECTIONS.find(d => d[0] === k);
       S.scope.push(def ? {key: def[0], title: def[1], html: ''} : {key: '', title: 'New section', html: ''});
-      $('de3-scope').innerHTML = renderScope(S); applyReadOnly();
+      EDITING.add(S.scope[S.scope.length - 1]);
+      renderScopePane();
       const t = (ROOT || document).querySelectorAll('#de3-scope [data-scope-title]'); if (t.length) { t[t.length - 1].focus(); t[t.length - 1].select(); }
     }
     if (b.dataset.scopeDel !== undefined) {
       const i = Number(b.dataset.scopeDel), sc = S.scope[i];
-      if (sc && (!String(sc.html || '').replace(/<[^>]*>|&nbsp;|\s/g, '') || window.confirm('Remove “' + (sc.title || 'this section') + '” and its content?'))) { S.scope.splice(i, 1); $('de3-scope').innerHTML = renderScope(S); applyReadOnly(); }
+      if (sc && (!String(sc.html || '').replace(/<[^>]*>|&nbsp;|\s/g, '') || window.confirm('Remove “' + (sc.title || 'this section') + '” and its content?'))) { S.scope.splice(i, 1); renderScopePane(); }
     }
     if (b.dataset.scopeMove) {
       const [i, d] = b.dataset.scopeMove.split('|').map(Number), j = i + d;
-      if (S.scope[i] && S.scope[j]) { [S.scope[i], S.scope[j]] = [S.scope[j], S.scope[i]]; $('de3-scope').innerHTML = renderScope(S); applyReadOnly(); }
+      if (S.scope[i] && S.scope[j]) { [S.scope[i], S.scope[j]] = [S.scope[j], S.scope[i]]; renderScopePane(); }
+    }
+    if (b.dataset.scopeEdit !== undefined || b.dataset.scopeDone !== undefined) {
+      const sc = S.scope[Number(b.dataset.scopeEdit !== undefined ? b.dataset.scopeEdit : b.dataset.scopeDone)];
+      if (sc) { if (b.dataset.scopeEdit !== undefined) EDITING.add(sc); else EDITING.delete(sc); }
+      renderScopePane();
+      if (sc && EDITING.has(sc)) { const ed = (ROOT || document).querySelector(`#de3-scope [data-scope-html="${S.scope.indexOf(sc)}"]`); if (ed) ed.focus(); }
+    }
+    if (b.dataset.scopeFit !== undefined) {
+      const ed = b.closest('.scope-sec').querySelector('[data-scope-html]');
+      ed.querySelectorAll('table,td,th').forEach(c => { c.style.width = ''; if (!c.getAttribute('style')) c.removeAttribute('style'); });
+      syncScopeHtml(ed);
     }
     if (b.dataset.scopeCmd) {
       const ed = b.closest('.scope-sec').querySelector('[data-scope-html]');
@@ -928,8 +970,8 @@ function init(rootEl) {
       qsa('.tabpane').forEach(p => p.classList.toggle('active', p.id === 'de3-pane-' + b.dataset.tab));
     }
   });
-  $('de3-loadPreset').onclick = () => { if (!isReadOnly()) loadState(PRESETS.blank.state); };
-  $('de3-clearOverrides').onclick = () => { if (!isReadOnly()) { S.overrides = {}; update(); } };
+  $('de3-loadPreset').onclick = () => { if (!isLocked()) loadState(PRESETS.blank.state); };
+  $('de3-clearOverrides').onclick = () => { if (!isLocked()) { S.overrides = {}; update(); } };
   initGanttDrag();
   loadState(PRESETS.blank.state);
 }
@@ -958,6 +1000,80 @@ function addWorkPackage() {
   S.custom.push({name, wp: 'new', group: name, qty: 1, rate: Math.max(0, Number(hoursEl.value) || 0), notes: ''});
   RES = compute(S); renderTables(); update();
 }
+/* Dragging the right border of a table cell in an edited section sets the
+   column's width. The first drag fixes every column at its current width so
+   the others stay put, and the table grows or shrinks with the column. */
+function initColumnResize() {
+  const EDGE = 6;
+  const edgeCell = e => {
+    const c = e.target.closest && e.target.closest('.scope-editor.editing td, .scope-editor.editing th');
+    if (!c) return null;
+    return c.getBoundingClientRect().right - e.clientX <= EDGE ? c : null;
+  };
+  let R = null;
+  ROOT.addEventListener('pointermove', e => {
+    if (R) {
+      const w = Math.max(30, Math.round(R.w0 + e.clientX - R.x0));
+      R.head.style.width = w + 'px';
+      R.table.style.width = (R.t0 + w - R.w0) + 'px';
+      return;
+    }
+    const ed = e.target.closest && e.target.closest('.scope-editor.editing');
+    if (ed) ed.classList.toggle('col-resize', Boolean(edgeCell(e)));
+  });
+  ROOT.addEventListener('pointerdown', e => {
+    if (e.button !== 0 || isLocked()) return;
+    const c = edgeCell(e); if (!c) return;
+    const table = c.closest('table'), first = table.rows[0];
+    if (!first) return;
+    if (!table.style.width) {
+      [...first.cells].forEach(x => { x.style.width = Math.round(x.getBoundingClientRect().width) + 'px'; });
+      table.style.width = Math.round(table.getBoundingClientRect().width) + 'px';
+    }
+    const head = first.cells[Math.min(c.cellIndex, first.cells.length - 1)];
+    R = {head, table, x0: e.clientX, w0: head.getBoundingClientRect().width, t0: Math.round(table.getBoundingClientRect().width), ed: c.closest('[data-scope-html]')};
+    e.preventDefault();
+  });
+  const end = () => { if (!R) return; const ed = R.ed; R = null; syncScopeHtml(ed); };
+  ROOT.addEventListener('pointerup', end);
+  ROOT.addEventListener('pointercancel', end);
+}
+/* ---------- Endorsement: Draft → Proposed → Final ----------
+   Every change of stage is recorded with who made it, when and why. A Final
+   estimate is locked until someone moves it back to Draft, so the numbers
+   that were endorsed cannot drift by accident. */
+const STAGES = {
+  draft: {label: 'Draft', desc: 'Being worked on. Numbers can change at any time.'},
+  proposed: {label: 'Proposed', desc: 'Submitted for endorsement. Still editable, so review comments can be applied.'},
+  final: {label: 'Final', desc: 'Endorsed. The estimate is locked; move it back to Draft to change anything.'},
+};
+const STAGE_ACTIONS = {draft: [['proposed', 'Propose for endorsement', 'primary']], proposed: [['final', 'Endorse as Final', 'primary'], ['draft', 'Back to Draft', 'ghost']], final: [['draft', 'Reopen as Draft', 'ghost']]};
+let CURRENT_USER = null;
+function isFinal() { return Boolean(S.endorsement && S.endorsement.status === 'final'); }
+function isLocked() { return isReadOnly() || isFinal(); }
+function renderEndorsement() {
+  const E = S.endorsement, keys = Object.keys(STAGES), at = keys.indexOf(E.status);
+  const when = t => { const d = new Date(t); return isNaN(d) ? '' : d.toLocaleString('en-GB', {day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'}); };
+  $('de3-endorse').innerHTML = `<h2 data-info="sec.endorse">Endorsement</h2>
+    <ol class="stages">${keys.map((k, i) => `<li class="${i < at ? 'done' : i === at ? 'now' : ''}"><span>${i + 1}</span>${STAGES[k].label}</li>`).join('')}</ol>
+    <p class="small stage-desc">${esc(STAGES[E.status].desc)}</p>
+    <textarea id="de3-endorseNote" rows="2" placeholder="Comment for this step (optional) – e.g. reviewed with the delivery lead"></textarea>
+    <div class="actions">${STAGE_ACTIONS[E.status].map(a => `<button type="button" class="btn ${a[2]}" data-endorse="${a[0]}">${a[1]}</button>`).join('')}</div>
+    <p class="small" style="margin:8px 0 0">Save the estimation to keep a change of stage.</p>
+    ${E.history.length ? `<details class="stage-log"><summary><span>History</span><span class="small">${E.history.length} step${E.history.length === 1 ? '' : 's'}</span></summary><ul>${E.history.slice().reverse().map(h => `<li><b>${esc((STAGES[h.status] || {}).label || h.status)}</b> · ${esc(h.by || 'Unknown')} · ${esc(when(h.at))}${h.note ? `<div>${esc(h.note)}</div>` : ''}</li>`).join('')}</ul></details>` : ''}`;
+  const pill = $('de3-statusPill');
+  if (pill) { pill.textContent = STAGES[E.status].label; pill.className = 'de3-status ' + E.status; pill.title = STAGES[E.status].desc; }
+  const ic = $('de3-endorse').querySelector('[data-info]');
+  if (ic && INFO[ic.dataset.info]) ic.insertAdjacentHTML('beforeend', `<span class="de-info" tabindex="0" role="button" data-tip="sec.endorse" aria-label="What this means">i</span>`);
+}
+function endorse(to) {
+  if (!STAGES[to] || to === S.endorsement.status) return;
+  const note = ($('de3-endorseNote').value || '').trim();
+  if (to === 'final' && !window.confirm('Endorse this estimate as Final? It will be locked until someone moves it back to Draft.')) return;
+  S.endorsement.status = to;
+  S.endorsement.history.push({status: to, by: CURRENT_USER ? (CURRENT_USER.name || CURRENT_USER.email || '') : '', email: CURRENT_USER ? CURRENT_USER.email || '' : '', at: new Date().toISOString(), note});
+  renderEndorsement(); update();
+}
 function isReadOnly() { return Boolean(ROOT && ROOT.classList.contains('de-readonly')); }
 
 /* ---------- Gantt drag & drop: bars left/right (start week) and up/down (order); hours and duration never change ---------- */
@@ -965,7 +1081,7 @@ function initGanttDrag() {
   let D = null;
   const clearMarks = () => document.querySelectorAll('#de3-gantt .g-row.drop-before, #de3-gantt .g-row.drop-after').forEach(r => r.classList.remove('drop-before', 'drop-after'));
   document.addEventListener('pointerdown', e => {
-    if (e.button !== 0 || isReadOnly()) return;
+    if (e.button !== 0 || isLocked()) return;
     if (e.target.closest && e.target.closest('#de3-gantt button')) return;   // the remove control is a click, not a drag
     const bar = e.target.closest && e.target.closest('#de3-gantt .g-bar.drag');
     const lab = !bar && e.target.closest && e.target.closest('#de3-gantt .g-row[data-key] .g-label');
@@ -1036,6 +1152,10 @@ window.FabricEstimatorV3 = {
   refreshReadOnly() { if (ROOT) applyReadOnly(); },
   // Totals the page needs for the HTML export and the saved summary.
   getResult() { return RES ? {total: RES.total, delivery: RES.delivery, pm: RES.pm, doc: RES.doc, risk: RES.risk, weeks: SCH ? SCH.total : 0, fte: RES.fte, tshirt: RES.tshirt, wps: RES.wps.map(w => ({key: w.key, name: w.name, hours: w.hours}))} : null; },
+  setCurrentUser(user) { CURRENT_USER = user || null; },
+  getEndorsement() { return clone(S.endorsement); },
+  /* After a save the Scope tab goes back to reading mode. */
+  closeScopeEditing() { if (ROOT && EDITING.size) { EDITING = new Set(); renderScopePane(); } },
   getClientName() { return S.meta.client || ''; },
   setClientName(name) { if (!ROOT) return; S.meta.client = name || ''; bindStatic(); update(); },
   /* Organisation calibration, owned by the admin panel. The rate card itself
