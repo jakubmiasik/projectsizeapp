@@ -184,6 +184,15 @@ async function initialize() {
       updated_by_oid NVARCHAR(100) NULL,
       updated_by_name NVARCHAR(200) NULL
     );
+
+    IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='project_type_sections' AND xtype='U')
+    CREATE TABLE project_type_sections (
+      project_type NVARCHAR(64) PRIMARY KEY,
+      sections NVARCHAR(1000) NOT NULL,
+      updated_at DATETIME2 DEFAULT GETUTCDATE(),
+      updated_by_oid NVARCHAR(100) NULL,
+      updated_by_name NVARCHAR(200) NULL
+    );
   `);
   console.log('Database initialized');
 }
@@ -954,25 +963,40 @@ async function deleteRequirements(estimationId, version) {
 
 /* Organisation-wide calibration. Only the rates that differ from the engine's
    built-in defaults are stored, so a later change to the engine's own numbers
-   still reaches every rate an administrator never touched. */
+   still reaches every rate an administrator never touched. The same goes for
+   the scope sections of each project type. */
 async function getRateDefaults() {
   const p = await getPool();
   const result = await p.request()
     .query('SELECT rate_key, rate, updated_at, updated_by_name FROM rate_defaults');
+  const types = await p.request()
+    .query('SELECT project_type, sections, updated_at, updated_by_name FROM project_type_sections');
   const rates = {};
+  const projectTypes = {};
   let updatedAt = null;
   let updatedBy = null;
-  for (const row of result.recordset) {
-    rates[row.rate_key] = Number(row.rate);
+  const track = (row) => {
     if (!updatedAt || row.updated_at > updatedAt) {
       updatedAt = row.updated_at;
       updatedBy = row.updated_by_name || null;
     }
+  };
+  for (const row of result.recordset) {
+    rates[row.rate_key] = Number(row.rate);
+    track(row);
   }
-  return { rates, updatedAt, updatedBy };
+  for (const row of types.recordset) {
+    try {
+      const sections = JSON.parse(row.sections);
+      if (Array.isArray(sections)) projectTypes[row.project_type] = sections;
+    } catch (_) { /* a row that does not parse falls back to the built-in sections */ }
+    track(row);
+  }
+  return { rates, projectTypes, updatedAt, updatedBy };
 }
 
-async function saveRateDefaults(rates, { userOid = null, userName = null } = {}) {
+/* projectTypes is optional: leaving it out keeps the stored sections. */
+async function saveRateDefaults(rates, { userOid = null, userName = null } = {}, projectTypes) {
   const p = await getPool();
   const entries = Object.entries(rates || {})
     .filter(([key, value]) => key && Number.isFinite(Number(value)));
@@ -988,6 +1012,18 @@ async function saveRateDefaults(rates, { userOid = null, userName = null } = {})
         .input('name', sql.NVarChar(200), userName)
         .query(`INSERT INTO rate_defaults (rate_key, rate, updated_by_oid, updated_by_name)
                 VALUES (@key, @rate, @oid, @name)`);
+    }
+    if (projectTypes) {
+      await new sql.Request(tx).query('DELETE FROM project_type_sections');
+      for (const [type, sections] of Object.entries(projectTypes)) {
+        await new sql.Request(tx)
+          .input('type', sql.NVarChar(64), type)
+          .input('sections', sql.NVarChar(1000), JSON.stringify(sections))
+          .input('oid', sql.NVarChar(100), userOid)
+          .input('name', sql.NVarChar(200), userName)
+          .query(`INSERT INTO project_type_sections (project_type, sections, updated_by_oid, updated_by_name)
+                  VALUES (@type, @sections, @oid, @name)`);
+      }
     }
     await tx.commit();
   } catch (err) {
