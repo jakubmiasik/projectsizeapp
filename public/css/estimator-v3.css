@@ -255,3 +255,15 @@
 #detailed-estimation-view .scope-editor.editing td,#detailed-estimation-view .scope-editor.editing th{position:relative}
 #detailed-estimation-view .scope-editor.editing td:hover,#detailed-estimation-view .scope-editor.editing th:hover{box-shadow:inset -2px 0 0 color-mix(in srgb,var(--primary) 35%,transparent)}
 #detailed-estimation-view .scope-editor td,#detailed-estimation-view .scope-editor th{overflow-wrap:break-word}
+/* ---- Scope: section widths, work-package panels and tags ---- */
+#detailed-estimation-view #de3-scope{display:flex;flex-wrap:wrap;gap:0 16px;align-items:flex-start}
+#detailed-estimation-view #de3-scope>.scope-sec{flex:0 0 calc(var(--sw,100) * 1% - (100 - var(--sw,100)) / 100 * 16px);min-width:0}
+#detailed-estimation-view #de3-scope>.scope-add{flex-basis:100%}
+#detailed-estimation-view .scope-editor details.wp{margin:0 0 8px;padding:8px 12px}
+#detailed-estimation-view .scope-editor details.wp>summary{justify-content:flex-start;font-size:.9em}
+#detailed-estimation-view .scope-editor details.wp>summary>span:first-child{flex:1;text-align:left}
+#detailed-estimation-view .scope-editor details.wp h3{font-size:.68rem;text-transform:uppercase;letter-spacing:.08em;color:var(--ink-soft);margin:12px 0 4px}
+#detailed-estimation-view .scope-editor details:not(.wp){border:1px solid var(--line);border-radius:6px;padding:8px 12px;margin:0 0 8px}
+#detailed-estimation-view .scope-editor .badge{font-size:.62rem}
+#detailed-estimation-view .scope-toolbar select+select{margin-left:2px}
+@media(max-width:1100px){#detailed-estimation-view #de3-scope>.scope-sec{flex-basis:100%}}
