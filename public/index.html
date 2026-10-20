@@ -429,7 +429,7 @@
     <section class="detailed-estimation-view container" id="detailed-estimation-view">
       <div class="de-header">
         <button type="button" class="de-back-btn" id="de-back-btn">← Back to Sizing</button>
-        <div style="flex:1;min-width:0"><h2 style="margin:0">Project Estimate</h2><div class="de-header-client" id="de3-heroClient">&ndash;</div></div>
+        <div style="flex:1;min-width:0"><h2 style="margin:0">Project Estimate</h2><div class="de-header-client"><span id="de3-heroClient">&ndash;</span><span class="de3-status draft" id="de3-statusPill">Draft</span></div></div>
         <button type="button" class="de-save-btn" id="de-save-inline-btn">Save</button>
       </div>
 
@@ -445,6 +445,7 @@
       </section>
 
       <div class="grid-main"><aside><div class="sticky">
+      <section class="card endorse" id="de3-endorse"></section>
       <section class="card"><h2>Scenario</h2><p class="small" style="margin:0 0 8px">Start from a blank estimation.</p>
       <div class="actions"><button type="button" class="btn primary" id="de3-loadPreset">Load blank estimation</button></div><p class="small" style="margin:8px 0 0">Loading a starting point replaces every input on this page. Save the estimation to keep your work.</p></section>
       <section class="card"><h2>Estimate summary</h2><div id="de3-summary"></div></section>
@@ -1381,6 +1382,8 @@
 
         // The account menu now lives in the sidebar footer.
         AppShell.setUser({ name: user.name, email: user.email, onSignOut: goToLogout });
+        // Endorsement steps on the estimate record who made them.
+        window.FabricEstimatorV3?.setCurrentUser({ name: user.name, email: user.email });
 
         // Every estimation starts from the organisation calibration, so it has
         // to reach the estimator before the first estimate is opened. A failure
