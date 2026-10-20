@@ -455,7 +455,7 @@
       <div class="tabs" id="de3-tabs"><button type="button" class="tab active" data-tab="scope">Scope</button><button type="button" class="tab" data-tab="inputs">Scope inputs</button><button type="button" class="tab" data-tab="timeline">Timeline</button><button type="button" class="tab" data-tab="activities">Activity hours</button><button type="button" class="tab" data-tab="calibration">Calibration</button></div>
 
       <div class="tabpane active" id="de3-pane-scope"><section class="card"><h2>Scope</h2>
-      <p class="small" style="margin:0">The written scope behind the numbers. Paste content from Word, Outlook, Excel or another estimate straight into a section – headings, lists, tables and links are kept, other formatting is cleaned up. Rename, reorder or remove sections, and add predefined or custom ones at the bottom. The Scope tab is saved with the estimation.</p></section>
+      <p class="small" style="margin:0">The written scope behind the numbers. Choose <b>✎ Edit</b> on a section to change it, then paste content from Word, Outlook, Excel or another estimate – headings, lists, tables and links are kept, other formatting is cleaned up. While editing you can set the text size, drag table column borders, rename, reorder or remove the section; add predefined or custom sections at the bottom. Sections go back to reading mode when you save. The Scope tab is saved with the estimation.</p></section>
       <div id="de3-scope"></div></div>
 
       <div class="tabpane" id="de3-pane-timeline"><section class="card"><h2>Delivery timeline</h2><div id="de3-gantt"></div></section></div>
@@ -1507,6 +1507,7 @@
             body: JSON.stringify(payload)
           }, 'Save failed');
           setLoadedEstimationState(estimation);
+          window.FabricEstimatorV3?.closeScopeEditing();
           await showAlert(successMessage, 'Saved');
         }
 
