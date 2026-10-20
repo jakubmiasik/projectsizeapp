@@ -260,6 +260,9 @@ app.delete('/api/admin/estimations/:id', requireAuth, requireAdmin, async (req, 
 
 // ==================== CALIBRATION DEFAULTS API ====================
 
+// The Project Estimate's scope input sections a project type can include.
+const SCOPE_SECTION_KEYS = ['discovery', 'sources', 'transform', 'legacy', 'models', 'reports', 'ops'];
+
 // Every signed-in user reads the organisation calibration, because a new
 // estimation starts from it; only an administrator may change it.
 app.get('/api/rate-defaults', requireAuth, async (_req, res) => {
@@ -283,8 +286,24 @@ app.put('/api/rate-defaults', requireAuth, requireAdmin, async (req, res) => {
     if (!Number.isFinite(num) || num < 0) return res.status(400).json({ error: `Invalid rate for ${key}` });
     clean[key] = num;
   }
+  // Scope sections per project type: only known section keys, no duplicates.
+  let projectTypes;
+  if (req.body?.projectTypes !== undefined) {
+    const types = req.body.projectTypes;
+    if (!types || typeof types !== 'object' || Array.isArray(types)) {
+      return res.status(400).json({ error: 'projectTypes must be an object' });
+    }
+    projectTypes = {};
+    for (const [type, sections] of Object.entries(types)) {
+      if (!/^[A-Za-z0-9_]{1,64}$/.test(type)) return res.status(400).json({ error: `Invalid project type: ${type}` });
+      if (!Array.isArray(sections) || sections.some((x) => !SCOPE_SECTION_KEYS.includes(x))) {
+        return res.status(400).json({ error: `Invalid sections for ${type}` });
+      }
+      projectTypes[type] = SCOPE_SECTION_KEYS.filter((x) => sections.includes(x));
+    }
+  }
   try {
-    const saved = await db.saveRateDefaults(clean, { userOid: req.user?.oid, userName: req.user?.name });
+    const saved = await db.saveRateDefaults(clean, { userOid: req.user?.oid, userName: req.user?.name }, projectTypes);
     res.json(saved);
   } catch (err) {
     console.error('Failed to save rate defaults:', err);

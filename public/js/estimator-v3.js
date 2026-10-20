@@ -209,7 +209,7 @@ function compute(s) {
   }
   /* ---- additional activities (outside the predefined scope) ---- */
   const CUS = (s.custom || []).map((c, i) => Object.assign({i}, c));
-  const cLine = (w, c) => { line(w, 'c.' + c.i, c.name || ('Additional activity ' + (c.i + 1)), c.qty, c.rate, 1, 'Additional activity · ' + n(c.qty) + ' × ' + n(c.rate) + ' h'); w.lines[w.lines.length - 1].custom = true; };
+  const cLine = (w, c) => { line(w, 'c.' + c.i, c.name || ('Additional activity ' + (c.i + 1)), c.qty, c.rate, 1, 'Additional activity · ' + n(c.qty) + ' × ' + n(c.rate) + ' h'); const l = w.lines[w.lines.length - 1]; l.custom = true; l.notes = String(c.notes || '').trim(); };
   const later = [s.settings.envTest && 'uat', s.settings.envProd && 'prod', s.settings.envOther && 'other'].filter(Boolean);
   const valid = new Set(wps.map(w => w.key).concat(later));
   CUS.forEach(c => { c.target = (c.wp && c.wp !== 'new' && valid.has(c.wp)) ? c.wp : 'x:' + (String(c.group || '').trim() || 'Additional activities'); });
@@ -356,7 +356,8 @@ function renderCustom(s, res) {
       <select data-bind="custom.${i}.wp">${opts.map(o => opt(o[0], o[0] === 'new' ? o[1] : 'Add to: ' + o[1], isNew ? 'new' : c.wp)).join('')}</select>
       <input data-bind="custom.${i}.group" value="${esc(c.group)}" placeholder="New work package name"${isNew ? '' : ' disabled'}>
       ${numIn(`custom.${i}.qty`, c.qty, '0.5')}${numIn(`custom.${i}.rate`, c.rate, '0.5')}
-      <span class="pill" data-chours="${i}">${fmt(lineHours['c.' + i] || 0, 1)} h</span><button class="btn danger" data-del="custom.${i}" title="Remove">×</button></div>`;
+      <span class="pill" data-chours="${i}">${fmt(lineHours['c.' + i] || 0, 1)} h</span><button class="btn danger" data-del="custom.${i}" title="Remove">×</button>
+      <textarea class="c-notes" data-bind="custom.${i}.notes" rows="2" placeholder="What is included – scope, assumptions, deliverables…">${esc(c.notes)}</textarea></div>`;
   }).join('') || '<p class="small">No additional activities yet.</p>';
 }
 
@@ -367,7 +368,7 @@ function schedule(res, s) {
   /* Work packages the user took off the timeline. Their hours are untouched in
      the estimate – only the bar is gone, which is what a 0 h package needs. */
   const rm = new Set(s.removed || []);
-  const removed = res.wps.filter(w => rm.has(w.key)).map(w => ({key: w.key, name: w.name, hours: w.hours}));
+  const removed = res.wps.filter(w => rm.has(w.key)).map(w => ({key: w.key, name: wpLabel(s, w), hours: w.hours}));
   const ord = s.order || [];
   const tpl = k => GANTT_TEMPLATE[k] ? GANTT_TEMPLATE[k][0] : 9;
   let rows = res.wps.filter(w => !rm.has(w.key)).map((w, idx) => {
@@ -376,7 +377,7 @@ function schedule(res, s) {
     const autoDur = Math.max(1, Math.ceil(w.hours / (planFte * hpw)));
     const resized = Number(o.dur) > 0 && Math.round(Number(o.dur)) !== autoDur;
     const dur = resized ? Math.max(1, Math.round(Number(o.dur))) : autoDur;
-    return {key: w.key, name: w.name, hours: w.hours, dur, autoDur, resized, planFte, additional: !!w.custom, idx};
+    return {key: w.key, name: wpLabel(s, w), original: w.name, renamed: wpLabel(s, w) !== w.name, hours: w.hours, dur, autoDur, resized, planFte, additional: !!w.custom, idx};
   });
   const pos = r => { const i = ord.indexOf(r.key); return i >= 0 ? i : 1000 + tpl(r.key) * 10 + r.idx / 1000; };
   rows.sort((a, b) => pos(a) - pos(b));
@@ -403,6 +404,8 @@ function schedule(res, s) {
   const mgmt = res.pm + res.doc + res.risk;
   return {rows, removed, total, mgmt, avgFte: res.total / (total * hpw)};
 }
+/* The business-friendly name someone gave a work package on the timeline, or its own. */
+function wpLabel(s, w) { const v = String(((s.wpNames || {})[w.key]) || '').trim(); return v || w.name; }
 /* Move a work package: shift = weeks left/right (start never below week 1, duration unchanged); targetKey = row to drop on */
 function applyGanttMove(s, sch, key, shift, targetKey, placeAfter) {
   s.schedule = s.schedule || {};
@@ -434,30 +437,36 @@ function renderGantt(res, s, sch) {
   const colorOf = r => r.additional ? '#7a5c99' : (WP_COLORS[r.key] || '#5c6f82');
   const bar = (r, color, drag) => `<div class="g-bar${drag ? ' drag' : ''}"${drag ? ` data-key="${esc(r.key)}"` : ''} style="left:${pct(r.start - 1)};width:${pct(r.dur)};background:${color}" title="${esc(r.name)}: weeks ${r.start}–${r.end}, ${fmt(r.hours)} h${drag ? ' – drag to move' : ''}"><span>${fmt(r.hours)} h</span></div>`;
   const badges = r => (r.additional ? '<i class="badge add">Additional</i>' : '') + (r.moved ? '<i class="badge mv">Moved</i>' : '') + (r.resized ? '<i class="badge ex">Custom length</i>' : '');
-  const rows = sch.rows.map(r => `<div class="g-row" data-key="${esc(r.key)}"><div class="g-label" title="Drag to reorder"><b><span class="grip">⋮⋮</span>${esc(r.name)}${badges(r)}</b><span>W${r.start}–W${r.end} · ${fmt(r.dur)} wk · ${fmt(r.fte, 2)} FTE</span><button type="button" class="g-del" data-wpdel="${esc(r.key)}" title="Remove ${esc(r.name)} from the timeline" aria-label="Remove ${esc(r.name)} from the timeline">×</button></div><div class="g-track" style="--weeks:${T}">${bar(r, colorOf(r), true)}</div></div>`).join('');
+  const rows = sch.rows.map(r => `<div class="g-row" data-key="${esc(r.key)}"><div class="g-label" title="Drag to reorder"><b title="${esc(r.renamed ? 'Original name: ' + r.original : r.name)}"><span class="grip">⋮⋮</span>${esc(r.name)}${badges(r)}</b><span>W${r.start}–W${r.end} · ${fmt(r.dur)} wk · ${fmt(r.fte, 2)} FTE</span><button type="button" class="g-ren" data-wpedit="${esc(r.key)}" title="Give ${esc(r.name)} a business-friendly name" aria-label="Rename ${esc(r.name)}">✎</button><button type="button" class="g-del" data-wpdel="${esc(r.key)}" title="Remove ${esc(r.name)} from the timeline" aria-label="Remove ${esc(r.name)} from the timeline">×</button></div><div class="g-track" style="--weeks:${T}">${bar(r, colorOf(r), true)}</div></div>`).join('');
   const mg = {name: 'Project management, documentation & contingency', start: 1, dur: T, end: T, hours: sch.mgmt};
   const mgRow = sch.mgmt > 0 ? `<div class="g-row g-mgmt"><div class="g-label"><b>${esc(mg.name)}</b><span>W1–W${T} · runs across the engagement</span></div><div class="g-track" style="--weeks:${T}">${bar(mg, 'repeating-linear-gradient(135deg,#94a3b8 0 6px,#a8b5c6 6px 12px)', false)}</div></div>` : '';
-  const chart = `<div class="g-hint small">Drag a bar <b>left / right</b> to change its start week, or drag a bar or its name <b>up / down</b> to change the order. Moving never changes hours or duration. Use <b>×</b> to take a work package off the timeline – its hours stay in the estimate.</div><div class="gantt" id="ganttChart"><div class="g-row g-head"><div class="g-label">Work package</div><div class="g-track g-axis" style="--weeks:${T}">${axis}</div></div>${rows}${mgRow}</div>`;
+  const chart = `<div class="g-hint small">Drag a bar <b>left / right</b> to change its start week, or drag a bar or its name <b>up / down</b> to change the order. Moving never changes hours or duration. Use <b>✎</b> to give a work package a business-friendly name (hover the name to see the original) and <b>×</b> to take it off the timeline – its hours stay in the estimate.</div><div class="gantt" id="ganttChart"><div class="g-row g-head"><div class="g-label">Work package</div><div class="g-track g-axis" style="--weeks:${T}">${axis}</div></div>${rows}${mgRow}</div>`;
   const removed = (sch.removed || []).length ? `<div class="g-removed small"><span>Off the timeline:</span>${sch.removed.map(r => `<button type="button" class="chip" data-wprestore="${esc(r.key)}" title="Put ${esc(r.name)} back on the timeline">${esc(r.name)} · ${fmt(r.hours)} h <b>+</b></button>`).join('')}<button type="button" class="btn ghost mini" data-wprestore="*">Restore all</button></div>` : '';
-  const table = `<details class="sched"><summary><span>Adjust schedule</span><span class="small">order, people, start week and duration · blank = automatic</span></summary>
-    <table class="grid"><thead><tr><th>Order</th><th>Work package</th><th class="r">People (FTE)</th><th class="r">Start week</th><th class="r">Duration (weeks)</th><th class="r">End week</th><th class="r">Hours</th><th class="r">Actual FTE</th></tr></thead><tbody>
-    ${sch.rows.map((r, i) => { const o = (s.schedule || {})[r.key] || {}; return `<tr class="${r.moved || r.resized ? 'ovr' : ''}"><td class="nowrap"><button class="btn mini" data-move="${esc(r.key)}|-1"${i === 0 ? ' disabled' : ''} title="Move up">↑</button><button class="btn mini" data-move="${esc(r.key)}|1"${i === sch.rows.length - 1 ? ' disabled' : ''} title="Move down">↓</button></td><td>${esc(r.name)}${badges(r)}</td><td class="r"><input type="number" min="0.1" step="0.1" data-sched="${esc(r.key)}.fte" value="${Number(o.fte) > 0 ? r.planFte : ''}" placeholder="${DEFAULT_WP_FTE}" title="People working on this package – drives the automatic duration"></td><td class="r"><input type="number" min="1" data-sched="${esc(r.key)}.start" value="${r.moved ? r.start : ''}" placeholder="${r.autoStart}"></td><td class="r"><input type="number" min="1" data-sched="${esc(r.key)}.dur" value="${r.resized ? r.dur : ''}" placeholder="${r.autoDur}" title="Override the number of weeks for this package"></td><td class="r">${r.end}</td><td class="r">${fmt(r.hours)}</td><td class="r">${fmt(r.fte, 2)}</td></tr>`; }).join('')}
-    </tbody></table><div class="actions"><button class="btn ghost" data-action="reset-schedule">Reset schedule and order</button></div></details>`;
-  return chart + removed + `<div class="g-foot small">Total duration <b>${T} weeks</b> · average team <b>${fmt(sch.avgFte, 2)} FTE</b> at ${fmt(Number(s.settings.hoursPerWeek) || 40)} productive h/week. Each bar is as long as its hours need at the people assigned to it (${DEFAULT_WP_FTE} FTE unless you change it), and packages only run in parallel while the team has capacity for them.</div>` + table;
+  /* A new package is an additional activity with its own bar, so it is also
+     listed (and can be split up) under Additional activities. */
+  const addWp = `<div class="g-addwp"><input data-newwp="name" placeholder="New work package name, e.g. Data migration of archive" aria-label="New work package name"><input type="number" min="0" step="1" data-newwp="hours" placeholder="Hours" aria-label="Hours for the new work package"><button type="button" class="btn secondary" data-action="add-wp">+ Add work package</button><span class="small">Added packages count towards delivery effort and are listed under <b>Additional activities</b> on Scope inputs, where you can describe or split them.</span></div>`;
+  const table = `<details class="sched"><summary><span>Adjust schedule</span><span class="small">name, order, people, start week and duration · blank = automatic</span></summary>
+    <table class="grid"><thead><tr><th>Order</th><th>Work package</th><th>Business-friendly name</th><th class="r">People (FTE)</th><th class="r">Start week</th><th class="r">Duration (weeks)</th><th class="r">End week</th><th class="r">Hours</th><th class="r">Actual FTE</th></tr></thead><tbody>
+    ${sch.rows.map((r, i) => { const o = (s.schedule || {})[r.key] || {}; return `<tr class="${r.moved || r.resized ? 'ovr' : ''}"><td class="nowrap"><button class="btn mini" data-move="${esc(r.key)}|-1"${i === 0 ? ' disabled' : ''} title="Move up">↑</button><button class="btn mini" data-move="${esc(r.key)}|1"${i === sch.rows.length - 1 ? ' disabled' : ''} title="Move down">↓</button></td><td>${esc(r.original)}${badges(r)}</td><td><input class="wpname" data-wpname="${esc(r.key)}" value="${r.renamed ? esc(r.name) : ''}" placeholder="${esc(r.original)}" title="Name shown on the timeline – the original name stays in the tooltip"></td><td class="r"><input type="number" min="0.1" step="0.1" data-sched="${esc(r.key)}.fte" value="${Number(o.fte) > 0 ? r.planFte : ''}" placeholder="${DEFAULT_WP_FTE}" title="People working on this package – drives the automatic duration"></td><td class="r"><input type="number" min="1" data-sched="${esc(r.key)}.start" value="${r.moved ? r.start : ''}" placeholder="${r.autoStart}"></td><td class="r"><input type="number" min="1" data-sched="${esc(r.key)}.dur" value="${r.resized ? r.dur : ''}" placeholder="${r.autoDur}" title="Override the number of weeks for this package"></td><td class="r">${r.end}</td><td class="r">${fmt(r.hours)}</td><td class="r">${fmt(r.fte, 2)}</td></tr>`; }).join('')}
+    </tbody></table><div class="actions"><button class="btn ghost" data-action="reset-schedule">Reset schedule, order and names</button></div></details>`;
+  return chart + removed + addWp + `<div class="g-foot small">Total duration <b>${T} weeks</b> · average team <b>${fmt(sch.avgFte, 2)} FTE</b> at ${fmt(Number(s.settings.hoursPerWeek) || 40)} productive h/week. Each bar is as long as its hours need at the people assigned to it (${DEFAULT_WP_FTE} FTE unless you change it), and packages only run in parallel while the team has capacity for them.</div>` + table;
 }
 
 function renderBreakdown(res) {
   return res.wps.map(w => `<details class="wp" open style="--wp:${w.custom ? '#7a5c99' : (WP_COLORS[w.key] || '#5c6f82')}"><summary><span>${esc(w.name)}</span><span class="pill strong">${fmt(w.hours, 1)} h</span></summary><p class="small">${esc(w.desc)}</p>
     <table class="grid"><thead><tr><th>Activity</th><th class="r">Qty</th><th class="r">Rate (h)</th><th class="r">Multiplier</th><th class="r">Calculated</th><th class="r">Override h</th><th class="r">Final</th></tr></thead><tbody>
-    ${w.lines.map(l => `<tr class="${l.overridden ? 'ovr' : ''}${l.calc === 0 && !l.overridden ? ' zero' : ''}"><td>${esc(l.label)}${l.custom ? ' <i class="badge add">Additional</i>' : ''}${l.formula ? `<div class="small">${esc(l.formula)}</div>` : ''}</td><td class="r">${fmt(l.qty, l.qty % 1 ? 1 : 0)}</td><td class="r">${fmt(l.rate, 2)}</td><td class="r">${fmt(l.mult, 2)}</td><td class="r">${fmt(l.calc, 1)}</td><td class="r"><input class="ov" type="number" step="0.5" data-ov="${esc(l.id)}" value="${l.overridden ? esc(l.hours) : ''}" placeholder="auto"></td><td class="r"><b>${fmt(l.final, 1)}</b></td></tr>`).join('')}
+    ${w.lines.map(l => `<tr class="${l.overridden ? 'ovr' : ''}${l.calc === 0 && !l.overridden ? ' zero' : ''}"><td>${esc(l.label)}${l.custom ? ' <i class="badge add">Additional</i>' : ''}${l.formula ? `<div class="small">${esc(l.formula)}</div>` : ''}${l.notes ? `<div class="small l-notes">${esc(l.notes)}</div>` : ''}</td><td class="r">${fmt(l.qty, l.qty % 1 ? 1 : 0)}</td><td class="r">${fmt(l.rate, 2)}</td><td class="r">${fmt(l.mult, 2)}</td><td class="r">${fmt(l.calc, 1)}</td><td class="r"><input class="ov" type="number" step="0.5" data-ov="${esc(l.id)}" value="${l.overridden ? esc(l.hours) : ''}" placeholder="auto"></td><td class="r"><b>${fmt(l.final, 1)}</b></td></tr>`).join('')}
     </tbody></table></details>`).join('') + `<p class="small">Type hours in <b>Override h</b> to fix any activity; leave blank to use the calculated value. Overridden lines are highlighted.</p>`;
 }
+/* A changed rate asks for a justification. The field is always rendered and
+   only shown on changed rows, so typing a rate never rebuilds the table. */
 function renderCalibration(s) {
   const groups = [...new Set(RATE_DEFS.map(r => r[1]))];
   const BASE = baseRates();
   const R = Object.assign({}, BASE, s.rates);
-  return groups.map(g => `<details class="cal" ${g === 'Discovery' ? 'open' : ''}><summary>${esc(g)}</summary><table class="grid"><thead><tr><th>Activity</th><th>Unit</th><th class="r">Rate in use</th><th class="r">Default</th></tr></thead><tbody>
-    ${RATE_DEFS.filter(r => r[1] === g).map(r => { const cur = R[r[0]]; const def = BASE[r[0]]; const chg = Number(cur) !== Number(def); return `<tr class="${chg ? 'ovr' : ''}"><td>${esc(r[2])}</td><td class="small">${esc(r[3])}</td><td class="r"><input class="rate" type="number" step="0.01" data-rate="${r[0]}" value="${esc(cur)}"></td><td class="r muted">${esc(def)}</td></tr>`; }).join('')}
+  const notes = s.rateNotes || {};
+  return groups.map(g => `<details class="cal" ${g === 'Discovery' ? 'open' : ''}><summary>${esc(g)}</summary><table class="grid"><thead><tr><th>Activity</th><th>Unit</th><th class="r">Rate in use</th><th class="r">Default</th><th class="just">Justification of the change</th></tr></thead><tbody>
+    ${RATE_DEFS.filter(r => r[1] === g).map(r => { const cur = R[r[0]]; const def = BASE[r[0]]; const chg = Number(cur) !== Number(def); return `<tr class="${chg ? 'ovr' : ''}"><td>${esc(r[2])}</td><td class="small">${esc(r[3])}</td><td class="r"><input class="rate" type="number" step="0.01" data-rate="${r[0]}" value="${esc(cur)}"></td><td class="r muted">${esc(def)}</td><td class="just"><input class="just" data-ratenote="${r[0]}" value="${esc(notes[r[0]])}" placeholder="Why the rate differs from the default"></td></tr>`; }).join('')}
     </tbody></table></details>`).join('');
 }
 if (typeof module !== 'undefined') module.exports = {renderSources, renderTransforms, renderModels, renderReports, renderTeam, renderSummary, renderCustom, schedule, applyGanttMove, moveOrder, renderGantt, renderBreakdown, renderCalibration};
@@ -471,9 +480,242 @@ const TYPES = {
   biMigration: {name: 'BI / Reporting Migration', show: ['discovery', 'sources', 'models', 'reports', 'ops']},
   hybrid: {name: 'Discovery + Conditional Deployment', show: ['discovery', 'sources', 'transform', 'legacy', 'models', 'reports', 'ops']},
 };
+/* The scope sections a project type can include. Each type's built-in list is
+   the fallback; an administrator can recalibrate it in Admin → Calibration. */
+const SECTIONS = [['discovery', 'B · Discovery and assessment'], ['sources', 'C · Sources and ingestion'], ['transform', 'D · Transformation layer'], ['legacy', 'E · Legacy migration estate'],
+  ['models', 'F · Gold, semantic models and security'], ['reports', 'G · Reporting portfolio'], ['ops', 'H · Quality, operations and release']];
+let ORG_TYPES = {};
+function typeSections(k) {
+  const key = TYPES[k] ? k : 'platformMigration';
+  return Array.isArray(ORG_TYPES[key]) ? ORG_TYPES[key] : TYPES[key].show;
+}
+
+/* ---------- What each input means and how it moves the estimate ----------
+   {rateKey} is replaced with the rate in use when the tip opens, so the
+   numbers follow the calibration. `cx` lists the levels of a complexity-type
+   input from CX below. */
+const CX = {
+  docQ: ['Documentation quality', [['Good', '×1.00', 'Up-to-date design docs, data dictionary and lineage exist; owners can answer questions.'], ['Partial', '×1.10', 'A gap workbook or partial specs exist, but key definitions conflict or are missing.'], ['Limited / reverse-engineering', '×1.25', 'Logic lives only in code (SSIS, procedures, Cognos); it has to be read to be understood.']]],
+  arch: ['Architecture complexity', [['Low', '×0.8', 'One source family, standard medallion lakehouse, no special security or latency needs.'], ['Medium', '×1.0', 'Several sources and a few integration patterns, an existing platform to extend.'], ['High', '×1.35', 'Many sources, hybrid lakehouse / warehouse or near-real-time, several domains, strict regulatory constraints.']]],
+  connect: ['Connectivity', [['Native / simple', '×0.8', 'Fabric shortcut, mirroring, Azure SQL, Dataverse.'], ['Standard gateway', '×1.0', 'On-premises SQL Server or Oracle through the data gateway / self-hosted IR.'], ['API / ODBC / files', '×1.35', 'REST APIs, ODBC, SFTP, CSV / Excel / TXT drops.'], ['Custom / constrained', '×1.7', 'SAP, mainframe, throttled or paged APIs, VPN-only access, custom views nobody owns.']]],
+  load: ['Load pattern', [['Full load', '×0.8', 'Small reference tables reloaded every run.'], ['Incremental', '×1.0', 'Watermark or CDC on a modified date / key.'], ['History + incremental', '×1.25', 'Years of history backfilled once, then daily deltas.'], ['Near-real-time', '×1.6', 'Eventstreams or frequent micro-batches, minutes of latency.']]],
+  ttype: ['Transformation type', [['Cleansing / standardisation', '×0.8', 'Trim, cast, null handling, code-to-description lookups.'], ['Conforming / joins / dedup', '×1.0', 'Key mapping, merging customers from two systems, removing duplicates.'], ['Aggregation / snapshot', '×1.1', 'Monthly snapshots, summary tables, period-end balances.'], ['Business rules / derivations', '×1.3', 'Gross margin, allocations, currency conversion, stand decomposition.'], ['History / SCD', '×1.5', 'Slowly changing dimensions, as-of and bitemporal logic.']]],
+  tcomplex: ['Transformation complexity', [['Low', '×0.6', 'One source table, a handful of columns, no lookups.'], ['Medium', '×1.0', 'A few joins and standard rules, well-understood source.'], ['High', '×1.6', 'Many joins, conditional rules, data-quality handling and exceptions.'], ['Very high', '×2.4', 'Multi-step logic, heavy performance tuning or a poorly understood source.']]],
+  legacy: ['Legacy asset tiers', [['Low-complexity ETL', '{etlLow} h', 'Copy or key-mapping package, one source to one target.'], ['Medium ETL', '{etlMed} h', 'Loads a fact or dimension with lookups and a few rules.'], ['High ETL / controller', '{etlHigh} h', 'Orchestrates other packages, script tasks, heavy branching.'], ['Simple stored procedure', '{spSimple} h', 'Under ~500 lines of straightforward SQL.'], ['Complex stored procedure', '{spComplex} h', 'Over ~500 lines, cursors, dynamic SQL, business-critical logic such as commissions.']]],
+  framework: ['Reusable framework', [['No framework benefit', '×1.0', 'Every asset is rebuilt by hand.'], ['Moderate reuse', '×0.75', 'Templates or patterns cover part of the estate.'], ['Strong metadata / template reuse', '×0.55', 'A metadata-driven framework generates most loads from configuration.']]],
+  gold: ['Gold complexity', [['Standard', '×1.0', 'Star schema straight from the transformed layer, one currency, simple hierarchies.'], ['Complex', '×1.5', 'Many-to-many, several currencies, ragged hierarchies, reuse across divisions.'], ['Very complex', '×2.2', 'Snapshot or bitemporal history, heavy allocation logic, very large volumes.']]],
+  smMode: ['Semantic model mode', [['New build', '×1.0', 'A new model designed from Gold.'], ['Reuse / migrate', '×0.65', 'An existing model moved to Fabric with its measures largely reused.'], ['Redesign', '×1.2', 'An existing model restructured for new requirements.']]],
+  rcomplex: ['Report complexity', [['Low', '×0.75', 'A table, a few cards and one or two slicers.'], ['Medium', '×1.0', 'Several visuals, slicers, drill-through to a detail page.'], ['Medium-high', '×1.25', 'Bookmarks, tooltip pages, dynamic titles, conditional formatting.'], ['High', '×1.5', 'Field parameters, calculation-group selectors, complex interactions or pixel-perfect layout.']]],
+  raction: ['Report action', [['Repoint', '×0.25', 'Point an existing Power BI report at the new model.'], ['Migrate as-is', '×0.6', 'Re-create the same layout in Power BI (e.g. from Tableau or Cognos).'], ['Rebuild', '×1.0', 'Rebuild with improvements to layout and logic.'], ['Redesign', '×1.3', 'New UX from new requirements, with user workshops.']]],
+  other: ['OTHER environment complexity', [['Low', '×0.8', 'A copy of TEST with the same deployment pipeline.'], ['Medium', '×1.0', 'Its own capacity, connections and data refresh.'], ['High', '×1.3', 'Separate tenant or network, data masking or a training data set to prepare.']]],
+};
+const INFO = {
+  'sec.strategy': 'How the engagement is framed. Project type decides which sections below are included; maturity, documentation quality and the PM / documentation / contingency percentages scale the whole estimate.',
+  'sec.discovery': 'Effort to understand the current estate and design the target before building. Hours mostly scale with documentation quality.',
+  'sec.sources': 'One row per source system or group of similar sources. Each row costs one connector plus an amount per object, both scaled by connectivity and load pattern.',
+  'sec.transform': 'Logic between ingestion and Gold. Hours = transformations × {transformObj} h × type × complexity.',
+  'sec.legacy': 'Existing ETL, procedures and views that have to be rebuilt on the new platform. Retired assets and a reusable framework reduce the hours; poor documentation increases them.',
+  'sec.models': 'Curated facts and dimensions, business rules and the Power BI semantic models with their security.',
+  'sec.reports': 'Reports grouped by technology or kind. Hours per report = base + extra pages, scaled by complexity and by what has to happen to the report.',
+  'sec.ops': 'Testing, operations and release: reconciliation, security tests, schedules, monitoring, KT, catalogue, UAT and the production launch.',
+  'sec.custom': 'Anything the sections above do not cover. Hours = quantity × hours per unit; they count as delivery effort, so PM, documentation and contingency apply.',
+  'sec.team': 'Who delivers the work. FTE does not change total hours – it decides how long the timeline is and how hours split between roles.',
+  'meta.client': 'The opportunity this estimate belongs to. It comes from Client Name on the sizing page and follows it, so it cannot be changed here. No effect on hours.',
+  'meta.projectType': 'The kind of engagement. It decides which scope sections (B–H) are included – sections that are left out add no hours. Administrators set the sections per type in Admin → Calibration.',
+  'meta.architecture': 'The target architecture pattern. It is recorded for reviewers and the proposal and does not change hours by itself – reflect its effort through architecture complexity and the scope inputs.',
+  'settings.maturity': 'How much evidence the estimate rests on. It sets contingency: ROM 20%, Planning 15%, Validated after Discovery 10%. With “Apply maturity multiplier” ticked, delivery effort is also multiplied by ×1.2 / ×1.1 / ×1.0.',
+  'settings.docQ': {t: 'How well the current estate is documented. Multiplies Discovery and Legacy rebuild hours.', cx: 'docQ'},
+  'settings.pmPct': 'Project management as a percentage of delivery effort, added on top of it.',
+  'settings.docPct': 'Documentation (design, runbooks, hand-over) as a percentage of delivery effort, added on top of it.',
+  'settings.riskPct': 'Contingency as a percentage of delivery effort, added on top of it. Estimate maturity sets it; you can type your own value.',
+  'settings.envDev': 'Development environment. It is where the build happens, so it adds no separate hours.',
+  'settings.envTest': 'Adds the TEST Environment & UAT work package: setup {testSetup} h, {uatCycle} h per UAT cycle, {uatTester} h per tester, a {uatDefectPct}% defect allowance on build hours and a {testEvidence} h evidence pack.',
+  'settings.envProd': 'Adds Production Launch & Hypercare: PROD setup, deployment waves, cutover, parallel run, hypercare, knowledge transfer and the decommissioning plan.',
+  'settings.envOther': 'Adds a work package for one more environment (training, pre-production…): setup, deployment and support, scaled by OTHER complexity.',
+  'settings.maturityAsMultiplier': 'Also multiplies delivery effort by the maturity factor (ROM ×1.2, Planning ×1.1, Validated ×1.0), on top of contingency. Use it when the scope itself is likely to grow.',
+  'foundation': 'Platform work before ingestion: capacities, workspaces, environments, Git / deployment pipelines and a metadata framework. Existing 0 h · Basic {foundationBasic} h · Production {foundationProduction} h · Enterprise {foundationEnterprise} h.',
+  'governance': 'Standards and governance design: naming, access model, ownership, glossary. Basic {govBasic} h · Operational {govOperational} h · Enterprise {govEnterprise} h, counted under Quality & Operations.',
+  'settings.otherName': 'Name of the extra environment. It becomes the work package name on the timeline.',
+  'settings.otherComplexity': {t: 'Scales setup ({otherSetup} h), deployment ({otherDeploy} h) and support ({otherSupport} h) of the OTHER environment.', cx: 'other'},
+  'meta.notes': 'Free-text notes on scope and assumptions. No effect on hours – use the Scope tab for the full write-up.',
+  'discovery.workshops': 'Scoping and design workshops including preparation and write-up. {workshop} h each × documentation quality.',
+  'discovery.assessedSources': 'Source systems reviewed for connectivity, volumes and access. {srcAssess} h each × documentation quality.',
+  'discovery.sampledObjects': 'Representative tables, files or attributes profiled during Discovery. {objSample} h each × documentation quality. Use either samples or the full inventory for the same assets, not both.',
+  'discovery.inventoriedAssets': 'Full inventory of legacy assets (packages, procedures, jobs) with lineage. {assetInventory} h each × documentation quality.',
+  'discovery.sampledProcesses': 'Business processes walked through end to end. {procSample} h each × documentation quality.',
+  'discovery.assessedReports': 'Existing reports reviewed for usage and KPI criticality. {reportAssess} h each × documentation quality.',
+  'discovery.archComplexity': {t: 'Multiplies the target architecture & design effort ({archBase} h base).', cx: 'arch'},
+  'discovery.assessSecurity': 'Security and governance assessment. Conceptual {secAssessConceptual} h: access model on paper. Detailed {secAssessDetailed} h: RLS / OLS rules, groups and data classification.',
+  'discovery.poc': 'Proof of concept before the build is committed. Light {pocLight} h: validate one pattern. Technical {pocTechnical} h: a working end-to-end slice.',
+  'src.name': 'A source system or a group of sources that behave the same way.',
+  'src.objects': 'Tables, views, files or API endpoints to ingest. Hours = objects × {ingestObj} h × connectivity × load pattern, plus one connector ({srcConnector} h × connectivity) per row.',
+  'src.connect': {t: 'How hard the source is to reach. Multiplies the connector and every object on the row.', cx: 'connect'},
+  'src.load': {t: 'How the data is loaded. Multiplies the object hours on the row.', cx: 'load'},
+  'trans.name': 'A group of similar transformations, e.g. customer merge or currency conversion.',
+  'trans.source': 'The source the transformations read from. Pick Multiple sources for ones that combine several. No effect on hours.',
+  'trans.count': 'Transformation steps in the group (notebooks, dataflows, procedures). Hours = count × {transformObj} h × type × complexity.',
+  'trans.type': {t: 'What kind of logic the transformations carry.', cx: 'ttype'},
+  'trans.complexity': {t: 'How hard each transformation is to build and test.', cx: 'tcomplex'},
+  'legacy.etlLow': {t: 'Low-complexity ETL assets, {etlLow} h each. Every legacy tier is scaled by the reusable framework, the retirement ratio and documentation quality.', cx: 'legacy'},
+  'legacy.etlMed': {t: 'Medium ETL assets, {etlMed} h each.', cx: 'legacy'},
+  'legacy.etlHigh': {t: 'High ETL / controller packages, {etlHigh} h each.', cx: 'legacy'},
+  'legacy.spSimple': {t: 'Simple stored procedures, {spSimple} h each.', cx: 'legacy'},
+  'legacy.spComplex': {t: 'Complex stored procedures, {spComplex} h each.', cx: 'legacy'},
+  'legacy.views': 'Views re-created on the target. {viewMig} h each, scaled like the other legacy assets.',
+  'legacy.framework': {t: 'Reuse from a metadata or template framework. Multiplies every legacy rebuild line.', cx: 'framework'},
+  'legacy.retirement': 'Share of legacy assets confirmed obsolete. Legacy rebuild hours drop by this percentage.',
+  'gold.dimensions': 'Conformed dimensions in Gold. {dimension} h each × Gold complexity.',
+  'gold.facts': 'Fact tables in Gold. {fact} h each × Gold complexity.',
+  'gold.businessRules': 'Calculations beyond a standard fact or dimension build: allocations, currency conversion, stand decomposition. {businessRule} h each.',
+  'gold.consumptionViews': 'Views exposed to consumers on top of Gold. {consumptionView} h each.',
+  'gold.complexity': {t: 'Multiplies dimension and fact hours.', cx: 'gold'},
+  'sm.name': 'One row per semantic model. Hours = ({smBase} h base + tables + measures + calculation objects + security) × mode.',
+  'sm.tables': 'Tables in the model, {smTable} h each.',
+  'sm.measuresMig': 'Measures reused from an existing model, {smMeasureMig} h each.',
+  'sm.measuresNew': 'New measures or KPIs written in DAX, {smMeasureNew} h each.',
+  'sm.calcs': 'Calculation group items, field parameters and similar objects, {smCalc} h each.',
+  'sm.security': 'Security per model. Static RLS {secStatic} h · Dynamic RLS {secDynamic} h · Hierarchy / OLS / CLS {secHierarchy} h.',
+  'sm.mode': {t: 'Multiplies the whole model line.', cx: 'smMode'},
+  'rep.name': 'A group of reports with the same technology and similar shape.',
+  'rep.count': 'Reports in the group. Hours = reports × ({reportBase} h base + extra pages × {reportPage} h) × complexity × action.',
+  'rep.pages': 'Average pages per report. The first page is part of the base.',
+  'rep.complexity': {t: 'How demanding each report is to build.', cx: 'rcomplex'},
+  'rep.action': {t: 'What has to happen to the report.', cx: 'raction'},
+  'ops.reconcileObjects': 'Objects compared with the legacy or source numbers. {reconcileObj} h each.',
+  'ops.validateMeasures': 'Measures checked for parity. {measureValidate} h each.',
+  'ops.securityTests': 'Security scenarios tested, e.g. a user restricted to one company. {securityTest} h each.',
+  'ops.schedules': 'Pipelines or refresh chains to orchestrate. {schedule} h each.',
+  'ops.monitoring': 'Basic alerts {monitoringBasic} h · Dashboard + alerts {monitoringDashboard} h · Operational framework {monitoringFramework} h.',
+  'ops.ktSessions': 'Knowledge-transfer sessions, {ktSession} h each. With PROD ticked they are counted under Production Launch & Hypercare.',
+  'ops.purview': 'Workspace scan {purviewScan} h · Scan + lineage {purviewLineage} h · Governance integration {purviewIntegration} h.',
+  'test.uatCycles': 'UAT cycles: plan, support, triage and close. {uatCycle} h each.',
+  'test.testers': 'Business testers to prepare and support. {uatTester} h each.',
+  'prod.waves': 'Deployment waves or cutovers. {prodWave} h each, plus one-off PROD setup and cutover planning.',
+  'prod.parallelWeeks': 'Weeks the old and new solution run side by side, across all waves. {parallelWeek} h per week.',
+  'prod.hypercareWeeks': 'Weeks of hypercare after go-live, across all waves. {hypercareWeek} h per week.',
+  'prod.decommission': 'A plan to retire the legacy platform. {decommission} h when included.',
+  'custom.name': 'What the activity is.',
+  'custom.wp': 'Add the hours to an existing work package (its bar grows) or give the activity its own bar on the timeline.',
+  'custom.qty': 'How many units of the activity.',
+  'custom.rate': 'Hours per unit. Hours = quantity × hours per unit.',
+  'settings.hoursPerWeek': 'Productive hours one FTE delivers per week – 32 h means 80% utilisation. Lower values make the timeline longer; total hours do not change.',
+  'team.role': 'A role on the delivery team.',
+  'team.fte': 'Share of a full-time person on the project. The sum of FTE sets the team capacity on the timeline.',
+};
+const CX_PAGE_ORDER = ['docQ', 'arch', 'connect', 'load', 'ttype', 'tcomplex', 'legacy', 'framework', 'gold', 'smMode', 'rcomplex', 'raction', 'other'];
+
+function tipRates(text) {
+  const R = Object.assign({}, baseRates(), S.rates || {});
+  return String(text).replace(/\{(\w+)\}/g, (m, k) => R[k] === undefined ? m : fmt(R[k], R[k] % 1 ? 2 : 0));
+}
+function tipHtml(key) {
+  const i = INFO[key]; if (!i) return '';
+  const o = typeof i === 'string' ? {t: i} : i;
+  let h = `<p>${esc(tipRates(o.t))}</p>`;
+  if (key === 'meta.projectType') {
+    const on = typeSections(S.meta.projectType);
+    h += `<p><b>Included now:</b> ${esc(SECTIONS.filter(x => on.includes(x[0])).map(x => x[1].split(' · ')[1]).join(' · ') || 'no build sections')}.</p>`;
+  }
+  if (o.cx) h += `<ul>${CX[o.cx][1].map(l => `<li><b>${esc(l[0])} ${esc(tipRates(l[1]))}</b> – ${esc(l[2])}</li>`).join('')}</ul>`;
+  return h;
+}
+/* The "What complexity means" card on Scope inputs. */
+function renderCxGuide() {
+  return CX_PAGE_ORDER.map(k => `<div class="cx-block"><h4>${esc(CX[k][0])}</h4><table class="grid"><thead><tr><th>Level</th><th class="r">Effect</th><th>Examples</th></tr></thead><tbody>${CX[k][1].map(l => `<tr><td class="nowrap"><b>${esc(l[0])}</b></td><td class="r nowrap">${esc(tipRates(l[1]))}</td><td>${esc(l[2])}</td></tr>`).join('')}</tbody></table></div>`).join('');
+}
+/* Icons go next to every label that has an explanation (keyed by the field it
+   binds) and next to anything marked data-info (section titles, row headers). */
+function addInfoIcons() {
+  const icon = k => `<span class="de-info" tabindex="0" role="button" data-tip="${esc(k)}" aria-label="What this means">i</span>`;
+  qsa('label').forEach(lb => {
+    const f = lb.querySelector('[data-bind]'); if (!f || !INFO[f.dataset.bind] || lb.querySelector('.de-info')) return;
+    if (f.type === 'checkbox') { lb.insertAdjacentHTML('beforeend', icon(f.dataset.bind)); return; }
+    const t = [...lb.childNodes].find(nd => nd.nodeType === 3 && nd.textContent.trim());
+    if (t) t.after(document.createRange().createContextualFragment(icon(f.dataset.bind)));
+  });
+  qsa('[data-info]').forEach(el => { if (INFO[el.dataset.info] && !el.querySelector('.de-info')) el.insertAdjacentHTML('beforeend', icon(el.dataset.info)); });
+}
+let TIP = null;
+function showTip(ic) {
+  if (!TIP) return;
+  TIP.innerHTML = tipHtml(ic.dataset.tip);
+  TIP.hidden = false;
+  const r = ic.getBoundingClientRect(), w = TIP.offsetWidth, h = TIP.offsetHeight;
+  const left = Math.max(8, Math.min(window.innerWidth - w - 8, r.left + r.width / 2 - w / 2));
+  const top = r.bottom + 8 + h > window.innerHeight && r.top - 8 - h > 0 ? r.top - 8 - h : r.bottom + 8;
+  TIP.style.left = left + 'px'; TIP.style.top = top + 'px';
+}
+function hideTip() { if (TIP) TIP.hidden = true; }
+
+/* ---------- Scope tab: the written scope behind the numbers ---------- */
+const SCOPE_SECTIONS = [
+  ['changes', 'What changed', 'What changed since the previous version of this estimate: new inputs received, corrections, and why.'],
+  ['summary', 'Executive summary', 'Customer objective, business problem, current state, target state, proposed solution and key assumptions.'],
+  ['sourcesUsed', 'Sources used', 'Transcripts, requirement documents, workbooks and sample outputs this estimate is based on.'],
+  ['workPackages', 'Scope – work packages', 'Per work package: stakeholders, requirements / activities, dependencies, assumptions, out of scope and deliverables.'],
+  ['phases', 'Delivery phases', 'Phases with target dates, and what is deliberately left for later.'],
+  ['justification', 'Estimation input justification', 'Every scope input, its value, how it was derived, its source and basis (evidence, derived, assumption, tool default).'],
+  ['readiness', 'Estimation readiness', 'Status per area – sources, objects, volumes, transformations, governance, security, models, reports, latency – and the overall confidence.'],
+  ['questions', 'Discovery questions', 'Open questions grouped as critical, important and optional.'],
+  ['techValidation', 'Technology validation', 'Product capabilities and limits checked against documentation, and what is still an assumption.'],
+];
+const SCOPE_CMDS = [['bold', '', '<b>B</b>', 'Bold'], ['italic', '', '<i>I</i>', 'Italic'], ['underline', '', '<u>U</u>', 'Underline'], ['formatBlock', 'H3', 'H', 'Heading'], ['formatBlock', 'P', '¶', 'Paragraph'],
+  ['insertUnorderedList', '', '• List', 'Bullet list'], ['insertOrderedList', '', '1. List', 'Numbered list'], ['removeFormat', '', '✕', 'Clear formatting']];
+const defaultScope = () => SCOPE_SECTIONS.map(d => ({key: d[0], title: d[1], html: ''}));
+
+/* Pasted content comes from Word, Excel, Outlook and web pages, and a shared
+   estimate shows it to other people, so it is reduced to an allow-list of
+   tags, attributes and cosmetic styles – on paste and again on every render. */
+const RICH_TAGS = new Set(['P', 'BR', 'DIV', 'SPAN', 'STRONG', 'B', 'EM', 'I', 'U', 'S', 'STRIKE', 'SUB', 'SUP', 'A', 'UL', 'OL', 'LI', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6',
+  'BLOCKQUOTE', 'CODE', 'PRE', 'HR', 'IMG', 'TABLE', 'THEAD', 'TBODY', 'TFOOT', 'TR', 'TD', 'TH', 'CAPTION', 'MARK', 'SMALL']);
+const RICH_STYLES = new Set(['color', 'background-color', 'font-weight', 'font-style', 'text-decoration', 'text-decoration-line', 'text-align']);
+function cleanStyle(v) {
+  return String(v || '').split(';').map(d => { const i = d.indexOf(':'); if (i < 0) return ''; const p = d.slice(0, i).trim().toLowerCase(), val = d.slice(i + 1).trim(); return RICH_STYLES.has(p) && !/url\s*\(|expression\s*\(|[{}<>]/i.test(val) ? `${p}: ${val}` : ''; }).filter(Boolean).join('; ');
+}
+function sanitizeRich(html) {
+  const raw = String(html || ''); if (!raw.trim()) return '';
+  const doc = new DOMParser().parseFromString(`<body>${raw}</body>`, 'text/html');
+  doc.body.querySelectorAll('script,style,link,meta,base,iframe,frame,object,embed,svg,math,form,input,textarea,select,button,video,audio,canvas,noscript,template,title').forEach(x => x.remove());
+  const walk = node => [...node.children].forEach(el => {
+    if (!RICH_TAGS.has(el.tagName)) { const p = el.parentNode; while (el.firstChild) p.insertBefore(el.firstChild, el); p.removeChild(el); return; }
+    [...el.attributes].forEach(a => {
+      const nm = a.name.toLowerCase(), v = a.value.trim();
+      if (nm === 'style') { const st = cleanStyle(v); if (st) el.setAttribute('style', st); else el.removeAttribute('style'); return; }
+      if (nm === 'href' && el.tagName === 'A') { if (/^(https?:|mailto:|#)/i.test(v)) { el.setAttribute('target', '_blank'); el.setAttribute('rel', 'noopener noreferrer'); } else el.removeAttribute('href'); return; }
+      if (nm === 'src' && el.tagName === 'IMG') { if (!/^(https:|data:image\/(png|jpe?g|gif|webp);)/i.test(v)) el.remove(); return; }
+      if ((nm === 'colspan' || nm === 'rowspan') && /^\d{1,3}$/.test(v)) return;
+      if (nm === 'alt' || nm === 'title' || (nm === 'target' && el.tagName === 'A') || (nm === 'rel' && el.tagName === 'A')) return;
+      el.removeAttribute(a.name);
+    });
+    walk(el);
+  });
+  walk(doc.body);
+  return doc.body.innerHTML.trim();
+}
+function renderScope(s) {
+  const secs = s.scope || [];
+  const used = new Set(secs.map(x => x.key).filter(Boolean));
+  const missing = SCOPE_SECTIONS.filter(d => !used.has(d[0]));
+  const cards = secs.map((x, i) => {
+    const def = SCOPE_SECTIONS.find(d => d[0] === x.key);
+    return `<section class="card scope-sec"><div class="scope-head"><span class="num">${i + 1}</span><input class="scope-title" data-scope-title="${i}" value="${esc(x.title)}" placeholder="Section title" aria-label="Section title">
+      <span class="scope-tools"><button type="button" class="btn mini" data-scope-move="${i}|-1"${i === 0 ? ' disabled' : ''} title="Move up">↑</button><button type="button" class="btn mini" data-scope-move="${i}|1"${i === secs.length - 1 ? ' disabled' : ''} title="Move down">↓</button><button type="button" class="btn danger mini" data-scope-del="${i}" title="Remove this section">×</button></span></div>
+      <div class="scope-toolbar">${SCOPE_CMDS.map(c => `<button type="button" class="btn mini" data-scope-cmd="${c[0]}" data-scope-val="${c[1]}" title="${c[3]}">${c[2]}</button>`).join('')}</div>
+      <div class="scope-editor" contenteditable="true" data-scope-html="${i}" data-placeholder="${esc(def ? def[2] : 'Paste or type the content of this section.')}">${sanitizeRich(x.html)}</div></section>`;
+  }).join('');
+  return cards + `<div class="scope-add"><select id="de3-scopeAddKey" aria-label="Section to add">${missing.map(d => opt(d[0], d[1])).join('')}${opt('custom', 'Custom section')}</select><button type="button" class="btn secondary" data-action="scope-add">+ Add section</button></div>`;
+}
+function syncScopeHtml(ed) { const i = Number(ed.dataset.scopeHtml); if (S.scope[i]) S.scope[i].html = ed.innerHTML; }
+function insertClean(ed, data) {
+  const html = data.getData('text/html'), text = data.getData('text/plain');
+  const clean = html ? sanitizeRich(html) : '';
+  if (clean) document.execCommand('insertHTML', false, clean);
+  else if (text) document.execCommand('insertText', false, text);
+  syncScopeHtml(ed);
+}
 const NEW_ROW = {sources: {name: '', objects: 10, connect: 1, load: 1}, transforms: {name: '', source: '', count: 10, type: 1, complexity: 1}, models: {name: '', tables: 10, measuresMig: 0, measuresNew: 20, calcs: 0, security: 'static', mode: 1},
   reports: {name: '', count: 5, pages: 3, complexity: 1, action: 1}, team: {role: 'Data Engineer', fte: 0.8},
-  custom: {name: '', wp: 'new', group: 'Additional activities', qty: 1, rate: 8}};
+  custom: {name: '', wp: 'new', group: 'Additional activities', qty: 1, rate: 8, notes: ''}};
 const clone = o => JSON.parse(JSON.stringify(o));
 /* Every DOM lookup is confined to the estimator view. The estimator lives
    inside a page that already owns generic selectors like .card, .row and
@@ -504,7 +746,7 @@ function writeVal(el, v) {
 }
 function bindStatic() { qsa('[data-bind]').forEach(el => { if (!el.closest('#de3-sourceRows,#de3-transformRows,#de3-modelRows,#de3-reportRows,#de3-teamRows,#de3-customRows')) writeVal(el, getPath(S, el.dataset.bind)); }); }
 function applyVisibility() {
-  const show = (TYPES[S.meta.projectType] || TYPES.platformMigration).show;
+  const show = typeSections(S.meta.projectType);
   S.show = {discovery: false, sources: false, transform: false, legacy: false, models: false, reports: false, ops: false};
   show.forEach(k => { S.show[k] = true; });
   qsa('[data-show]').forEach(c => c.classList.toggle('hidden', !S.show[c.dataset.show]));
@@ -526,7 +768,7 @@ function update(opts) {
   $('de3-gantt').innerHTML = renderGantt(RES, S, SCH);
   if (schedOpen) { const d = (ROOT || document).querySelector('#de3-gantt details.sched'); if (d) d.open = true; }
   $('de3-breakdown').innerHTML = renderBreakdown(RES);
-  if (opts.calibration) $('de3-calibration').innerHTML = renderCalibration(S);
+  if (opts.calibration) { $('de3-calibration').innerHTML = renderCalibration(S); $('de3-cxGuide').innerHTML = renderCxGuide(); }
   qsa('#de3-teamRows .row').forEach((r, i) => { const p = r.querySelector('.pill'); if (p && RES.roles[i]) p.textContent = Math.round(RES.roles[i].hours).toLocaleString('en-GB') + ' h'; });
   const lh = {}; RES.wps.forEach(w => w.lines.forEach(l => { lh[l.id] = l.final; }));
   qsa('[data-chours]').forEach(p => { p.textContent = (lh['c.' + p.dataset.chours] || 0).toLocaleString('en-GB', {maximumFractionDigits: 1}) + ' h'; });
@@ -549,6 +791,7 @@ function update(opts) {
    `disabled = false` would silently switch those back on. */
 function applyReadOnly() {
   const ro = isReadOnly();
+  qsa('[data-scope-html]').forEach(el => { el.contentEditable = ro ? 'false' : 'true'; });
   qsa('input,select,textarea,button').forEach(el => {
     if (el.closest('.de-header') || el.classList.contains('tab')) return;
     if (ro) {
@@ -561,7 +804,9 @@ function applyReadOnly() {
 }
 function loadState(st) {
   S = clone(st); S.rates = S.rates || {}; S.overrides = S.overrides || {}; S.schedule = S.schedule || {}; S.order = S.order || []; S.removed = S.removed || []; S.custom = S.custom || []; S.transforms = S.transforms || [];
-  bindStatic(); applyVisibility(); RES = compute(S); renderTables(); update({calibration: true});
+  S.rateNotes = S.rateNotes || {}; S.wpNames = S.wpNames || {};
+  if (!Array.isArray(S.scope)) S.scope = defaultScope();   // estimates saved before the Scope tab
+  bindStatic(); applyVisibility(); RES = compute(S); renderTables(); $('de3-scope').innerHTML = renderScope(S); update({calibration: true});
 }
 
 function init(rootEl) {
@@ -569,6 +814,30 @@ function init(rootEl) {
   ROOT = rootEl || document.getElementById('detailed-estimation-view');
   if (!ROOT) return;
   $('de3-projectType').innerHTML = Object.entries(TYPES).map(([k, t]) => `<option value="${k}">${t.name}</option>`).join('');
+  addInfoIcons();
+  TIP = document.createElement('div'); TIP.className = 'de-tip'; TIP.setAttribute('role', 'tooltip'); TIP.hidden = true; ROOT.appendChild(TIP);
+  const tipOn = e => { const ic = e.target.closest && e.target.closest('.de-info'); if (ic) showTip(ic); };
+  const tipOff = e => { if (e.target.closest && e.target.closest('.de-info')) hideTip(); };
+  ROOT.addEventListener('mouseover', tipOn); ROOT.addEventListener('focusin', tipOn);
+  ROOT.addEventListener('mouseout', tipOff); ROOT.addEventListener('focusout', tipOff);
+  window.addEventListener('scroll', hideTip, true);
+  // The toolbar acts on the editor's selection, so it must not take focus.
+  ROOT.addEventListener('mousedown', e => { if (e.target.closest('[data-scope-cmd]')) e.preventDefault(); });
+  ROOT.addEventListener('paste', e => {
+    const ed = e.target.closest && e.target.closest('[data-scope-html]');
+    if (!ed || isReadOnly() || !e.clipboardData) return;
+    e.preventDefault(); insertClean(ed, e.clipboardData);
+  });
+  ROOT.addEventListener('drop', e => {
+    const ed = e.target.closest && e.target.closest('[data-scope-html]');
+    if (!ed || !e.dataTransfer) return;
+    e.preventDefault();
+    if (isReadOnly()) return;
+    const at = document.caretRangeFromPoint && document.caretRangeFromPoint(e.clientX, e.clientY);
+    ed.focus();
+    if (at) { const sl = window.getSelection(); sl.removeAllRanges(); sl.addRange(at); }
+    insertClean(ed, e.dataTransfer);
+  });
   ROOT.addEventListener('input', e => {
     const el = e.target;
     if (el.dataset.bind) {
@@ -577,6 +846,13 @@ function init(rootEl) {
       if (/^sources\.\d+\.name$/.test(el.dataset.bind)) $('de3-transformRows').innerHTML = renderTransforms(S);   // the source pickers show these names
       if (/^(meta\.projectType|settings\.env)/.test(el.dataset.bind)) { applyVisibility(); RES = compute(S); $('de3-customRows').innerHTML = renderCustom(S, RES); }
       update();
+    } else if (el.dataset.ratenote) {
+      const v = el.value.trim();
+      if (v) S.rateNotes[el.dataset.ratenote] = v; else delete S.rateNotes[el.dataset.ratenote];
+    } else if (el.dataset.scopeTitle !== undefined) {
+      const sc = S.scope[Number(el.dataset.scopeTitle)]; if (sc) sc.title = el.value;
+    } else if (el.dataset.scopeHtml !== undefined) {
+      syncScopeHtml(el);
     } else if (el.dataset.rate) {
       const base = baseRates();
       S.rates[el.dataset.rate] = el.value === '' ? base[el.dataset.rate] : Number(el.value);
@@ -587,6 +863,11 @@ function init(rootEl) {
   ROOT.addEventListener('change', e => {
     const el = e.target;
     if (isReadOnly()) return;
+    if (el.dataset.wpname) {
+      const v = el.value.trim();
+      if (v) S.wpNames[el.dataset.wpname] = v; else delete S.wpNames[el.dataset.wpname];
+      update();
+    }
     if (el.dataset.ov) { if (el.value === '') delete S.overrides[el.dataset.ov]; else S.overrides[el.dataset.ov] = Number(el.value); update(); }
     if (el.dataset.sched) {
       const [k, f] = splitLast(el.dataset.sched, '.');
@@ -604,14 +885,42 @@ function init(rootEl) {
     }
   });
   ROOT.addEventListener('click', e => {
+    if (e.target.closest('.de-info')) { e.preventDefault(); return; }   // inside a label it would otherwise toggle or focus the field
     const b = e.target.closest('button'); if (!b) return;
     if (isReadOnly() && !b.dataset.tab && !b.dataset.tabJump) return;
     if (b.dataset.del) { const [k, i] = b.dataset.del.split('.'); S[k].splice(Number(i), 1); if (k === 'sources') unlinkSource(Number(i)); Object.keys(S.overrides).filter(x => /^(p\.|t\.|g\.sm\.|r\.|c\.)/.test(x)).forEach(x => delete S.overrides[x]); RES = compute(S); renderTables(); update(); }
     if (b.dataset.add) { S[b.dataset.add].push(clone(NEW_ROW[b.dataset.add])); RES = compute(S); renderTables(); update(); }
-    if (b.dataset.cal === 'reset') { S.rates = {}; update({calibration: true}); }
+    if (b.dataset.cal === 'reset') { S.rates = {}; S.rateNotes = {}; update({calibration: true}); }
     if (b.dataset.wpdel) { S.removed = (S.removed || []).concat(S.removed.includes(b.dataset.wpdel) ? [] : [b.dataset.wpdel]); update(); }
     if (b.dataset.wprestore) { S.removed = b.dataset.wprestore === '*' ? [] : (S.removed || []).filter(k => k !== b.dataset.wprestore); update(); }
-    if (b.dataset.action === 'reset-schedule') { S.schedule = {}; S.order = []; S.removed = []; update(); }
+    if (b.dataset.action === 'reset-schedule') { S.schedule = {}; S.order = []; S.removed = []; S.wpNames = {}; update(); }
+    if (b.dataset.wpedit) {
+      const d = (ROOT || document).querySelector('#de3-gantt details.sched'); if (d) d.open = true;
+      const inp = (ROOT || document).querySelector('#de3-gantt [data-wpname="' + CSS.escape(b.dataset.wpedit) + '"]');
+      if (inp) { inp.scrollIntoView({block: 'center', behavior: 'smooth'}); inp.focus(); }
+    }
+    if (b.dataset.action === 'add-wp') addWorkPackage();
+    if (b.dataset.action === 'scope-add') {
+      const k = $('de3-scopeAddKey').value, def = SCOPE_SECTIONS.find(d => d[0] === k);
+      S.scope.push(def ? {key: def[0], title: def[1], html: ''} : {key: '', title: 'New section', html: ''});
+      $('de3-scope').innerHTML = renderScope(S); applyReadOnly();
+      const t = (ROOT || document).querySelectorAll('#de3-scope [data-scope-title]'); if (t.length) { t[t.length - 1].focus(); t[t.length - 1].select(); }
+    }
+    if (b.dataset.scopeDel !== undefined) {
+      const i = Number(b.dataset.scopeDel), sc = S.scope[i];
+      if (sc && (!String(sc.html || '').replace(/<[^>]*>|&nbsp;|\s/g, '') || window.confirm('Remove “' + (sc.title || 'this section') + '” and its content?'))) { S.scope.splice(i, 1); $('de3-scope').innerHTML = renderScope(S); applyReadOnly(); }
+    }
+    if (b.dataset.scopeMove) {
+      const [i, d] = b.dataset.scopeMove.split('|').map(Number), j = i + d;
+      if (S.scope[i] && S.scope[j]) { [S.scope[i], S.scope[j]] = [S.scope[j], S.scope[i]]; $('de3-scope').innerHTML = renderScope(S); applyReadOnly(); }
+    }
+    if (b.dataset.scopeCmd) {
+      const ed = b.closest('.scope-sec').querySelector('[data-scope-html]');
+      if (!ed.contains(document.activeElement) && document.activeElement !== ed) ed.focus();
+      const v = b.dataset.scopeVal;
+      document.execCommand(b.dataset.scopeCmd, false, b.dataset.scopeCmd === 'formatBlock' ? '<' + v + '>' : (v || null));
+      syncScopeHtml(ed);
+    }
     if (b.dataset.move) { const [k, d] = splitLast(b.dataset.move, '|'); if (moveOrder(S, SCH, k, Number(d))) update(); }
     if (b.dataset.tabJump) { const t = (ROOT || document).querySelector('[data-tab="' + b.dataset.tabJump + '"]'); if (t) t.click(); }
     if (b.dataset.tab) {
@@ -636,6 +945,18 @@ function unlinkSource(i) {
     const v = Number(t.source);
     if (v === i) t.source = ''; else if (v > i) t.source = v - 1;
   });
+}
+/* A work package added on the timeline is an additional activity with its own
+   bar. The name is made unique so it never silently merges into another one. */
+function addWorkPackage() {
+  const box = $('de3-gantt');
+  const nameEl = box.querySelector('[data-newwp="name"]'), hoursEl = box.querySelector('[data-newwp="hours"]');
+  const base = (nameEl.value || '').trim() || 'Additional work package';
+  const taken = new Set(RES.wps.map(w => w.name.toLowerCase()).concat(RES.wps.map(w => wpLabel(S, w).toLowerCase())));
+  let name = base, k = 2;
+  while (taken.has(name.toLowerCase())) name = base + ' (' + (k++) + ')';
+  S.custom.push({name, wp: 'new', group: name, qty: 1, rate: Math.max(0, Number(hoursEl.value) || 0), notes: ''});
+  RES = compute(S); renderTables(); update();
 }
 function isReadOnly() { return Boolean(ROOT && ROOT.classList.contains('de-readonly')); }
 
@@ -722,6 +1043,15 @@ window.FabricEstimatorV3 = {
      keeping a second copy. */
   getRateDefs() { return RATE_DEFS.map(r => ({key: r[0], group: r[1], label: r[2], unit: r[3], builtIn: r[5]})); },
   getOrgRates() { return Object.assign({}, ORG_RATES); },
+  /* Which scope sections each project type includes, also owned by the admin
+     panel. Only the types an administrator changed are stored. */
+  getScopeSectionDefs() { return SECTIONS.map(([key, label]) => ({key, label})); },
+  getProjectTypes() { return Object.entries(TYPES).map(([key, t]) => ({key, name: t.name, builtIn: t.show.slice(), sections: typeSections(key).slice()})); },
+  setOrgProjectTypes(types) {
+    ORG_TYPES = {};
+    Object.entries(types || {}).forEach(([k, v]) => { if (TYPES[k] && Array.isArray(v)) ORG_TYPES[k] = SECTIONS.map(x => x[0]).filter(x => v.includes(x)); });
+    if (ROOT) { applyVisibility(); RES = compute(S); renderTables(); update(); }
+  },
   setOrgRates(rates) {
     ORG_RATES = {};
     Object.entries(rates || {}).forEach(([k, v]) => { if (DEFAULT_RATES[k] !== undefined && isFinite(Number(v))) ORG_RATES[k] = Number(v); });
