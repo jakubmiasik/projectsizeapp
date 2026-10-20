@@ -661,6 +661,7 @@ const SCOPE_SECTIONS = [
   ['techValidation', 'Technology validation', 'Product capabilities and limits checked against documentation, and what is still an assumption.'],
 ];
 const SCOPE_CMDS = [['bold', '', '<b>B</b>', 'Bold'], ['italic', '', '<i>I</i>', 'Italic'], ['underline', '', '<u>U</u>', 'Underline'], ['formatBlock', 'H3', 'H', 'Heading'], ['formatBlock', 'P', '¶', 'Paragraph'],
+  ['justifyLeft', '', '⇤', 'Align left'], ['justifyCenter', '', '⇔', 'Centre'], ['justifyRight', '', '⇥', 'Align right'], ['justifyFull', '', '☰', 'Justify'],
   ['insertUnorderedList', '', '• List', 'Bullet list'], ['insertOrderedList', '', '1. List', 'Numbered list'], ['removeFormat', '', '✕', 'Clear formatting']];
 const SCOPE_WIDTHS = [['', 'Full width'], ['75', '¾ width'], ['66', '⅔ width'], ['50', '½ width'], ['33', '⅓ width']];
 /* A collapsible work-package block with the headings a scope document uses. */
