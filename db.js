@@ -202,6 +202,14 @@ async function healthCheck() {
   await p.request().query('SELECT 1');
 }
 
+// The load list filters on where an opportunity stands, which lives in the
+// saved data rather than in a column of its own: Open / Won / Lost from the
+// sizing page and the estimate's endorsement stage. Read from the latest
+// version of each group, like the rest of the row.
+const STATUS_COLUMNS = `
+  CASE WHEN ISJSON(latest.data) = 1 THEN JSON_VALUE(latest.data, '$.opportunityStatus') END AS opportunity_status,
+  CASE WHEN ISJSON(latest.data) = 1 THEN JSON_VALUE(latest.data, '$.detailedEstimation.endorsement.status') END AS endorsement_status`;
+
 async function listEstimations(userOid) {
   const p = await getPool();
   const result = await p.request()
@@ -216,6 +224,8 @@ async function listEstimations(userOid) {
         latest.created_at,
         latest.updated_at,
         latest.version,
+        latest.opportunity_status,
+        latest.endorsement_status,
         (
           SELECT COUNT(*)
           FROM estimations e2
@@ -229,7 +239,8 @@ async function listEstimations(userOid) {
           AND parent_id IS NULL
       ) roots
       CROSS APPLY (
-        SELECT TOP 1 id, parent_id, client_name, title, created_at, updated_at, version
+        SELECT TOP 1 id, parent_id, client_name, title, created_at, updated_at, version,
+          ${STATUS_COLUMNS}
         FROM estimations latest
         WHERE latest.user_oid = @userOid
           AND (latest.id = roots.id OR latest.parent_id = roots.id)
@@ -259,6 +270,8 @@ async function listSharedWithMe(userEmail) {
         latest.created_at,
         latest.updated_at,
         latest.version,
+        latest.opportunity_status,
+        latest.endorsement_status,
         shared_groups.shared_at,
         shared_groups.shared_by_name,
         (
@@ -269,7 +282,8 @@ async function listSharedWithMe(userEmail) {
       FROM shared_groups
       JOIN estimations roots ON roots.id = shared_groups.estimation_group_id AND roots.parent_id IS NULL
       CROSS APPLY (
-        SELECT TOP 1 id, parent_id, client_name, title, created_at, updated_at, version
+        SELECT TOP 1 id, parent_id, client_name, title, created_at, updated_at, version,
+          ${STATUS_COLUMNS}
         FROM estimations latest
         WHERE latest.id = roots.id OR latest.parent_id = roots.id
         ORDER BY latest.version DESC, latest.updated_at DESC, latest.created_at DESC
