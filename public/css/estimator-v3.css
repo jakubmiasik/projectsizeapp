@@ -232,7 +232,6 @@
 #detailed-estimation-view .stages li.now{color:var(--primary);border-color:var(--primary);background:var(--primary-soft)}
 #detailed-estimation-view .stages li.now span{background:var(--primary);color:#fff}
 #detailed-estimation-view .stage-desc{margin:8px 0 0}
-#detailed-estimation-view #de3-endorseNote{min-height:44px;font-size:.78rem}
 #detailed-estimation-view .stage-log{margin-top:8px}
 #detailed-estimation-view .stage-log ul{margin:6px 0 0;padding:0;list-style:none;font-size:.74rem;color:var(--ink-soft)}
 #detailed-estimation-view .stage-log li{padding:5px 0;border-top:1px solid var(--line-soft)}

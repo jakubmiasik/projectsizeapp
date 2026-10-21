@@ -966,7 +966,10 @@ function init(rootEl) {
     }
     if (b.dataset.scopeDel !== undefined) {
       const i = Number(b.dataset.scopeDel), sc = S.scope[i];
-      if (sc && (!String(sc.html || '').replace(/<[^>]*>|&nbsp;|\s/g, '') || window.confirm('Remove “' + (sc.title || 'this section') + '” and its content?'))) { S.scope.splice(i, 1); renderScopePane(); }
+      if (!sc) return;
+      const drop = () => { const j = S.scope.indexOf(sc); if (j >= 0) { S.scope.splice(j, 1); renderScopePane(); } };
+      if (!String(sc.html || '').replace(/<[^>]*>|&nbsp;|\s/g, '')) drop();
+      else ask({title: 'Remove section', message: 'Remove “' + (sc.title || 'this section') + '” and its content?', mode: 'confirm', confirmText: 'Remove', cancelText: 'Cancel'}).then(ok => { if (ok) drop(); });
     }
     if (b.dataset.scopeMove) {
       const [i, d] = b.dataset.scopeMove.split('|').map(Number), j = i + d;
@@ -1091,7 +1094,6 @@ function renderEndorsement() {
   $('de3-endorse').innerHTML = `<h2 data-info="sec.endorse">Endorsement</h2>
     <ol class="stages">${keys.map((k, i) => `<li class="${i < at ? 'done' : i === at ? 'now' : ''}"><span>${i + 1}</span>${STAGES[k].label}</li>`).join('')}</ol>
     <p class="small stage-desc">${esc(STAGES[E.status].desc)}</p>
-    <textarea id="de3-endorseNote" rows="2" placeholder="Comment for this step (optional) – e.g. reviewed with the delivery lead"></textarea>
     <div class="actions">${STAGE_ACTIONS[E.status].map(a => `<button type="button" class="btn ${a[2]}" data-endorse="${a[0]}">${a[1]}</button>`).join('')}</div>
     <p class="small" style="margin:8px 0 0">Save the estimation to keep a change of stage.</p>
     ${E.history.length ? `<details class="stage-log"><summary><span>History</span><span class="small">${E.history.length} step${E.history.length === 1 ? '' : 's'}</span></summary><ul>${E.history.slice().reverse().map(h => `<li><b>${esc((STAGES[h.status] || {}).label || h.status)}</b> · ${esc(h.by || 'Unknown')} · ${esc(when(h.at))}${h.note ? `<div>${esc(h.note)}</div>` : ''}</li>`).join('')}</ul></details>` : ''}`;
@@ -1100,10 +1102,23 @@ function renderEndorsement() {
   const ic = $('de3-endorse').querySelector('[data-info]');
   if (ic && INFO[ic.dataset.info]) ic.insertAdjacentHTML('beforeend', `<span class="de-info" tabindex="0" role="button" data-tip="sec.endorse" aria-label="What this means">i</span>`);
 }
-function endorse(to) {
+/* Questions go through the page's own dialog; the browser's prompt is only a
+   fallback for when the estimator runs without the page around it. */
+function ask(o) {
+  if (typeof window.showDialog === 'function') return window.showDialog(o);
+  return Promise.resolve(o.mode === 'prompt' ? window.prompt(o.message, o.defaultValue || '') : window.confirm(o.message));
+}
+const STAGE_ASK = {
+  proposed: ['Propose for endorsement', 'Submit this estimate for endorsement? It stays editable, so review comments can still be applied.', 'Propose'],
+  final: ['Endorse as Final', 'Endorse this estimate as Final? It will be locked until someone moves it back to Draft.', 'Endorse as Final'],
+  draft: ['Move back to Draft', 'Move this estimate back to Draft? It becomes editable again.', 'Move to Draft'],
+};
+async function endorse(to) {
   if (!STAGES[to] || to === S.endorsement.status) return;
-  const note = ($('de3-endorseNote').value || '').trim();
-  if (to === 'final' && !window.confirm('Endorse this estimate as Final? It will be locked until someone moves it back to Draft.')) return;
+  const [title, message, confirmText] = STAGE_ASK[to];
+  const answer = await ask({title, message: message + ' You can add a comment for the history below.', mode: 'prompt', confirmText, cancelText: 'Cancel', placeholder: 'Comment (optional) – e.g. reviewed with the delivery lead'});
+  if (answer === null || answer === undefined || answer === false) return;
+  const note = String(answer).trim();
   S.endorsement.status = to;
   S.endorsement.history.push({status: to, by: CURRENT_USER ? (CURRENT_USER.name || CURRENT_USER.email || '') : '', email: CURRENT_USER ? CURRENT_USER.email || '' : '', at: new Date().toISOString(), note});
   renderEndorsement(); update();
