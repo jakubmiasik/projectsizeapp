@@ -210,6 +210,10 @@
     .de-save-btn:hover{transform:translateY(-1px);box-shadow:0 6px 16px rgba(1,105,111,.3)}
     .de-assumptions textarea{width:100%;min-height:60px;resize:vertical}
     .de-layer-total{font-weight:700;color:var(--color-primary-strong);margin-top:var(--space-2);font-size:var(--text-sm)}
+    /* Download and Load file work on the estimation, so they only show
+       while the Project Estimate view is open. */
+    body:not(.estimation-visible) #download-file-btn,
+    body:not(.estimation-visible) #load-file-btn { display: none !important; }
   </style>
 </head>
 <body>
@@ -231,10 +235,10 @@
 
         <div class="topbar-actions" id="header-actions">
           <button class="topbar-btn" id="save-cloud-btn" aria-label="Save to cloud" style="display:none">
-            <i class="bi bi-save"></i> Save
+            <i class="bi bi-save"></i> Save Opp
           </button>
           <button class="topbar-btn" id="load-cloud-btn" aria-label="Load from cloud" style="display:none">
-            <i class="bi bi-cloud-arrow-down"></i> Load
+            <i class="bi bi-cloud-arrow-down"></i> Load Opp
           </button>
           <button class="topbar-btn" id="download-file-btn" aria-label="Download estimation as an HTML file" title="Download the whole estimation as an HTML file you can open and edit offline" style="display:none">
             <i class="bi bi-file-earmark-arrow-down"></i> Download
@@ -456,7 +460,7 @@
       <div class="de-header">
         <button type="button" class="de-back-btn" id="de-back-btn">← Back to Sizing</button>
         <div style="flex:1;min-width:0"><h2 style="margin:0">Project Estimate</h2><div class="de-header-client"><span id="de3-heroClient">&ndash;</span><span class="de3-status draft" id="de3-statusPill">Draft</span></div></div>
-        <button type="button" class="de-save-btn" id="de-save-inline-btn">Save</button>
+        <button type="button" class="de-save-btn" id="de-save-inline-btn">Save Opp</button>
       </div>
 
       <div id="de-readonly-notice" hidden style="margin-bottom:var(--space-3);padding:.65rem .9rem;border:1px solid var(--color-border);border-left:3px solid var(--color-primary);border-radius:var(--radius-md);background:var(--color-surface-2);font-size:var(--text-xs);color:var(--color-text-muted)">
@@ -904,7 +908,7 @@
       view.classList.toggle('de-readonly', readOnly);
 
       const saveBtn = document.getElementById('de-save-inline-btn');
-      if (saveBtn) saveBtn.textContent = readOnly ? 'Save as my copy' : 'Save';
+      if (saveBtn) saveBtn.textContent = readOnly ? 'Save as my copy' : 'Save Opp';
 
       const notice = document.getElementById('de-readonly-notice');
       if (notice) notice.hidden = !readOnly;
@@ -2952,6 +2956,7 @@ ${json}
         if (appSection) appSection.style.display = 'none';
         if (heroSection) heroSection.style.display = 'none';
         deView.classList.add('active');
+        document.body.classList.add('estimation-visible');
         prefillClient(document.getElementById('client-name')?.value);
         // The view is hidden while the page loads, so the Gantt and the
         // summary are first laid out here, with real widths available.
@@ -2962,6 +2967,7 @@ ${json}
 
       function hideDetailedView() {
         deView.classList.remove('active');
+        document.body.classList.remove('estimation-visible');
         if (appSection) appSection.style.display = '';
         if (heroSection) heroSection.style.display = '';
         AppShell.setActive('sizing');
