@@ -236,6 +236,13 @@
           <button class="topbar-btn" id="load-cloud-btn" aria-label="Load from cloud" style="display:none">
             <i class="bi bi-cloud-arrow-down"></i> Load
           </button>
+          <button class="topbar-btn" id="download-file-btn" aria-label="Download estimation as an HTML file" title="Download the whole estimation as an HTML file you can open and edit offline" style="display:none">
+            <i class="bi bi-file-earmark-arrow-down"></i> Download
+          </button>
+          <button class="topbar-btn" id="load-file-btn" aria-label="Load estimation from an HTML file" title="Load an estimation from a file made with Download" style="display:none">
+            <i class="bi bi-file-earmark-arrow-up"></i> Load file
+          </button>
+          <input type="file" id="estimation-file-input" accept=".html,.htm,text/html" hidden />
           <button class="topbar-btn" id="share-cloud-btn" aria-label="Share estimation" style="display:none">
             <i class="bi bi-share"></i> Share
           </button>
@@ -833,12 +840,15 @@
       row.className = 'resource-role';
       row.dataset.resourceRole = String(resourceRoleIndex);
       row.innerHTML = `
-        <input class="resource-input" type="text" placeholder="Role (e.g. Data Engineer)" value="${roleName}">
+        <input class="resource-input" type="text" placeholder="Role (e.g. Data Engineer)">
         <div class="multiplier-field">
-          <input class="resource-percent" type="number" min="0" max="300" step="5" value="${percent}">
+          <input class="resource-percent" type="number" min="0" max="300" step="5">
           <span class="buffer-note">%</span>
         </div>
         <button type="button" class="resource-remove" aria-label="Remove role">×</button>`;
+      // Set as properties, not markup: a role name is free text.
+      row.querySelector('.resource-input').value = roleName;
+      row.querySelector('.resource-percent').value = percent;
       resourceRolesRoot.appendChild(row);
     }
 
@@ -1152,7 +1162,7 @@
           const entry = state.sections[section.id];
           if (!entry) return;
           if (entry.value !== undefined) {
-            const radio = document.querySelector(`input[name="${section.id}"][value="${entry.value}"]`);
+            const radio = document.querySelector(`input[name="${section.id}"][value="${CSS.escape(String(entry.value))}"]`);
             if (radio) radio.checked = true;
           }
           if (entry.multiplier !== undefined) {
@@ -1408,6 +1418,8 @@
         appSection.style.display = '';
         document.getElementById('save-cloud-btn').style.display = '';
         document.getElementById('load-cloud-btn').style.display = '';
+        document.getElementById('download-file-btn').style.display = '';
+        document.getElementById('load-file-btn').style.display = '';
         applyRoleVisibility();
 
         // The account menu now lives in the sidebar footer.
@@ -2088,6 +2100,46 @@
           }
         });
 
+        // Load file: brings back a file made with Download. The file's own
+        // data replaces the page, but it reconnects to the saved estimation it
+        // came from only when the server still lets this user edit that one;
+        // otherwise Save keeps it as a new estimation.
+        const estimationFileInput = document.getElementById('estimation-file-input');
+        document.getElementById('load-file-btn').addEventListener('click', () => {
+          estimationFileInput.value = '';
+          estimationFileInput.click();
+        });
+        estimationFileInput.addEventListener('change', async () => {
+          const file = estimationFileInput.files?.[0];
+          if (!file) return;
+          let loaded;
+          try {
+            loaded = await readEstimationFile(file);
+          } catch (err) {
+            await showAlert(err.message, 'Cannot load this file');
+            return;
+          }
+          const name = loaded.title || loaded.estimation.clientName || file.name;
+          const ok = await showConfirm(`Load "${name}" from ${file.name}? It replaces everything on the sizing page and the Project Estimate, and anything you have not saved is lost.`, 'Load estimation file');
+          if (!ok) return;
+
+          let linked = null;
+          if (loaded.source) {
+            try {
+              linked = await fetchJson(`/api/estimations/${encodeURIComponent(loaded.source.id)}`, {}, 'Not available');
+            } catch (err) {
+              linked = null;
+            }
+          }
+          importState(loaded.estimation);
+          setLoadedEstimationState(linked ? { ...linked, isShared: false } : null);
+          if (window.__syncDetailedView) window.__syncDetailedView();
+          await showAlert(linked
+            ? `Loaded from ${file.name}. Nothing is saved yet: use Save to update "${linked.title}" or keep it as a new version.`
+            : `Loaded from ${file.name}. It is not linked to a saved estimation, so use Save to keep it as a new one.`,
+          'Estimation file loaded');
+        });
+
         document.getElementById('share-cloud-btn').addEventListener('click', async () => {
           if (!loadedEstimation || loadedEstimation.isShared) return;
           const groupId = loadedEstimation.parent_id || loadedEstimation.id;
@@ -2644,6 +2696,227 @@
       div.textContent = str ?? '';
       return div.innerHTML;
     }
+
+    // ==================== ESTIMATION FILE ====================
+    // Download saves the whole estimation as one HTML file that opens as a
+    // working Project Estimate offline; Load file brings such a file back.
+    // The estimation travels as JSON inside the file, so loading reads that
+    // data, never the rendered markup, and an edit made in the file survives.
+    // Not to be confused with Load, which opens estimations saved in the app.
+    const ESTIMATION_FILE_FORMAT = 'fabric-project-sizing/estimation';
+    const ESTIMATION_FILE_VERSION = 1;
+    const ESTIMATION_FILE_MAX_BYTES = 25 * 1024 * 1024;
+
+    // The file is built from the view as it is before the estimator renders
+    // into it, so this has to run before initDetailedEstimation below.
+    const pristineDetailedView = document.getElementById('detailed-estimation-view').cloneNode(true);
+
+    function estimationFileName(title, version) {
+      const base = String(title || 'estimation').normalize('NFKD').replace(/[^\w\- ]+/g, '').trim().replace(/\s+/g, '-').slice(0, 80) || 'estimation';
+      const day = new Date().toISOString().slice(0, 10);
+      return `${base}${version ? `-v${version}` : ''}-${day}.html`;
+    }
+
+    function downloadHtml(html, name) {
+      const url = URL.createObjectURL(new Blob([html], { type: 'text/html' }));
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = name;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }
+
+    async function buildEstimationFile() {
+      const fetchText = async (url) => {
+        const res = await fetch(url, { credentials: 'same-origin', cache: 'no-cache' });
+        if (!res.ok) throw new Error(`${url} returned ${res.status}`);
+        return res.text();
+      };
+      const [shellCss, estimatorCss, estimatorJs, runtimeJs] = await Promise.all([
+        fetchText('/css/app-shell.css'),
+        fetchText('/css/estimator-v3.css'),
+        fetchText('/js/estimator-v3.js'),
+        fetchText('/js/estimation-file.js')
+      ]);
+      const Estimator = window.FabricEstimatorV3;
+      const state = exportState();
+      const title = loadedEstimation?.title || state.clientName || 'Estimation';
+      const version = loadedEstimation?.version || null;
+      const fileName = estimationFileName(title, version);
+      const exportedAt = new Date();
+      const payload = {
+        format: ESTIMATION_FILE_FORMAT,
+        formatVersion: ESTIMATION_FILE_VERSION,
+        exportedAt: exportedAt.toISOString(),
+        fileName,
+        title,
+        // Lets Load file reconnect to the saved estimation, if the person
+        // loading it may still edit that one.
+        source: loadedEstimation ? { id: loadedEstimation.id, title: loadedEstimation.title, version: loadedEstimation.version } : null,
+        calibration: Estimator ? {
+          rates: Estimator.getOrgRates(),
+          projectTypes: Object.fromEntries(Estimator.getProjectTypes().map((t) => [t.key, t.sections]))
+        } : {},
+        estimation: state
+      };
+
+      const view = pristineDetailedView.cloneNode(true);
+      view.classList.add('active');
+      view.classList.remove('de-readonly');
+      view.querySelector('#de-back-btn')?.remove();
+      view.querySelector('#de-readonly-notice')?.remove();
+      const saveBtn = view.querySelector('#de-save-inline-btn');
+      saveBtn.id = 'fps-file-save';
+      saveBtn.textContent = 'Save changes to file';
+      saveBtn.title = 'Download an updated copy of this file with your changes';
+
+      const when = exportedAt.toLocaleString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+      const banner = `<div class="fps-file-banner">
+        <strong>${escapeHtml(title)}${version ? ` (v${version})` : ''}</strong> · offline copy downloaded ${escapeHtml(when)}.
+        Edit any tab here, then choose <b>Save changes to file</b> to download the updated copy, and bring it back into the app with <b>Load file</b>.
+        Changes are not saved anywhere until you do.
+        <div id="fps-file-status" class="fps-file-status" role="status"></div>
+      </div>`;
+      const pageStyle = document.querySelector('head style')?.textContent || '';
+      const fileStyle = `
+        body.fps-file{margin:0;background:var(--color-bg)}
+        .fps-file-page{max-width:1560px;margin:0 auto;padding:var(--space-4)}
+        .fps-file-banner{margin-bottom:var(--space-3);padding:.65rem .9rem;border:1px solid var(--color-border);border-left:3px solid var(--color-primary);border-radius:var(--radius-md);background:var(--color-surface-2);font-size:var(--text-xs);color:var(--color-text-muted)}
+        .fps-file-status:not(:empty){margin-top:.4rem;color:var(--color-primary);font-weight:600}
+        .fps-file-status.is-error{color:#b42318}
+        #fps-file-save:disabled{opacity:.5;cursor:not-allowed}`;
+      // Script text must not close its own element; "<\/" means the same in
+      // JS. The closing tags below are written that way for the same reason:
+      // this code itself sits in the page's inline script.
+      const asScript = (src) => src.replace(/<\/(script)/gi, '<\\/$1');
+      const json = JSON.stringify(payload, null, 2).replace(/</g, '\\u003c');
+      const theme = document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
+
+      const html = `<!DOCTYPE html>
+<html lang="en" data-theme="${theme}">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="generator" content="Fabric Project Sizing" />
+<title>${escapeHtml(title)} – Project Estimate</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Sora:wght@500;600;700&display=swap" />
+<style>${shellCss}</style>
+<style>${pageStyle}</style>
+<style>${estimatorCss}</style>
+<style>${fileStyle}</style>
+</head>
+<body class="fps-file">
+<main class="fps-file-page">
+${banner}
+${view.outerHTML}
+</main>
+<script type="application/json" id="fps-estimation-data">
+${json}
+<\/script>
+<script>${asScript(estimatorJs)}<\/script>
+<script>${asScript(runtimeJs)}<\/script>
+</body>
+</html>
+`;
+      return { html, fileName };
+    }
+
+    // Reads a file made by Download (or saved from one) and returns its
+    // estimation. The file is untrusted: it is parsed without running any of
+    // its scripts, only the JSON block is read, and every value is checked
+    // or cleaned before it reaches the page.
+    async function readEstimationFile(file) {
+      const notOurs = 'This file is not an estimation downloaded from Fabric Project Sizing. Choose a file made with Download, or a copy saved from one with "Save changes to file".';
+      if (file.size > ESTIMATION_FILE_MAX_BYTES) throw new Error('This file is too large to be an estimation file.');
+      const text = await file.text();
+      const doc = new DOMParser().parseFromString(text, 'text/html');
+      const dataEl = doc.getElementById('fps-estimation-data');
+      if (!dataEl || dataEl.tagName !== 'SCRIPT' || dataEl.type !== 'application/json') throw new Error(notOurs);
+      let data;
+      try {
+        data = JSON.parse(dataEl.textContent);
+      } catch (err) {
+        throw new Error(`The estimation data in this file is not valid JSON, so it was probably damaged while editing: ${err.message}`);
+      }
+      if (!data || typeof data !== 'object' || data.format !== ESTIMATION_FILE_FORMAT) throw new Error(notOurs);
+      if (!Number.isInteger(data.formatVersion) || data.formatVersion > ESTIMATION_FILE_VERSION) {
+        throw new Error('This estimation file was made by a newer version of the app. Reload the app and try again.');
+      }
+      if (!data.estimation || typeof data.estimation !== 'object' || Array.isArray(data.estimation)) throw new Error(notOurs);
+      const source = data.source && typeof data.source === 'object' && /^[\w-]{1,64}$/.test(String(data.source.id ?? ''))
+        ? { id: String(data.source.id), title: typeof data.source.title === 'string' ? data.source.title : '' }
+        : null;
+      return {
+        title: typeof data.title === 'string' ? data.title.slice(0, 200) : '',
+        source,
+        estimation: cleanImportedState(data.estimation)
+      };
+    }
+
+    function cleanImportedState(raw) {
+      const sanitize = window.FabricEstimatorV3?.sanitizeRich;
+      const text = (v, max) => (typeof v === 'string' || typeof v === 'number' ? String(v).slice(0, max) : '');
+      const rich = (v) => (typeof v === 'string' && sanitize ? sanitize(v) : '');
+      const number = (v, min, max) => {
+        const n = Number(v);
+        return Number.isFinite(n) ? String(Math.min(max, Math.max(min, n))) : undefined;
+      };
+      const state = {
+        clientName: text(raw.clientName, 200),
+        opportunityStatus: OPPORTUNITY_STATUSES[raw.opportunityStatus] ? raw.opportunityStatus : 'open',
+        clientDescription: rich(raw.clientDescription),
+        useCaseExplanation: rich(raw.useCaseExplanation),
+        additionalNotes: rich(raw.additionalNotes),
+        sections: {},
+        buffer: number(raw.buffer, 0, 1000) ?? '0',
+        resourceRoles: []
+      };
+      sections.forEach((section) => {
+        const entry = raw.sections && typeof raw.sections === 'object' ? raw.sections[section.id] : null;
+        if (!entry || typeof entry !== 'object') return;
+        const value = String(entry.value ?? '');
+        state.sections[section.id] = {
+          value: /^\d+$/.test(value) && section.options[Number(value)] ? value : undefined,
+          multiplier: number(entry.multiplier, 0, 1000)
+        };
+      });
+      if (Array.isArray(raw.resourceRoles)) {
+        state.resourceRoles = raw.resourceRoles.slice(0, 50)
+          .filter((role) => role && typeof role === 'object')
+          .map((role) => ({ name: text(role.name, 200), percent: number(role.percent, 0, 300) ?? '0' }));
+      }
+      const de = raw.detailedEstimation;
+      if (de && typeof de === 'object') {
+        if (de.estimatorVersion !== '3.1' || !de.state || typeof de.state !== 'object') {
+          throw new Error('The Project Estimate in this file is not in a format this app can open.');
+        }
+        // The estimator escapes what it renders and cleans the Scope tab on
+        // render too; clean the stored scope as well so it is saved clean.
+        const st = JSON.parse(JSON.stringify(de.state));
+        if (Array.isArray(st.scope)) {
+          st.scope = st.scope.filter((x) => x && typeof x === 'object').map((x) => Object.assign(x, { html: rich(x.html), title: text(x.title, 200) }));
+        }
+        state.detailedEstimation = { estimatorVersion: '3.1', state: st };
+      }
+      return state;
+    }
+
+    document.getElementById('download-file-btn').addEventListener('click', async (event) => {
+      const button = event.currentTarget;
+      button.disabled = true;
+      try {
+        window.FabricEstimatorV3?.closeScopeEditing();
+        const { html, fileName } = await buildEstimationFile();
+        downloadHtml(html, fileName);
+      } catch (err) {
+        await showAlert('Could not build the estimation file: ' + err.message, 'Download failed');
+      } finally {
+        button.disabled = false;
+      }
+    });
+    // ==================== END ESTIMATION FILE ====================
 
     // ==================== DETAILED ESTIMATION ====================
     // The estimator itself (engine, renderers, Gantt) lives in
