@@ -1203,6 +1203,9 @@ window.FabricEstimatorV3 = {
   getResult() { return RES ? {total: RES.total, delivery: RES.delivery, pm: RES.pm, doc: RES.doc, risk: RES.risk, weeks: SCH ? SCH.total : 0, fte: RES.fte, tshirt: RES.tshirt, wps: RES.wps.map(w => ({key: w.key, name: w.name, hours: w.hours}))} : null; },
   setCurrentUser(user) { CURRENT_USER = user || null; },
   getEndorsement() { return clone(S.endorsement); },
+  /* The Scope tab's paste cleaner, for the page's own rich text when it comes
+     from somewhere it cannot vouch for, such as a loaded estimation file. */
+  sanitizeRich,
   /* After a save the Scope tab goes back to reading mode. */
   closeScopeEditing() { if (ROOT && EDITING.size) { EDITING = new Set(); renderScopePane(); } },
   getClientName() { return S.meta.client || ''; },
