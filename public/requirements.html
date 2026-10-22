@@ -955,7 +955,10 @@
             </div>
           </div>
           <button type="button" class="topbar-btn" id="saveBtn">
-            <i class="bi bi-check2-circle"></i> Save
+            <i class="bi bi-check2-circle"></i> Save Opp
+          </button>
+          <button type="button" class="topbar-btn" id="loadOppBtn" aria-label="Load an opportunity">
+            <i class="bi bi-cloud-arrow-down"></i> Load Opp
           </button>
           <button type="button" class="topbar-btn topbar-btn-primary" id="previewBtn">
             <i class="bi bi-eye"></i> Preview
@@ -1147,6 +1150,43 @@
     <button class="btn btn-outline-secondary btn-sm" type="button" id="ftAddWpBtn">
       <i class="bi bi-plus-circle"></i> Workpackage
     </button>
+  </div>
+
+  <div class="modal fade" id="loadOppModal" tabindex="-1" aria-hidden="true" aria-labelledby="loadOppModalTitle">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+      <div class="modal-content glass-panel border-0">
+        <div class="modal-header border-0 pb-0">
+          <div>
+            <h5 class="modal-title mb-1" id="loadOppModalTitle">Load Opp</h5>
+            <p class="text-muted-app mb-0">Choose an opportunity to open its requirements.</p>
+          </div>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body pt-3">
+          <div class="d-flex flex-wrap gap-2 mb-3">
+            <input type="search" id="loadOppFilterName" class="form-control" style="flex:1;min-width:12rem" placeholder="Filter by opportunity name" aria-label="Filter by opportunity name" autocomplete="off" />
+            <select id="loadOppFilterStatus" class="form-select" style="width:auto" aria-label="Filter by status">
+              <option value="">All statuses</option>
+              <optgroup label="Opportunity">
+                <option value="opp:open">Open</option>
+                <option value="opp:won">Won</option>
+                <option value="opp:lost">Lost</option>
+              </optgroup>
+              <optgroup label="Estimate stage">
+                <option value="stage:draft">Draft</option>
+                <option value="stage:proposed">Proposed</option>
+                <option value="stage:final">Final</option>
+              </optgroup>
+            </select>
+          </div>
+          <ul class="nav nav-tabs mb-3" role="tablist">
+            <li class="nav-item"><button type="button" class="nav-link active" data-load-opp-tab="mine">My Estimations</button></li>
+            <li class="nav-item"><button type="button" class="nav-link" data-load-opp-tab="shared">Shared with me</button></li>
+          </ul>
+          <div class="list-group" id="loadOppList"></div>
+        </div>
+      </div>
+    </div>
   </div>
 
   <div class="modal fade" id="workpackageModal" tabindex="-1" aria-hidden="true">
@@ -1981,6 +2021,141 @@
       }
     }
 
+    // Load Opp lists the same estimations as Load Opp on the sizing page and
+    // reopens this page on the chosen one, so its requirements load in place
+    // of the current ones. Leaving the page keeps a local draft of the edits.
+    const OPPORTUNITY_STATUSES = { open: 'Open', won: 'Won', lost: 'Lost' };
+    const ESTIMATE_STAGES = { draft: 'Draft', proposed: 'Proposed', final: 'Final' };
+
+    function initLoadOpp() {
+      const modalEl = document.getElementById('loadOppModal');
+      const modal = new bootstrap.Modal(modalEl);
+      const listEl = document.getElementById('loadOppList');
+      const nameFilter = document.getElementById('loadOppFilterName');
+      const statusFilter = document.getElementById('loadOppFilterStatus');
+      const lists = { mine: null, shared: null };
+      const versionCache = new Map();
+      const expanded = new Set();
+      let tab = 'mine';
+
+      const message = (text) => `<div class="list-group-item text-muted-app">${escapeHtml(text)}</div>`;
+      const groupIdOf = (e) => e.group_id || e.parent_id || e.id;
+      const oppStatusOf = (e) => OPPORTUNITY_STATUSES[e.opportunity_status] ? e.opportunity_status : 'open';
+      const stageOf = (e) => ESTIMATE_STAGES[e.endorsement_status] ? e.endorsement_status : 'draft';
+      const formatDate = (value) => value ? new Date(value).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '';
+
+      function applyFilters(list) {
+        const query = nameFilter.value.trim().toLowerCase();
+        const [kind, value] = statusFilter.value.split(':');
+        return list.filter((e) => {
+          if (query && !`${e.client_name || ''} ${e.title || ''}`.toLowerCase().includes(query)) return false;
+          if (kind === 'opp' && oppStatusOf(e) !== value) return false;
+          if (kind === 'stage' && stageOf(e) !== value) return false;
+          return true;
+        });
+      }
+
+      function rowHtml(e, extra = '') {
+        const status = oppStatusOf(e);
+        const badge = status === 'open' ? '' : ` <span class="badge ${status === 'won' ? 'text-bg-success' : 'text-bg-danger'}">${OPPORTUNITY_STATUSES[status]}</span>`;
+        const meta = [e.client_name, formatDate(e.updated_at), `v${e.version || 1}`, ESTIMATE_STAGES[stageOf(e)]].filter(Boolean).map(escapeHtml).join(' &middot; ');
+        return `<button type="button" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center gap-2"
+            data-open-id="${escapeHtml(e.id)}" data-open-version="${escapeHtml(e.version || 1)}" data-open-title="${escapeHtml(e.title || '')}">
+          <span class="text-start" style="min-width:0">
+            <strong>${escapeHtml(e.title || 'Untitled')}</strong>${badge}
+            <span class="d-block small text-muted-app">${meta}${extra}</span>
+          </span>
+          <span class="small text-muted-app">Load</span>
+        </button>`;
+      }
+
+      function render() {
+        const list = lists[tab];
+        if (!list) { listEl.innerHTML = message('Loading...'); return; }
+        if (list.length === 0) {
+          listEl.innerHTML = message(tab === 'mine' ? 'No saved estimations yet.' : 'No estimations have been shared with you yet.');
+          return;
+        }
+        const visible = applyFilters(list);
+        if (visible.length === 0) { listEl.innerHTML = message('No estimations match these filters.'); return; }
+        listEl.innerHTML = visible.map((e) => {
+          if (tab === 'shared') return rowHtml(e, ` &middot; Shared by ${escapeHtml(e.shared_by_name || 'Unknown')}`);
+          const groupId = groupIdOf(e);
+          if (Number(e.version_count || 1) <= 1) return rowHtml(e);
+          const open = expanded.has(groupId);
+          const versions = versionCache.get(groupId);
+          const versionRows = !open ? '' : (versions
+            ? versions.map((v) => `<div class="ps-4">${rowHtml(v)}</div>`).join('')
+            : `<div class="ps-4">${message('Loading versions...')}</div>`);
+          return rowHtml(e) + `<button type="button" class="list-group-item list-group-item-action small text-muted-app" data-toggle-versions="${escapeHtml(groupId)}">${open ? '▴ Hide versions' : `▾ ${e.version_count} versions`}</button>` + versionRows;
+        }).join('');
+      }
+
+      async function fetchList(name, url) {
+        try {
+          const resp = await fetch(url);
+          if (!resp.ok) throw new Error(resp.status === 401 ? 'Sign in to load an opportunity.' : 'Failed to load estimations.');
+          lists[name] = await resp.json();
+        } catch (err) {
+          lists[name] = null;
+          if (tab === name) listEl.innerHTML = message(err.message);
+          return;
+        }
+        if (tab === name) render();
+      }
+
+      function setTab(name) {
+        tab = name;
+        modalEl.querySelectorAll('[data-load-opp-tab]').forEach((b) => b.classList.toggle('active', b.dataset.loadOppTab === name));
+        render();
+      }
+
+      document.getElementById('loadOppBtn').addEventListener('click', () => {
+        lists.mine = null;
+        lists.shared = null;
+        versionCache.clear();
+        setTab('mine');
+        modal.show();
+        fetchList('mine', '/api/estimations');
+        fetchList('shared', '/api/estimations/shared-with-me');
+      });
+      nameFilter.addEventListener('input', render);
+      statusFilter.addEventListener('change', render);
+      modalEl.addEventListener('click', async (event) => {
+        const tabBtn = event.target.closest('[data-load-opp-tab]');
+        if (tabBtn) { setTab(tabBtn.dataset.loadOppTab); return; }
+
+        const toggle = event.target.closest('[data-toggle-versions]');
+        if (toggle) {
+          const groupId = toggle.dataset.toggleVersions;
+          if (expanded.has(groupId)) { expanded.delete(groupId); render(); return; }
+          expanded.add(groupId);
+          render();
+          if (!versionCache.has(groupId)) {
+            try {
+              const resp = await fetch(`/api/estimations/${encodeURIComponent(groupId)}/versions`);
+              if (!resp.ok) throw new Error();
+              versionCache.set(groupId, await resp.json());
+            } catch (err) {
+              expanded.delete(groupId);
+              showToast('Could not load versions.', 'warning');
+            }
+            render();
+          }
+          return;
+        }
+
+        const row = event.target.closest('[data-open-id]');
+        if (!row) return;
+        const params = new URLSearchParams({
+          estimationId: row.dataset.openId,
+          version: row.dataset.openVersion,
+          title: row.dataset.openTitle
+        });
+        window.location.href = '/requirements.html?' + params.toString();
+      });
+    }
+
     async function saveToServer() {
       if (!appMeta.estimationId || !appMeta.version) {
         showToast('Cannot save — no linked estimation.', 'warning');
@@ -2550,6 +2725,7 @@ ${orderedSectionsHtml}
       dom.resetPreviewOrderBtn?.addEventListener('click', resetPreviewOrder);
 
       document.getElementById('saveBtn').addEventListener('click', saveToServer);
+      initLoadOpp();
       // Navigation back to the sizing workspace now lives in the sidebar.
 
       document.getElementById('previewBtn').addEventListener('click', () => {
