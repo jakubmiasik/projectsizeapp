@@ -482,11 +482,40 @@
       </div></aside>
 
       <section>
-      <div class="tabs" id="de3-tabs"><button type="button" class="tab active" data-tab="scope">Scope</button><button type="button" class="tab" data-tab="inputs">Scope inputs</button><button type="button" class="tab" data-tab="timeline">Timeline</button><button type="button" class="tab" data-tab="activities">Activity hours</button><button type="button" class="tab" data-tab="calibration">Calibration</button></div>
+      <div class="tabs" id="de3-tabs"><button type="button" class="tab active" data-tab="scope">Scope</button><!-- FPS-VIEW:architecture TAB START --><button type="button" class="tab" data-tab="architecture">Architecture</button><!-- FPS-VIEW:architecture TAB END --><!-- FPS-VIEW:process TAB START --><button type="button" class="tab" data-tab="process">Delivery process</button><!-- FPS-VIEW:process TAB END --><button type="button" class="tab" data-tab="inputs">Scope inputs</button><button type="button" class="tab" data-tab="timeline">Timeline</button><button type="button" class="tab" data-tab="activities">Activity hours</button><button type="button" class="tab" data-tab="calibration">Calibration</button></div>
 
       <div class="tabpane active" id="de3-pane-scope"><section class="card"><h2>Scope</h2>
       <p class="small" style="margin:0">The written scope behind the numbers. Choose <b>✎ Edit</b> on a section to change it, then paste content from Word, Outlook, Excel or another estimate – headings, lists, tables and links are kept, other formatting is cleaned up. While editing you can set the text size, drag table column borders, rename, reorder or remove the section; add predefined or custom sections at the bottom. Sections go back to reading mode when you save. The Scope tab is saved with the estimation.</p></section>
       <div id="de3-scope"></div></div>
+
+      <!-- Optional views, filled by /js/estimation-views.js. Download writes
+           them into the estimation file as static markup in this same shape. -->
+      <!-- FPS-VIEW:architecture PANE START -->
+      <div class="tabpane" id="de3-pane-architecture"><section class="card fps-view" data-fps-view="architecture">
+      <div class="fps-view-head"><h2>Solution architecture</h2>
+      <div class="actions"><button type="button" class="btn ghost" data-fps-zoom="architecture">Actual size</button><button type="button" class="btn ghost" data-fps-open="architecture">Open in new window</button><button type="button" class="btn secondary" data-fps-download="architecture">Download SVG</button></div></div>
+      <p class="small fps-view-desc"></p>
+      <figure class="fps-diagram" id="fps-architecture-host"></figure>
+      <ul class="small fps-view-notes"></ul>
+      <p class="small fps-view-meta"></p>
+      <div class="fps-view-empty" hidden>No architecture diagram in this estimation yet. Load an estimation file that has one, or upload an SVG.</div>
+      <div class="actions fps-view-edit"><button type="button" class="btn secondary" data-fps-upload="architecture">Upload SVG…</button><button type="button" class="btn ghost" data-fps-remove="architecture">Remove diagram</button><input type="file" data-fps-file="architecture" accept=".svg,image/svg+xml" hidden></div>
+      </section></div>
+      <!-- FPS-VIEW:architecture PANE END -->
+
+      <!-- FPS-VIEW:process PANE START -->
+      <div class="tabpane" id="de3-pane-process"><section class="card fps-view" data-fps-view="process">
+      <div class="fps-view-head"><h2>Delivery process</h2>
+      <div class="actions"><button type="button" class="btn ghost" data-fps-open="process">Open in new window</button><button type="button" class="btn secondary" data-fps-download="process">Download HTML</button></div></div>
+      <p class="small fps-view-desc"></p>
+      <iframe class="fps-frame" id="fps-process-frame" title="Delivery process diagram" sandbox="allow-scripts allow-downloads allow-popups allow-modals"></iframe>
+      <ul class="small fps-view-notes"></ul>
+      <p class="small fps-view-meta"></p>
+      <div class="fps-view-empty" hidden>No delivery process diagram in this estimation yet. Load an estimation file that has one, or upload the diagram's HTML page.</div>
+      <template id="fps-process-source"></template>
+      <div class="actions fps-view-edit"><button type="button" class="btn secondary" data-fps-upload="process">Upload HTML…</button><button type="button" class="btn ghost" data-fps-remove="process">Remove diagram</button><input type="file" data-fps-file="process" accept=".html,.htm,text/html" hidden></div>
+      </section></div>
+      <!-- FPS-VIEW:process PANE END -->
 
       <div class="tabpane" id="de3-pane-timeline"><section class="card"><h2>Delivery timeline</h2><div id="de3-gantt"></div></section></div>
 
@@ -576,6 +605,7 @@
   <!-- Project Estimate engine. Must load before the inline script below, which
        boots it through window.FabricEstimatorV3. -->
   <script src="/js/estimator-v3.js"></script>
+  <script src="/js/estimation-views.js"></script>
 
   <script>
     const sectionIcons = {
@@ -1140,6 +1170,9 @@
       if (window.deGetPayload) {
         state.detailedEstimation = window.deGetPayload();
       }
+      // Architecture and delivery process diagrams, when the estimation has any
+      const views = window.deGetViews ? window.deGetViews() : null;
+      if (views) state.views = views;
       // Include computed T-shirt size
       const badgeEl = document.getElementById('badge');
       if (badgeEl) state.tshirtSize = badgeEl.textContent.trim();
@@ -1184,6 +1217,9 @@
       if (state.detailedEstimation && window.deLoadPayload) {
         window.deLoadPayload(state.detailedEstimation);
       }
+      // Estimations saved before the diagrams existed have none, which also
+      // clears the ones from whatever was on screen before.
+      if (window.deSetViews) window.deSetViews(state.views || null);
       // Client / opportunity is captured once on the sizing page, so it is the
       // name the estimate opens with. Estimates saved before the v3 estimator
       // carry no client of their own at all.
@@ -2738,14 +2774,17 @@
         if (!res.ok) throw new Error(`${url} returned ${res.status}`);
         return res.text();
       };
-      const [shellCss, estimatorCss, estimatorJs, runtimeJs] = await Promise.all([
+      const [shellCss, estimatorCss, estimatorJs, runtimeJs, viewsJs] = await Promise.all([
         fetchText('/css/app-shell.css'),
         fetchText('/css/estimator-v3.css'),
         fetchText('/js/estimator-v3.js'),
-        fetchText('/js/estimation-file.js')
+        fetchText('/js/estimation-file.js'),
+        fetchText('/js/estimation-views.js')
       ]);
       const Estimator = window.FabricEstimatorV3;
-      const state = exportState();
+      // The diagrams travel as markup in the file, like the v2 template has
+      // them, not in the JSON: that is where Load file reads them back from.
+      const { views, ...state } = exportState();
       const title = loadedEstimation?.title || state.clientName || 'Estimation';
       const version = loadedEstimation?.version || null;
       const fileName = estimationFileName(title, version);
@@ -2775,6 +2814,10 @@
       saveBtn.id = 'fps-file-save';
       saveBtn.textContent = 'Save changes to file';
       saveBtn.title = 'Download an updated copy of this file with your changes';
+      const viewsData = window.FabricEstimationViews ? window.FabricEstimationViews.writeToView(view, views) : {};
+      const viewsJson = Object.keys(viewsData).length
+        ? `<script type="application/json" id="fps-views-data">\n${JSON.stringify(viewsData, null, 2).replace(/</g, '\\u003c')}\n<\/script>\n`
+        : '';
 
       const when = exportedAt.toLocaleString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
       const banner = `<div class="fps-file-banner">
@@ -2821,6 +2864,7 @@ ${json}
 <\/script>
 <script>${asScript(estimatorJs)}<\/script>
 <script>${asScript(runtimeJs)}<\/script>
+${viewsJson}<script>${asScript(viewsJs)}<\/script>
 </body>
 </html>
 `;
@@ -2852,10 +2896,16 @@ ${json}
       const source = data.source && typeof data.source === 'object' && /^[\w-]{1,64}$/.test(String(data.source.id ?? ''))
         ? { id: String(data.source.id), title: typeof data.source.title === 'string' ? data.source.title : '' }
         : null;
+      const estimation = cleanImportedState(data.estimation);
+      // Architecture and delivery process diagrams (the v2 template) sit in
+      // the file's markup, outside the JSON block. They are read as data and
+      // cleaned, never run here.
+      const views = window.FabricEstimationViews ? window.FabricEstimationViews.readFromDocument(doc) : null;
+      if (views) estimation.views = views;
       return {
         title: typeof data.title === 'string' ? data.title.slice(0, 200) : '',
         source,
-        estimation: cleanImportedState(data.estimation)
+        estimation
       };
     }
 
@@ -2936,6 +2986,14 @@ ${json}
       const Estimator = window.FabricEstimatorV3;
 
       if (Estimator) Estimator.init(deView);
+      const Views = window.FabricEstimationViews;
+      if (Views) {
+        Views.init(deView, {
+          title: () => loadedEstimation?.title || document.getElementById('client-name')?.value.trim() || 'Project',
+          alert: (message, title) => showAlert(message, title),
+          confirm: (message, title) => showConfirm(message, title)
+        });
+      }
 
       // Client / opportunity always follows the sizing page's Client Name –
       // the estimate shows it read-only. An empty sizing field leaves the name
@@ -3003,6 +3061,8 @@ ${json}
       // Expose functions globally for save/load integration
       window.deGetPayload = () => (Estimator ? Estimator.getState() : null);
       window.deLoadPayload = (payload) => { if (Estimator) Estimator.setState(payload); };
+      window.deGetViews = () => (Views ? Views.getViews() : null);
+      window.deSetViews = (views) => { if (Views) Views.setViews(views); };
       window.deShowView = showDetailedView;
       window.dePrefillClient = prefillClient;
       window.deHideView = hideDetailedView;

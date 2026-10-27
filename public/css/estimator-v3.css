@@ -266,3 +266,25 @@
 #detailed-estimation-view .scope-editor .badge{font-size:.62rem}
 #detailed-estimation-view .scope-toolbar select+select{margin-left:2px}
 @media(max-width:1100px){#detailed-estimation-view #de3-scope>.scope-sec{flex-basis:100%}}
+
+/* ===== Optional views: Architecture + Delivery process (BPMN) =====
+   Filled by /js/estimation-views.js. The estimation file carries the same
+   markup, so these rules apply there too. */
+#detailed-estimation-view .fps-view [hidden]{display:none!important}
+#detailed-estimation-view .fps-view-head{display:flex;align-items:flex-start;gap:12px;flex-wrap:wrap;margin-bottom:6px}
+#detailed-estimation-view .fps-view-head h2{margin:0;flex:1;min-width:200px}
+#detailed-estimation-view .fps-view-head .actions{margin:0;display:flex;gap:6px;flex-wrap:wrap}
+#detailed-estimation-view .fps-view-desc{margin:0 0 12px}
+#detailed-estimation-view .fps-diagram{margin:0;border:1px solid var(--line);border-radius:8px;background:#ffffff;overflow:auto;max-height:80vh}
+#detailed-estimation-view .fps-diagram svg{display:block;width:100%;height:auto;max-width:none}
+#detailed-estimation-view .fps-diagram.is-actual svg{width:auto;max-width:none}
+#detailed-estimation-view .fps-frame{display:block;width:100%;height:80vh;min-height:560px;border:1px solid var(--line);border-radius:8px;background:#ffffff}
+#detailed-estimation-view .fps-view-meta{margin:10px 0 0}
+#detailed-estimation-view .fps-view-empty{border:1px dashed var(--line);border-radius:8px;padding:28px;text-align:center;color:var(--ink-soft);background:var(--surface-2)}
+#detailed-estimation-view .fps-view-notes{margin:12px 0 0;padding-left:18px}
+#detailed-estimation-view .fps-view-edit{margin-top:12px;display:flex;gap:6px;flex-wrap:wrap}
+@media print{
+  #detailed-estimation-view .fps-diagram{max-height:none;overflow:visible;border:none}
+  #detailed-estimation-view .fps-view-head .actions,#detailed-estimation-view .fps-view-edit{display:none}
+  #detailed-estimation-view .fps-frame{height:auto;min-height:0}
+}

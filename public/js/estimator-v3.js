@@ -828,6 +828,7 @@ function applyReadOnly() {
   qsa('[data-scope-html]').forEach(el => { el.contentEditable = !ro && EDITING.has(S.scope[Number(el.dataset.scopeHtml)]) ? 'true' : 'false'; });
   qsa('input,select,textarea,button').forEach(el => {
     if (el.closest('.de-header') || el.classList.contains('tab')) return;
+    if (el.closest('.fps-view-head .actions')) return;   // viewing a diagram changes nothing
     if (!shared && el.closest('#de3-endorse')) return;   // a Final estimate can still be moved back to Draft
     if (ro) {
       if (!el.disabled) { el.disabled = true; el.dataset.roDisabled = '1'; }
