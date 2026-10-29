@@ -9,8 +9,10 @@
 /* app-shell.css zeroes paragraph margins globally; the estimator's notes were
    written against the browser default, so restore it inside the view. */
 #detailed-estimation-view p{margin:1em 0}
-#detailed-estimation-view{color:var(--ink);font-family:Inter,system-ui,"Segoe UI",Arial,sans-serif;font-size:14px;line-height:1.5}
-#detailed-estimation-view h1,#detailed-estimation-view h2,#detailed-estimation-view h3,#detailed-estimation-view .stat b{font-family:Sora,Inter,system-ui,sans-serif}
+#detailed-estimation-view{color:var(--ink);font-family:var(--font-body);font-size:var(--fs-base);line-height:var(--lh-body)}
+#detailed-estimation-view h1,#detailed-estimation-view h2,#detailed-estimation-view h3{font-family:var(--font-display)}
+/* Figures read as data: stat values, KPI tiles, totals and pills use the mono face. */
+#detailed-estimation-view .stat b,#detailed-estimation-view .kpis b,#detailed-estimation-view .metric span:last-child,#detailed-estimation-view .pill{font-family:var(--font-mono);font-variant-numeric:tabular-nums;letter-spacing:-.01em}
 #detailed-estimation-view button,#detailed-estimation-view input,#detailed-estimation-view select,#detailed-estimation-view textarea{font:inherit}
 #detailed-estimation-view button:focus-visible,#detailed-estimation-view input:focus-visible,#detailed-estimation-view select:focus-visible{outline:2px solid var(--sky);outline-offset:2px}
 /* ---- header ---- */
@@ -193,7 +195,7 @@
 /* ---- Scope tab ---- */
 #detailed-estimation-view .scope-head{display:flex;align-items:center;gap:8px}
 #detailed-estimation-view .scope-head .num{background:var(--primary-soft);color:var(--primary);border-radius:4px;padding:0 7px;font-size:.75rem;font-weight:700}
-#detailed-estimation-view .scope-title{margin:0;flex:1;border-color:transparent;font-family:Sora,Inter,system-ui,sans-serif;font-size:.98rem;font-weight:600;padding:4px 8px}
+#detailed-estimation-view .scope-title{margin:0;flex:1;border-color:transparent;font-family:var(--font-display);font-size:.98rem;font-weight:600;padding:4px 8px}
 #detailed-estimation-view .scope-title:hover{border-color:var(--line)}
 #detailed-estimation-view .scope-tools{display:flex;gap:2px}
 #detailed-estimation-view .scope-tools .danger{padding:1px 8px}

@@ -7,7 +7,7 @@
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%230c7c59'/%3E%3Ctext x='32' y='42' text-anchor='middle' font-size='28' font-family='Arial' fill='white'%3EF%3C/text%3E%3C/svg%3E" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Sora:wght@500;600;700&display=swap" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
   <!-- Shared design system: tokens, dark mode, sidebar shell, density -->
   <link rel="stylesheet" href="/css/app-shell.css" />
@@ -15,19 +15,25 @@
   <link rel="stylesheet" href="/css/estimator-v3.css" />
   <script src="/js/app-shell.js"></script>
   <style>
-    /* Page-specific scales. Colours, radii and shadows come from app-shell.css
-       so this page and requirements.html share one design system. */
+    /* Page-specific spacing. Colours, radii, shadows and the type scale come
+       from app-shell.css so this page and requirements.html share one design
+       system; the --text-* names are kept as aliases onto that scale. */
     :root {
-      --text-xs: clamp(0.75rem, 0.7rem + 0.25vw, 0.875rem);
-      --text-sm: clamp(0.875rem, 0.8rem + 0.35vw, 1rem);
-      --text-base: clamp(1rem, 0.95rem + 0.25vw, 1.125rem);
-      --text-lg: clamp(1.125rem, 1rem + 0.75vw, 1.5rem);
-      --text-xl: clamp(1.5rem, 1.2rem + 1.25vw, 2.25rem);
-      --text-2xl: clamp(2rem, 1.2rem + 2.5vw, 3.5rem);
+      --text-xs: var(--fs-xs);
+      --text-sm: var(--fs-sm);
+      --text-base: var(--fs-base);
+      --text-lg: var(--fs-lg);
+      --text-xl: var(--fs-xl);
+      --text-2xl: var(--fs-2xl);
       --space-2:.5rem; --space-3:.75rem; --space-4:1rem; --space-5:1.25rem; --space-6:1.5rem; --space-8:2rem; --space-10:2.5rem; --space-12:3rem;
       --radius-xl: 20px;
     }
-    body{font-size:var(--text-base);line-height:1.55} h1,h2,h3,h4,p{margin:0} button,input{font:inherit}
+    body{font-size:var(--text-base);line-height:var(--lh-body)} h1,h2,h3,h4,p{margin:0}
+    /* Columns of figures use the mono face so they read as data and line up.
+       Figures inside sentences and the size card stay in Plex Sans, whose
+       tabular digits already align without the typewriter spacing. */
+    .num,.de-result-value,#hours-summary td{font-family:var(--font-mono);font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+    .section-title{font-size:var(--fs-xl)} button,input{font:inherit}
     /* Inside the shell the page-content wrapper already provides the gutter, so
        the container just caps line length instead of adding its own margins. */
     .container{width:100%;max-width:1320px;margin:0 auto}
@@ -77,12 +83,12 @@
     .size-hero-main{display:flex;align-items:center;gap:var(--space-4)}
     .size-letter{flex-shrink:0;display:grid;place-items:center;min-width:4.75rem;height:4.75rem;padding:0 .6rem;border-radius:18px;background:#ffffff1f;border:1px solid #ffffff59;font-family:var(--font-display);font-size:2.6rem;font-weight:800;line-height:1;letter-spacing:-.03em}
     .size-hero-copy{display:grid;gap:.15rem;min-width:0}
-    .size-name{font-family:var(--font-display);font-size:var(--text-lg);font-weight:700;line-height:1.2}
+    .size-name{font-family:var(--font-display);font-size:var(--fs-xl);font-weight:800;line-height:var(--lh-tight);letter-spacing:-.02em}
     .size-range{color:#ffffffd0;font-size:var(--text-sm);font-weight:600}
     .size-facts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--space-2);margin:var(--space-4) 0 0}
     .size-facts>div{padding:.6rem .8rem;border-radius:var(--radius-md);background:#ffffff1a;border:1px solid #ffffff2e;min-width:0}
     .size-facts dt{font-size:var(--text-xs);font-weight:600;color:#ffffffc0}
-    .size-facts dd{margin:0;font-weight:700;font-size:var(--text-sm)}
+    .size-facts dd{margin:0;font-weight:600;font-size:var(--fs-base)}
     .size-scale-wrap{display:grid;gap:var(--space-2)}
     .size-scale{position:relative;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:4px;padding-top:10px}
     .size-seg{display:grid;gap:.1rem;justify-items:center;padding:.5rem .25rem .45rem;border-radius:var(--radius-sm);background:var(--color-surface-2);border:1px solid var(--color-divider);border-top:3px solid var(--seg-c);color:var(--color-text-muted);text-align:center;min-width:0}
@@ -231,7 +237,7 @@
     .landing{padding:var(--space-6) 0;min-height:calc(100vh - 120px);display:flex;align-items:center}
     .landing-hero{max-width:720px;margin:0 auto;text-align:center;padding:var(--space-6)}
     .landing-hero-badge{display:inline-flex;align-items:center;gap:.4rem;padding:.38rem .75rem;border-radius:999px;background:var(--color-primary-soft);color:var(--color-primary-strong);font-size:var(--text-xs);font-weight:900;letter-spacing:.06em;text-transform:uppercase;margin-bottom:var(--space-4)}
-    .landing-hero-title{font-size:clamp(2.2rem,5vw,3.8rem);line-height:1.05;letter-spacing:-.04em;margin:0 0 var(--space-3) 0;color:var(--color-text);background:linear-gradient(100deg,var(--primary-strong) 0%,var(--primary) 35%,var(--teal) 60%,var(--indigo) 100%);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+    .landing-hero-title{font-size:var(--fs-display);font-weight:800;padding-bottom:.1em;line-height:1.05;letter-spacing:-.04em;margin:0 0 var(--space-3) 0;color:var(--color-text);background:linear-gradient(100deg,var(--primary-strong) 0%,var(--primary) 35%,var(--teal) 60%,var(--indigo) 100%);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
     .landing-hero-desc{max-width:600px;margin:0 auto var(--space-5) auto;color:var(--color-text-muted);font-size:var(--text-base);line-height:1.7}
     .landing-nav-pills{display:flex;flex-wrap:wrap;justify-content:center;gap:.5rem;margin-bottom:var(--space-5)}
     .landing-pill{display:inline-flex;align-items:center;gap:.3rem;padding:.4rem .75rem;border-radius:999px;background:var(--color-surface);border:1px solid var(--color-border);font-size:var(--text-xs);font-weight:600;color:var(--color-text-muted);white-space:nowrap} .landing-pill{border-color:color-mix(in srgb,var(--pill-c,var(--color-border)) 35%,var(--color-border));background:color-mix(in srgb,var(--pill-c,transparent) 7%,var(--color-surface))}
@@ -2949,7 +2955,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <meta name="generator" content="Fabric Project Sizing" />
 <title>${escapeHtml(title)} – Project Estimate</title>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Sora:wght@500;600;700&display=swap" />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" />
 <style>${shellCss}</style>
 <style>${pageStyle}</style>
 <style>${estimatorCss}</style>
