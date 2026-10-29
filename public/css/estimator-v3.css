@@ -109,7 +109,7 @@
 #detailed-estimation-view .g-row.drop-before{box-shadow:inset 0 3px 0 var(--accent)}
 #detailed-estimation-view .g-row.drop-after{box-shadow:inset 0 -3px 0 var(--accent)}
 #detailed-estimation-view .badge{font-style:normal;font-size:.62rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;border-radius:3px;padding:1px 5px;margin-left:6px;vertical-align:1px;border:1px solid currentColor}
-#detailed-estimation-view .badge.add{color:#7c3aed}
+#detailed-estimation-view .badge.add{color:#c026d3}
 #detailed-estimation-view .badge.mv{color:var(--sky)}
 #detailed-estimation-view .badge.ex{color:var(--amber)}
 #detailed-estimation-view .btn.mini{padding:1px 7px;font-size:.76rem;border-color:var(--line);background:var(--surface);color:var(--ink);margin-right:3px}
