@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Requirements Generator</title>
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%2301696f'/%3E%3Ctext x='32' y='42' text-anchor='middle' font-size='30' font-family='Arial' fill='white'%3ER%3C/text%3E%3C/svg%3E" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%230c7c59'/%3E%3Ctext x='32' y='42' text-anchor='middle' font-size='30' font-family='Arial' fill='white'%3ER%3C/text%3E%3C/svg%3E" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Sora:wght@500;600;700&display=swap" />
@@ -28,7 +28,7 @@
       --app-shadow: var(--shadow-md);
       --app-shadow-sm: var(--shadow-sm);
       --bs-primary: var(--color-primary);
-      --bs-primary-rgb: 1, 105, 111;
+      --bs-primary-rgb: 12, 124, 89;
       /* Bootstrap components (buttons, modals, dropdowns) otherwise keep their
          own stack and drift from the rest of the page. */
       --bs-body-font-family: var(--font-body);
@@ -137,7 +137,7 @@
     [data-theme="dark"] .btn-gradient,
     [data-theme="dark"] .fab-add,
     [data-theme="dark"] .btn-gradient:hover,
-    [data-theme="dark"] .fab-add:hover { color: #062b2c; }
+    [data-theme="dark"] .fab-add:hover { color: var(--on-primary); }
 
     .btn-save {
       color: #fff;
@@ -452,7 +452,7 @@
       padding: 0.4rem 0.7rem;
       border-radius: 999px;
       background: color-mix(in srgb, var(--color-primary) 8%, transparent);
-      color: #0f6d75;
+      color: var(--color-primary-strong);
       font-size: 0.84rem;
       font-weight: 800;
     }
@@ -2486,22 +2486,22 @@
   <link rel="preload" as="style" data-optional-css href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Sora:wght@500;600;700&display=swap" onload="this.rel='stylesheet'" onerror="this.remove()" />
   <link rel="preload" as="style" data-optional-css href="https://cdn.jsdelivr.net/npm/bootswatch@5.3.3/dist/lux/bootstrap.min.css" onload="this.rel='stylesheet'" onerror="this.remove()" />
   <style>
-    :root { --app-ink:#172033; --app-muted:#667085; --app-purple:#5b5fc7; --app-violet:#7c3aed; --app-cyan:#14b8c4;
+    :root { --app-ink:#0b2a1f; --app-muted:#4a6b5c; --app-purple:#0c7c59; --app-violet:#064e3b; --app-cyan:#22c55e;
       /* Matches --font-body in app-shell.css; Bootstrap reads these too, so
          the export matches the app. */
       --app-font:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
       --bs-body-font-family:var(--app-font); --bs-font-sans-serif:var(--app-font); }
     *{box-sizing:border-box}
-    body{margin:0;color:var(--app-ink);font-family:var(--app-font);font-variant-numeric:tabular-nums;background:#f8fbff}
+    body{margin:0;color:var(--app-ink);font-family:var(--app-font);font-variant-numeric:tabular-nums;background:#eefaf3}
     /* Controls do not inherit the document font, so state it for them too. */
     input,textarea,select,button,.btn,.form-control{font-family:var(--app-font)}
-    .preview-toolbar{position:sticky;top:0;display:flex;justify-content:space-between;gap:1rem;align-items:center;padding:1rem 1.25rem;background:rgba(255,255,255,.94);border-bottom:1px solid rgba(23,32,51,.08);backdrop-filter:blur(12px)}
-    .preview-toolbar button{border:none;border-radius:.85rem;padding:.8rem 1rem;background:linear-gradient(135deg,var(--app-purple),var(--app-violet),var(--app-cyan));color:#fff;font-weight:700;cursor:pointer}
+    .preview-toolbar{position:sticky;top:0;display:flex;justify-content:space-between;gap:1rem;align-items:center;padding:1rem 1.25rem;background:rgba(255,255,255,.94);border-bottom:1px solid rgba(6,78,59,.08);backdrop-filter:blur(12px)}
+    .preview-toolbar button{border:none;border-radius:.85rem;padding:.8rem 1rem;background:linear-gradient(118deg,#053b2d,var(--app-purple) 52%,var(--app-cyan));color:#fff;font-weight:700;cursor:pointer}
     .preview-toolbar button:disabled{opacity:.65;cursor:default}
     .preview-toolbar-actions{display:flex;gap:.6rem;flex-wrap:wrap;justify-content:flex-end}
-    .preview-toolbar-actions button:first-child{background:#fff;color:var(--app-purple);border:1px solid rgba(91,95,199,.35)}
+    .preview-toolbar-actions button:first-child{background:#fff;color:var(--app-purple);border:1px solid rgba(12,124,89,.35)}
     .preview-wrap{width:min(1080px,calc(100% - 2rem));margin:1.25rem auto 3rem}
-    .preview-hero,.preview-card{background:#fff;border:1px solid rgba(23,32,51,.08);border-radius:1rem;box-shadow:0 18px 40px rgba(23,32,51,.08)}
+    .preview-hero,.preview-card{background:#fff;border:1px solid rgba(6,78,59,.08);border-radius:1rem;box-shadow:0 18px 40px rgba(6,78,59,.08)}
     .preview-hero{padding:2rem;margin-bottom:1rem}
     .preview-brand{display:flex;justify-content:flex-end;gap:1rem;align-items:flex-start;margin-bottom:.5rem;min-height:0}
     .preview-brand:empty{display:none}
@@ -2511,26 +2511,26 @@
     .preview-titleblock h1{width:100%}
     .preview-subtitle{width:100%;max-width:none;color:var(--app-muted);margin-bottom:0}
     .preview-pills{display:flex;flex-wrap:wrap;gap:.6rem;margin-top:1rem}
-    .preview-pill{display:inline-flex;align-items:center;gap:.4rem;padding:.45rem .8rem;border-radius:999px;background:rgba(91,95,199,.08);color:var(--app-purple);font-weight:700;font-size:.85rem}
+    .preview-pill{display:inline-flex;align-items:center;gap:.4rem;padding:.45rem .8rem;border-radius:999px;background:rgba(12,124,89,.08);color:var(--app-purple);font-weight:700;font-size:.85rem}
     .preview-card{padding:1.5rem;margin-top:1rem}
     .preview-grid-two{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1rem;margin-top:1rem}
     .preview-metrics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1rem;margin-top:1rem}
-    .preview-metric{border:1px solid rgba(23,32,51,.08);border-radius:1rem;padding:1rem;background:#fbfbff}
-    .preview-type-card{border:1px solid rgba(23,32,51,.08);border-radius:1rem;padding:1rem;background:#fbfbff;margin-top:.5rem}
+    .preview-metric{border:1px solid rgba(6,78,59,.08);border-radius:1rem;padding:1rem;background:#f4fbf7}
+    .preview-type-card{border:1px solid rgba(6,78,59,.08);border-radius:1rem;padding:1rem;background:#f4fbf7;margin-top:.5rem}
     .preview-wp-desc{margin:.75rem 0 1.25rem;color:var(--app-muted)}
     .preview-wp-section{margin-top:1.5rem}
-    .preview-wp-section > h3{font-size:1.05rem;font-weight:800;color:var(--app-ink);margin:0 0 .6rem;padding-bottom:.4rem;border-bottom:1px solid rgba(23,32,51,.1)}
+    .preview-wp-section > h3{font-size:1.05rem;font-weight:800;color:var(--app-ink);margin:0 0 .6rem;padding-bottom:.4rem;border-bottom:1px solid rgba(6,78,59,.1)}
     .preview-requirement-row{padding:.85rem 0}
-    .preview-requirement-row + .preview-requirement-row{border-top:1px solid rgba(23,32,51,.08)}
+    .preview-requirement-row + .preview-requirement-row{border-top:1px solid rgba(6,78,59,.08)}
     .preview-requirement-head{display:flex;justify-content:space-between;align-items:baseline;gap:1rem;margin-bottom:.35rem}
     .preview-req-title{display:inline-flex;align-items:baseline;gap:.5rem;flex-wrap:wrap}
     .preview-req-code{font-weight:800;color:var(--app-purple);font-size:.9rem;letter-spacing:.02em;font-variant-numeric:tabular-nums}
     .preview-req-name{font-weight:700;color:var(--app-ink);font-size:.95rem}
     .preview-req-hours{color:var(--app-muted);font-size:.85rem;white-space:nowrap}
     .preview-req-body p:last-child{margin-bottom:0}
-    .preview-wp-total{display:flex;justify-content:space-between;align-items:baseline;gap:1rem;margin-top:1.5rem;padding-top:.85rem;border-top:2px solid rgba(91,95,199,.25);color:var(--app-muted);font-size:.9rem}
+    .preview-wp-total{display:flex;justify-content:space-between;align-items:baseline;gap:1rem;margin-top:1.5rem;padding-top:.85rem;border-top:2px solid rgba(12,124,89,.25);color:var(--app-muted);font-size:.9rem}
     .preview-wp-total strong{color:var(--app-purple);font-size:1rem}
-    .diagram-wrap img{border-radius:1rem;border:1px solid rgba(23,32,51,.08)}
+    .diagram-wrap img{border-radius:1rem;border:1px solid rgba(6,78,59,.08)}
     /* Second line of defence behind sanitizeRichHtml(): an image's intrinsic
        size carries no inline style to strip, and drafts saved before
        sanitisation existed may still hold pasted geometry. User HTML never
@@ -2539,8 +2539,8 @@
     .rich *{position:static !important;float:none !important;height:auto !important;min-height:0 !important;max-width:100% !important;break-before:auto !important;page-break-before:auto !important;transform:none !important}
     .rich img{max-height:200mm;height:auto !important}
     .rich table{width:100%;table-layout:fixed;border-collapse:collapse}
-    .diagram-wrap img{max-width:100%;max-height:200mm;height:auto;border-radius:1rem;border:1px solid rgba(23,32,51,.08)}
-    h1,h2,h3,h4,h5{margin-top:0} h1{font-size:2.1rem;font-weight:900} h2{font-size:1.35rem;font-weight:800} h3{font-size:1.1rem;font-weight:800} h5{font-size:.9rem;text-transform:uppercase;letter-spacing:.08em;color:var(--app-muted)}
+    .diagram-wrap img{max-width:100%;max-height:200mm;height:auto;border-radius:1rem;border:1px solid rgba(6,78,59,.08)}
+    h1,h2,h3,h4,h5{margin-top:0} h1,h2,h3{font-family:Sora,var(--app-font);letter-spacing:-.015em} h1{font-size:2.1rem;font-weight:900} h2{font-size:1.35rem;font-weight:800} h3{font-size:1.1rem;font-weight:800} h5{font-size:.9rem;text-transform:uppercase;letter-spacing:.08em;color:var(--app-muted)}
     @media (max-width: 768px){.preview-grid-two,.preview-metrics{grid-template-columns:1fr}.preview-brand{justify-content:flex-start}}
     /* Print: a workpackage card holds every one of its requirements, so it is
        routinely taller than a page. Asking the engine to keep such a box intact
@@ -2550,7 +2550,7 @@
       .preview-toolbar{display:none}
       .preview-wrap{width:100%;margin:0}
       body{background:#fff}
-      .preview-card,.preview-hero{box-shadow:none;border-color:rgba(23,32,51,.14);break-inside:auto;page-break-inside:auto}
+      .preview-card,.preview-hero{box-shadow:none;border-color:rgba(6,78,59,.14);break-inside:auto;page-break-inside:auto}
       .preview-requirement-row,.preview-metric,.preview-type-card,.preview-wp-total,.diagram-wrap{break-inside:avoid;page-break-inside:avoid}
       h1,h2,h3,h4,h5{break-after:avoid;page-break-after:avoid}
       img{max-width:100%}
@@ -3138,7 +3138,7 @@ ${orderedSectionsHtml}
         const target = document.getElementById(targetId) || el;
         target.scrollIntoView({ behavior: 'smooth', block: 'center' });
         // Brief highlight
-        target.style.outline = '2px solid rgba(91,95,199,0.5)';
+        target.style.outline = '2px solid rgba(12,124,89,0.5)';
         target.style.outlineOffset = '4px';
         setTimeout(() => { target.style.outline = ''; target.style.outlineOffset = ''; }, 2000);
       }, 350);

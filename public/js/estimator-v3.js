@@ -313,7 +313,7 @@ const RCOMPLEX = [[0.75, 'Low'], [1, 'Medium'], [1.25, 'Medium-high'], [1.5, 'Hi
 const RACTION = [[0.25, 'Repoint'], [0.6, 'Migrate as-is'], [1, 'Rebuild'], [1.3, 'Redesign']];
 const TTYPE = [[0.8, 'Cleansing / standardisation'], [1, 'Conforming / joins / dedup'], [1.1, 'Aggregation / snapshot'], [1.3, 'Business rules / derivations'], [1.5, 'History / SCD']];
 const TCOMPLEX = [[0.6, 'Low'], [1, 'Medium'], [1.6, 'High'], [2.4, 'Very high']];
-const WP_COLORS = {discovery: '#1f3a5f', platform: '#2f6690', transform: '#3b7d9c', legacy: '#4a6fa5', gold: '#16697a', reports: '#3d8a8a', quality: '#5c6f82', uat: '#b07d2b', prod: '#8c4b4b', other: '#6b5b95'};
+const WP_COLORS = {discovery: '#064e3b', platform: '#0c7c59', transform: '#0f766e', legacy: '#0e7490', gold: '#15803d', reports: '#0369a1', quality: '#4a6b5c', uat: '#b45309', prod: '#be123c', other: '#5b21b6'};
 /* Relative order of the standard work packages on the timeline. Durations are
    never taken from here – they come from each package's hours and its FTE. */
 const GANTT_TEMPLATE = {discovery: [0, .12], platform: [.08, .30], transform: [.15, .60], legacy: [.20, .72], gold: [.22, .80], reports: [.35, .85], quality: [.25, .92], uat: [.55, .92], prod: [.60, 1], other: [.85, 1]};
@@ -434,12 +434,12 @@ function renderGantt(res, s, sch) {
     const months = Math.ceil(T / 4.33);
     for (let m = 0; m < months; m++) { const a = m * 4.33, b = Math.min(T, (m + 1) * 4.33); axis += `<span class="tick m" style="left:${pct(a)};width:${pct(b - a)}">M${m + 1}</span>`; }
   }
-  const colorOf = r => r.additional ? '#7a5c99' : (WP_COLORS[r.key] || '#5c6f82');
+  const colorOf = r => r.additional ? '#7c3aed' : (WP_COLORS[r.key] || '#4a6b5c');
   const bar = (r, color, drag) => `<div class="g-bar${drag ? ' drag' : ''}"${drag ? ` data-key="${esc(r.key)}"` : ''} style="left:${pct(r.start - 1)};width:${pct(r.dur)};background:${color}" title="${esc(r.name)}: weeks ${r.start}–${r.end}, ${fmt(r.hours)} h${drag ? ' – drag to move' : ''}"><span>${fmt(r.hours)} h</span></div>`;
   const badges = r => (r.additional ? '<i class="badge add">Additional</i>' : '') + (r.moved ? '<i class="badge mv">Moved</i>' : '') + (r.resized ? '<i class="badge ex">Custom length</i>' : '');
   const rows = sch.rows.map(r => `<div class="g-row" data-key="${esc(r.key)}"><div class="g-label" title="Drag to reorder"><b title="${esc(r.renamed ? 'Original name: ' + r.original : r.name)}"><span class="grip">⋮⋮</span>${esc(r.name)}${badges(r)}</b><span>W${r.start}–W${r.end} · ${fmt(r.dur)} wk · ${fmt(r.fte, 2)} FTE</span><button type="button" class="g-ren" data-wpedit="${esc(r.key)}" title="Give ${esc(r.name)} a business-friendly name" aria-label="Rename ${esc(r.name)}">✎</button><button type="button" class="g-del" data-wpdel="${esc(r.key)}" title="Remove ${esc(r.name)} from the timeline" aria-label="Remove ${esc(r.name)} from the timeline">×</button></div><div class="g-track" style="--weeks:${T}">${bar(r, colorOf(r), true)}</div></div>`).join('');
   const mg = {name: 'Project management, documentation & contingency', start: 1, dur: T, end: T, hours: sch.mgmt};
-  const mgRow = sch.mgmt > 0 ? `<div class="g-row g-mgmt"><div class="g-label"><b>${esc(mg.name)}</b><span>W1–W${T} · runs across the engagement</span></div><div class="g-track" style="--weeks:${T}">${bar(mg, 'repeating-linear-gradient(135deg,#94a3b8 0 6px,#a8b5c6 6px 12px)', false)}</div></div>` : '';
+  const mgRow = sch.mgmt > 0 ? `<div class="g-row g-mgmt"><div class="g-label"><b>${esc(mg.name)}</b><span>W1–W${T} · runs across the engagement</span></div><div class="g-track" style="--weeks:${T}">${bar(mg, 'repeating-linear-gradient(135deg,#9fc7b4 0 6px,#b9d8c8 6px 12px)', false)}</div></div>` : '';
   const chart = `<div class="g-hint small">Drag a bar <b>left / right</b> to change its start week, or drag a bar or its name <b>up / down</b> to change the order. Moving never changes hours or duration. Use <b>✎</b> to give a work package a business-friendly name (hover the name to see the original) and <b>×</b> to take it off the timeline – its hours stay in the estimate.</div><div class="gantt" id="ganttChart"><div class="g-row g-head"><div class="g-label">Work package</div><div class="g-track g-axis" style="--weeks:${T}">${axis}</div></div>${rows}${mgRow}</div>`;
   const removed = (sch.removed || []).length ? `<div class="g-removed small"><span>Off the timeline:</span>${sch.removed.map(r => `<button type="button" class="chip" data-wprestore="${esc(r.key)}" title="Put ${esc(r.name)} back on the timeline">${esc(r.name)} · ${fmt(r.hours)} h <b>+</b></button>`).join('')}<button type="button" class="btn ghost mini" data-wprestore="*">Restore all</button></div>` : '';
   /* A new package is an additional activity with its own bar, so it is also
@@ -453,7 +453,7 @@ function renderGantt(res, s, sch) {
 }
 
 function renderBreakdown(res) {
-  return res.wps.map(w => `<details class="wp" open style="--wp:${w.custom ? '#7a5c99' : (WP_COLORS[w.key] || '#5c6f82')}"><summary><span>${esc(w.name)}</span><span class="pill strong">${fmt(w.hours, 1)} h</span></summary><p class="small">${esc(w.desc)}</p>
+  return res.wps.map(w => `<details class="wp" open style="--wp:${w.custom ? '#7c3aed' : (WP_COLORS[w.key] || '#4a6b5c')}"><summary><span>${esc(w.name)}</span><span class="pill strong">${fmt(w.hours, 1)} h</span></summary><p class="small">${esc(w.desc)}</p>
     <table class="grid"><thead><tr><th>Activity</th><th class="r">Qty</th><th class="r">Rate (h)</th><th class="r">Multiplier</th><th class="r">Calculated</th><th class="r">Override h</th><th class="r">Final</th></tr></thead><tbody>
     ${w.lines.map(l => `<tr class="${l.overridden ? 'ovr' : ''}${l.calc === 0 && !l.overridden ? ' zero' : ''}"><td>${esc(l.label)}${l.custom ? ' <i class="badge add">Additional</i>' : ''}${l.formula ? `<div class="small">${esc(l.formula)}</div>` : ''}${l.notes ? `<div class="small l-notes">${esc(l.notes)}</div>` : ''}</td><td class="r">${fmt(l.qty, l.qty % 1 ? 1 : 0)}</td><td class="r">${fmt(l.rate, 2)}</td><td class="r">${fmt(l.mult, 2)}</td><td class="r">${fmt(l.calc, 1)}</td><td class="r"><input class="ov" type="number" step="0.5" data-ov="${esc(l.id)}" value="${l.overridden ? esc(l.hours) : ''}" placeholder="auto"></td><td class="r"><b>${fmt(l.final, 1)}</b></td></tr>`).join('')}
     </tbody></table></details>`).join('') + `<p class="small">Type hours in <b>Override h</b> to fix any activity; leave blank to use the calculated value. Overridden lines are highlighted.</p>`;
