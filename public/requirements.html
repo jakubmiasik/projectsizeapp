@@ -21,7 +21,7 @@
       --app-muted: var(--color-text-muted);
       --app-purple: var(--color-primary);
       --app-violet: var(--color-primary-strong);
-      --app-cyan: var(--color-primary);
+      --app-cyan: var(--indigo);
       --app-surface: var(--color-surface);
       --app-surface-strong: var(--color-surface);
       --app-border: var(--color-border);
@@ -85,7 +85,7 @@
       color: #fff;
       font-weight: 800;
       font-size: 1.2rem;
-      background: linear-gradient(135deg, var(--app-purple), var(--app-violet) 65%, var(--app-cyan));
+      background: var(--brand-gradient);
       box-shadow: 0 16px 28px color-mix(in srgb, var(--color-primary) 28%, transparent);
     }
 
@@ -2486,7 +2486,7 @@
   <link rel="preload" as="style" data-optional-css href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Sora:wght@500;600;700&display=swap" onload="this.rel='stylesheet'" onerror="this.remove()" />
   <link rel="preload" as="style" data-optional-css href="https://cdn.jsdelivr.net/npm/bootswatch@5.3.3/dist/lux/bootstrap.min.css" onload="this.rel='stylesheet'" onerror="this.remove()" />
   <style>
-    :root { --app-ink:#0b2a1f; --app-muted:#4a6b5c; --app-purple:#0c7c59; --app-violet:#064e3b; --app-cyan:#22c55e;
+    :root { --app-ink:#0b2a1f; --app-muted:#4a6b5c; --app-purple:#0c7c59; --app-violet:#064e3b; --app-cyan:#4f46e5;
       /* Matches --font-body in app-shell.css; Bootstrap reads these too, so
          the export matches the app. */
       --app-font:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
@@ -2496,7 +2496,7 @@
     /* Controls do not inherit the document font, so state it for them too. */
     input,textarea,select,button,.btn,.form-control{font-family:var(--app-font)}
     .preview-toolbar{position:sticky;top:0;display:flex;justify-content:space-between;gap:1rem;align-items:center;padding:1rem 1.25rem;background:rgba(255,255,255,.94);border-bottom:1px solid rgba(6,78,59,.08);backdrop-filter:blur(12px)}
-    .preview-toolbar button{border:none;border-radius:.85rem;padding:.8rem 1rem;background:linear-gradient(118deg,#053b2d,var(--app-purple) 52%,var(--app-cyan));color:#fff;font-weight:700;cursor:pointer}
+    .preview-toolbar button{border:none;border-radius:.85rem;padding:.8rem 1rem;background:linear-gradient(118deg,#053b2d,var(--app-purple) 40%,#0d9488 68%,var(--app-cyan));color:#fff;font-weight:700;cursor:pointer}
     .preview-toolbar button:disabled{opacity:.65;cursor:default}
     .preview-toolbar-actions{display:flex;gap:.6rem;flex-wrap:wrap;justify-content:flex-end}
     .preview-toolbar-actions button:first-child{background:#fff;color:var(--app-purple);border:1px solid rgba(12,124,89,.35)}

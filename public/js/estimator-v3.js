@@ -313,7 +313,10 @@ const RCOMPLEX = [[0.75, 'Low'], [1, 'Medium'], [1.25, 'Medium-high'], [1.5, 'Hi
 const RACTION = [[0.25, 'Repoint'], [0.6, 'Migrate as-is'], [1, 'Rebuild'], [1.3, 'Redesign']];
 const TTYPE = [[0.8, 'Cleansing / standardisation'], [1, 'Conforming / joins / dedup'], [1.1, 'Aggregation / snapshot'], [1.3, 'Business rules / derivations'], [1.5, 'History / SCD']];
 const TCOMPLEX = [[0.6, 'Low'], [1, 'Medium'], [1.6, 'High'], [2.4, 'Very high']];
-const WP_COLORS = {discovery: '#064e3b', platform: '#0c7c59', transform: '#0f766e', legacy: '#0e7490', gold: '#15803d', reports: '#0369a1', quality: '#4a6b5c', uat: '#b45309', prod: '#be123c', other: '#5b21b6'};
+// One hue per work package, matching the app's accents: indigo discovery,
+// green platform, sky/teal engineering, amber gold layer, pink reports,
+// violet UAT, rose go-live.
+const WP_COLORS = {discovery: '#4f46e5', platform: '#0c7c59', transform: '#0284c7', legacy: '#0d9488', gold: '#b45309', reports: '#db2777', quality: '#475569', uat: '#7c3aed', prod: '#be123c', other: '#6d28d9'};
 /* Relative order of the standard work packages on the timeline. Durations are
    never taken from here – they come from each package's hours and its FTE. */
 const GANTT_TEMPLATE = {discovery: [0, .12], platform: [.08, .30], transform: [.15, .60], legacy: [.20, .72], gold: [.22, .80], reports: [.35, .85], quality: [.25, .92], uat: [.55, .92], prod: [.60, 1], other: [.85, 1]};
@@ -434,7 +437,7 @@ function renderGantt(res, s, sch) {
     const months = Math.ceil(T / 4.33);
     for (let m = 0; m < months; m++) { const a = m * 4.33, b = Math.min(T, (m + 1) * 4.33); axis += `<span class="tick m" style="left:${pct(a)};width:${pct(b - a)}">M${m + 1}</span>`; }
   }
-  const colorOf = r => r.additional ? '#7c3aed' : (WP_COLORS[r.key] || '#4a6b5c');
+  const colorOf = r => r.additional ? '#c026d3' : (WP_COLORS[r.key] || '#4a6b5c');
   const bar = (r, color, drag) => `<div class="g-bar${drag ? ' drag' : ''}"${drag ? ` data-key="${esc(r.key)}"` : ''} style="left:${pct(r.start - 1)};width:${pct(r.dur)};background:${color}" title="${esc(r.name)}: weeks ${r.start}–${r.end}, ${fmt(r.hours)} h${drag ? ' – drag to move' : ''}"><span>${fmt(r.hours)} h</span></div>`;
   const badges = r => (r.additional ? '<i class="badge add">Additional</i>' : '') + (r.moved ? '<i class="badge mv">Moved</i>' : '') + (r.resized ? '<i class="badge ex">Custom length</i>' : '');
   const rows = sch.rows.map(r => `<div class="g-row" data-key="${esc(r.key)}"><div class="g-label" title="Drag to reorder"><b title="${esc(r.renamed ? 'Original name: ' + r.original : r.name)}"><span class="grip">⋮⋮</span>${esc(r.name)}${badges(r)}</b><span>W${r.start}–W${r.end} · ${fmt(r.dur)} wk · ${fmt(r.fte, 2)} FTE</span><button type="button" class="g-ren" data-wpedit="${esc(r.key)}" title="Give ${esc(r.name)} a business-friendly name" aria-label="Rename ${esc(r.name)}">✎</button><button type="button" class="g-del" data-wpdel="${esc(r.key)}" title="Remove ${esc(r.name)} from the timeline" aria-label="Remove ${esc(r.name)} from the timeline">×</button></div><div class="g-track" style="--weeks:${T}">${bar(r, colorOf(r), true)}</div></div>`).join('');
@@ -453,7 +456,7 @@ function renderGantt(res, s, sch) {
 }
 
 function renderBreakdown(res) {
-  return res.wps.map(w => `<details class="wp" open style="--wp:${w.custom ? '#7c3aed' : (WP_COLORS[w.key] || '#4a6b5c')}"><summary><span>${esc(w.name)}</span><span class="pill strong">${fmt(w.hours, 1)} h</span></summary><p class="small">${esc(w.desc)}</p>
+  return res.wps.map(w => `<details class="wp" open style="--wp:${w.custom ? '#c026d3' : (WP_COLORS[w.key] || '#4a6b5c')}"><summary><span>${esc(w.name)}</span><span class="pill strong">${fmt(w.hours, 1)} h</span></summary><p class="small">${esc(w.desc)}</p>
     <table class="grid"><thead><tr><th>Activity</th><th class="r">Qty</th><th class="r">Rate (h)</th><th class="r">Multiplier</th><th class="r">Calculated</th><th class="r">Override h</th><th class="r">Final</th></tr></thead><tbody>
     ${w.lines.map(l => `<tr class="${l.overridden ? 'ovr' : ''}${l.calc === 0 && !l.overridden ? ' zero' : ''}"><td>${esc(l.label)}${l.custom ? ' <i class="badge add">Additional</i>' : ''}${l.formula ? `<div class="small">${esc(l.formula)}</div>` : ''}${l.notes ? `<div class="small l-notes">${esc(l.notes)}</div>` : ''}</td><td class="r">${fmt(l.qty, l.qty % 1 ? 1 : 0)}</td><td class="r">${fmt(l.rate, 2)}</td><td class="r">${fmt(l.mult, 2)}</td><td class="r">${fmt(l.calc, 1)}</td><td class="r"><input class="ov" type="number" step="0.5" data-ov="${esc(l.id)}" value="${l.overridden ? esc(l.hours) : ''}" placeholder="auto"></td><td class="r"><b>${fmt(l.final, 1)}</b></td></tr>`).join('')}
     </tbody></table></details>`).join('') + `<p class="small">Type hours in <b>Override h</b> to fix any activity; leave blank to use the calculated value. Overridden lines are highlighted.</p>`;

@@ -13,8 +13,15 @@
    the estimator. */
 :root,
 [data-theme="light"] {
-  /* Green Fabric palette: deep forest primary, fresh green accent, mint-tinted
-     page and soft green hairlines, taken from the Fabric Releases page. */
+  /* Fabric palette. Forest green stays the brand and interaction colour
+     (navigation, primary actions, selection, success). A set of accents,
+     each with one job, keeps the app from reading as a single hue:
+       teal    data & ingestion, XS size        sky     engineering, info, S size
+       indigo  modelling, links, M size         violet  governance, admin, L size
+       pink    delivery, XL size                amber   reporting, warnings
+       rose    errors and destructive actions
+     Neutrals are a cool grey with only a hint of green, so colour is
+     carried by the accents rather than by every surface. */
   --primary: #0c7c59;
   --primary-strong: #064e3b;
   --primary-soft: #e2f5eb;
@@ -26,31 +33,44 @@
   --rose: #be123c;
   --rose-bg: #ffe4e6;
   --sky: #0284c7;
-  --bg: #eefaf3;
+  --teal: #0d9488;
+  --indigo: #4f46e5;
+  --violet: #7c3aed;
+  --pink: #db2777;
+  --link: #4f46e5;
+  --bg: #f3f7f5;
   --surface: #ffffff;
-  --surface-2: #f4fbf7;
-  --ink: #0b2a1f;
-  --ink-soft: #4a6b5c;
-  --line: #cfe5d9;
-  --line-soft: #e3f1e9;
+  --surface-2: #f6f9f8;
+  --ink: #10231c;
+  --ink-soft: #52645c;
+  --line: #dbe5e0;
+  --line-soft: #eaf0ed;
   --shadow: 0 1px 2px rgba(6, 78, 59, .05), 0 12px 32px -18px rgba(6, 78, 59, .35);
   /* Signature gradient for brand marks, the size hero and primary actions. */
-  --brand-gradient: linear-gradient(118deg, #053b2d 0%, #0c7c59 52%, #22c55e 100%);
+  --brand-gradient: linear-gradient(118deg, #053b2d 0%, #0c7c59 40%, #0d9488 68%, #4f46e5 100%);
   --action-gradient: linear-gradient(120deg, #0c7c59, #16a34a);
-  --page-glow: radial-gradient(900px 420px at 85% -80px, rgba(34, 197, 94, .14), transparent 70%),
-               radial-gradient(700px 380px at -10% 30%, rgba(45, 212, 191, .10), transparent 70%);
+  --page-glow: radial-gradient(900px 420px at 85% -80px, rgba(34, 197, 94, .13), transparent 70%),
+               radial-gradient(760px 420px at -10% 40%, rgba(99, 102, 241, .09), transparent 70%),
+               radial-gradient(600px 360px at 60% 110%, rgba(236, 72, 153, .06), transparent 70%);
+  /* Size colours: one hue per T-shirt size, cool to warm as effort grows.
+     Fixed across themes because they always sit under white text. */
+  --size-xs: #0d9488;
+  --size-s: #0284c7;
+  --size-m: #4f46e5;
+  --size-l: #7c3aed;
+  --size-xl: #db2777;
   --on-primary: #ffffff;
 
   /* Shell aliases over the palette above. */
   --color-bg: var(--bg);
   --color-surface: var(--surface);
   --color-surface-2: var(--surface-2);
-  --color-surface-offset: var(--primary-soft);
+  --color-surface-offset: #eef3f1;
   --color-border: var(--line);
   --color-divider: var(--line-soft);
   --color-text: var(--ink);
   --color-text-muted: var(--ink-soft);
-  --color-text-subtle: #7a9888;
+  --color-text-subtle: #7d918a;
   --color-primary: var(--primary);
   --color-primary-strong: var(--primary-strong);
   --color-primary-soft: var(--primary-soft);
@@ -101,22 +121,28 @@
   --rose: #fb7185;
   --rose-bg: #3b1520;
   --sky: #38bdf8;
-  --bg: #04120d;
-  --surface: #0b211a;
-  --surface-2: #0f2a21;
-  --ink: #e6fbf0;
-  --ink-soft: #9fc7b4;
-  --line: #1d4a39;
-  --line-soft: #133629;
+  --teal: #2dd4bf;
+  --indigo: #818cf8;
+  --violet: #a78bfa;
+  --pink: #f472b6;
+  --link: #a5b4fc;
+  --bg: #070f0d;
+  --surface: #101a17;
+  --surface-2: #15211d;
+  --ink: #e8f3ee;
+  --ink-soft: #9fb4ab;
+  --line: #24342e;
+  --line-soft: #1a2723;
   --shadow: 0 12px 36px -10px rgba(0, 0, 0, .65);
   --action-gradient: linear-gradient(120deg, #34d399, #4ade80);
-  --page-glow: radial-gradient(900px 420px at 85% -80px, rgba(34, 197, 94, .12), transparent 70%),
-               radial-gradient(700px 380px at -10% 30%, rgba(45, 212, 191, .07), transparent 70%);
+  --page-glow: radial-gradient(900px 420px at 85% -80px, rgba(34, 197, 94, .11), transparent 70%),
+               radial-gradient(760px 420px at -10% 40%, rgba(99, 102, 241, .10), transparent 70%),
+               radial-gradient(600px 360px at 60% 110%, rgba(236, 72, 153, .06), transparent 70%);
   /* Text on a primary fill: the dark-mode primary is a light green. */
   --on-primary: #04120d;
 
-  --color-text-subtle: #6f9a86;
-  --color-surface-offset: #123528;
+  --color-text-subtle: #70867d;
+  --color-surface-offset: #17241f;
   --color-primary-hover: #a7f3d0;
   --color-shadow: rgba(0, 0, 0, .3);
   --shadow-md: 0 16px 40px -12px rgba(0, 0, 0, .7);
@@ -143,8 +169,8 @@ body {
 
 h1, h2, h3, h4 { font-family: var(--font-display); letter-spacing: -.015em; }
 
-a { color: var(--color-primary); transition: color var(--transition-fast); }
-a:hover { color: var(--color-primary-strong); }
+a { color: var(--link); transition: color var(--transition-fast); }
+a:hover { color: var(--violet); }
 code { font-size: .8rem; }
 
 /* Form controls do not inherit the document font by default — browsers give
@@ -660,7 +686,7 @@ body.sidebar-collapsed { --shell-offset: var(--sidebar-collapsed); }
 }
 .app-toast-item.toast-success { border-left: 3px solid var(--color-success); }
 .app-toast-item.toast-error { border-left: 3px solid var(--color-danger); }
-.app-toast-item.toast-info { border-left: 3px solid var(--color-primary); }
+.app-toast-item.toast-info { border-left: 3px solid var(--sky); }
 
 @keyframes appToastIn {
   from { transform: translateX(100%); opacity: 0; }
