@@ -13,24 +13,33 @@
    the estimator. */
 :root,
 [data-theme="light"] {
-  --primary: #1f3a5f;
-  --primary-strong: #0f2742;
-  --primary-soft: #e8eef6;
-  --accent: #0c7c59;
-  --accent-soft: #e6f3ee;
-  --amber: #b07d2b;
-  --amber-bg: #fbf3e4;
-  --rose: #b42318;
-  --rose-bg: #fdecea;
-  --sky: #2f6690;
-  --bg: #f4f6f9;
+  /* Green Fabric palette: deep forest primary, fresh green accent, mint-tinted
+     page and soft green hairlines, taken from the Fabric Releases page. */
+  --primary: #0c7c59;
+  --primary-strong: #064e3b;
+  --primary-soft: #e2f5eb;
+  --accent: #16a34a;
+  --accent-soft: #dcfce7;
+  --mint: #7df0b3;
+  --amber: #b45309;
+  --amber-bg: #fef3c7;
+  --rose: #be123c;
+  --rose-bg: #ffe4e6;
+  --sky: #0284c7;
+  --bg: #eefaf3;
   --surface: #ffffff;
-  --surface-2: #f8fafc;
-  --ink: #1b2430;
-  --ink-soft: #5b6878;
-  --line: #dfe4ec;
-  --line-soft: #edf0f5;
-  --shadow: 0 1px 2px rgba(16, 24, 40, .05), 0 4px 12px -6px rgba(16, 24, 40, .10);
+  --surface-2: #f4fbf7;
+  --ink: #0b2a1f;
+  --ink-soft: #4a6b5c;
+  --line: #cfe5d9;
+  --line-soft: #e3f1e9;
+  --shadow: 0 1px 2px rgba(6, 78, 59, .05), 0 12px 32px -18px rgba(6, 78, 59, .35);
+  /* Signature gradient for brand marks, the size hero and primary actions. */
+  --brand-gradient: linear-gradient(118deg, #053b2d 0%, #0c7c59 52%, #22c55e 100%);
+  --action-gradient: linear-gradient(120deg, #0c7c59, #16a34a);
+  --page-glow: radial-gradient(900px 420px at 85% -80px, rgba(34, 197, 94, .14), transparent 70%),
+               radial-gradient(700px 380px at -10% 30%, rgba(45, 212, 191, .10), transparent 70%);
+  --on-primary: #ffffff;
 
   /* Shell aliases over the palette above. */
   --color-bg: var(--bg);
@@ -41,13 +50,13 @@
   --color-divider: var(--line-soft);
   --color-text: var(--ink);
   --color-text-muted: var(--ink-soft);
-  --color-text-subtle: #8a97a8;
+  --color-text-subtle: #7a9888;
   --color-primary: var(--primary);
   --color-primary-strong: var(--primary-strong);
   --color-primary-soft: var(--primary-soft);
-  --color-primary-hover: var(--sky);
+  --color-primary-hover: var(--accent);
   --color-accent: var(--accent);
-  --color-shadow: rgba(16, 24, 40, .06);
+  --color-shadow: rgba(6, 78, 59, .08);
   --color-danger: var(--rose);
   --color-success: var(--accent);
   --color-warning: var(--amber);
@@ -56,12 +65,12 @@
   --sidebar-collapsed: 64px;
   --topbar-height: 56px;
   --radius-sm: 6px;
-  --radius-md: 8px;
-  --radius-lg: 12px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
   --radius-pill: 999px;
-  --shadow-sm: 0 1px 2px rgba(16, 24, 40, .05), 0 4px 12px -6px rgba(16, 24, 40, .10);
-  --shadow-md: 0 4px 16px -6px rgba(16, 24, 40, .14);
-  --shadow-lg: 0 8px 32px -8px rgba(16, 24, 40, .18);
+  --shadow-sm: var(--shadow);
+  --shadow-md: 0 2px 4px rgba(6, 78, 59, .05), 0 16px 36px -14px rgba(6, 78, 59, .38);
+  --shadow-lg: 0 30px 80px -20px rgba(4, 18, 13, .45);
   /* Inter for body copy, Sora for headings — the pairing the estimator was
      designed with. Loaded as webfonts on every page and in the exported
      preview, so the app and the client-facing document match on any machine. */
@@ -79,35 +88,39 @@
 /* Only the base palette is restated; every --color-* alias above is a var()
    reference, so it re-resolves to these values automatically. */
 [data-theme="dark"] {
-  --primary: #8fb3e0;
+  --primary: #34d399;
   /* A *stronger* primary, not a darker one: in dark mode this token is used for
      link hover, the primary-button hover fill and gradient ends, all of which
      sit against dark surfaces and carry dark text. */
-  --primary-strong: #b6cdec;
-  --primary-soft: #1c2a3d;
-  --accent: #4cc39a;
-  --accent-soft: #16302a;
-  --amber: #e0b35c;
-  --amber-bg: #3a2f1a;
-  --rose: #f2877b;
-  --rose-bg: #3a1f1d;
-  --sky: #6f9fd0;
-  --bg: #0e141c;
-  --surface: #151d28;
-  --surface-2: #1a2431;
-  --ink: #e6ebf2;
-  --ink-soft: #9aa7b8;
-  --line: #273345;
-  --line-soft: #1f2a39;
-  --shadow: 0 4px 16px -6px rgba(0, 0, 0, .6);
+  --primary-strong: #6ee7b7;
+  --primary-soft: #0f3326;
+  --accent: #4ade80;
+  --accent-soft: #0f2f1f;
+  --amber: #fbbf24;
+  --amber-bg: #3a2c0c;
+  --rose: #fb7185;
+  --rose-bg: #3b1520;
+  --sky: #38bdf8;
+  --bg: #04120d;
+  --surface: #0b211a;
+  --surface-2: #0f2a21;
+  --ink: #e6fbf0;
+  --ink-soft: #9fc7b4;
+  --line: #1d4a39;
+  --line-soft: #133629;
+  --shadow: 0 12px 36px -10px rgba(0, 0, 0, .65);
+  --action-gradient: linear-gradient(120deg, #34d399, #4ade80);
+  --page-glow: radial-gradient(900px 420px at 85% -80px, rgba(34, 197, 94, .12), transparent 70%),
+               radial-gradient(700px 380px at -10% 30%, rgba(45, 212, 191, .07), transparent 70%);
+  /* Text on a primary fill: the dark-mode primary is a light green. */
+  --on-primary: #04120d;
 
-  --color-text-subtle: #6f7d90;
-  --color-surface-offset: #1f2a39;
-  --color-primary-hover: #a9c7ea;
+  --color-text-subtle: #6f9a86;
+  --color-surface-offset: #123528;
+  --color-primary-hover: #a7f3d0;
   --color-shadow: rgba(0, 0, 0, .3);
-  --shadow-sm: 0 1px 3px rgba(0, 0, 0, .2), 0 4px 12px rgba(0, 0, 0, .15);
-  --shadow-md: 0 4px 16px rgba(0, 0, 0, .25);
-  --shadow-lg: 0 8px 32px rgba(0, 0, 0, .35);
+  --shadow-md: 0 16px 40px -12px rgba(0, 0, 0, .7);
+  --shadow-lg: 0 30px 80px -20px rgba(0, 0, 0, .8);
   color-scheme: dark;
 }
 
@@ -116,6 +129,9 @@
 
 body {
   background-color: var(--color-bg);
+  /* Two soft green glows over the mint page, as on the Fabric Releases page. */
+  background-image: var(--page-glow);
+  background-attachment: fixed;
   font-family: var(--font-body);
   /* Figures line up column-to-column in the estimate tables. */
   font-variant-numeric: tabular-nums;
@@ -124,6 +140,8 @@ body {
   margin: 0;
   overflow-x: hidden;
 }
+
+h1, h2, h3, h4 { font-family: var(--font-display); letter-spacing: -.015em; }
 
 a { color: var(--color-primary); transition: color var(--transition-fast); }
 a:hover { color: var(--color-primary-strong); }
@@ -155,6 +173,12 @@ input[type="date"],
 input[type="time"] { font-variant-numeric: tabular-nums; }
 
 /* ──── App Layout: Sidebar + Main ──── */
+/* The width the fixed sidebar takes from the viewport. The main column and
+   the page's own full-screen overlays start after it, so neither ever slides
+   underneath the sidebar, and both follow it when it collapses or expands. */
+body { --shell-offset: var(--sidebar-width); }
+body.sidebar-collapsed { --shell-offset: var(--sidebar-collapsed); }
+
 .app-layout {
   display: flex;
   min-height: 100vh;
@@ -189,20 +213,19 @@ input[type="time"] { font-variant-numeric: tabular-nums; }
   width: 36px;
   height: 36px;
   border-radius: 10px;
-  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-strong));
+  background: var(--brand-gradient);
   color: #fff;
   display: grid;
   place-items: center;
+  font-family: var(--font-display);
   font-weight: 800;
   font-size: .9rem;
-  box-shadow: 0 4px 12px rgba(1, 105, 111, .2);
+  box-shadow: 0 6px 16px -6px rgba(6, 78, 59, .55);
   flex-shrink: 0;
-}
-[data-theme="dark"] .brand-logo {
-  background: linear-gradient(135deg, #0d9488, #14b8a6);
 }
 
 .brand-text {
+  font-family: var(--font-display);
   font-weight: 700;
   font-size: .95rem;
   color: var(--color-text);
@@ -275,6 +298,7 @@ input[type="time"] { font-variant-numeric: tabular-nums; }
   background: var(--color-primary-soft);
   color: var(--color-primary);
   font-weight: 600;
+  box-shadow: inset 3px 0 0 var(--color-primary);
 }
 .sidebar-link.active i { color: var(--color-primary); }
 
@@ -338,8 +362,8 @@ input[type="time"] { font-variant-numeric: tabular-nums; }
 }
 .sidebar-project:hover .sidebar-project-close { opacity: 1; }
 .sidebar-project-close:hover {
-  color: #c0392b;
-  background: rgba(192, 57, 43, .12);
+  color: var(--color-danger);
+  background: var(--rose-bg);
   opacity: 1;
 }
 .sidebar-project-close:focus-visible {
@@ -443,7 +467,7 @@ input[type="time"] { font-variant-numeric: tabular-nums; }
 /* ──── Main content area ──── */
 .main-content {
   flex: 1;
-  margin-left: var(--sidebar-width);
+  margin-left: var(--shell-offset);
   min-width: 0;
   min-height: 100vh;
   display: flex;
@@ -471,12 +495,13 @@ input[type="time"] { font-variant-numeric: tabular-nums; }
   padding: 16px 8px;
 }
 .sidebar.collapsed .sidebar-user { justify-content: center; }
-body.sidebar-collapsed .main-content { margin-left: var(--sidebar-collapsed); }
 
 /* ──── Top bar ──── */
 .topbar {
   min-height: var(--topbar-height);
-  background: var(--color-surface);
+  background: color-mix(in srgb, var(--color-surface) 86%, transparent);
+  -webkit-backdrop-filter: saturate(1.4) blur(10px);
+  backdrop-filter: saturate(1.4) blur(10px);
   border-bottom: 1px solid var(--color-divider);
   display: flex;
   align-items: center;
@@ -582,17 +607,15 @@ body.sidebar-collapsed .main-content { margin-left: var(--sidebar-collapsed); }
 }
 .topbar-btn:disabled { opacity: .55; cursor: not-allowed; }
 .topbar-btn-primary {
-  background: var(--color-primary);
-  border-color: var(--color-primary);
-  color: #fff;
+  background: var(--action-gradient);
+  border-color: transparent;
+  color: var(--on-primary);
 }
 .topbar-btn-primary:hover {
   background: var(--color-primary-strong);
   border-color: var(--color-primary-strong);
-  color: #fff;
+  color: var(--on-primary);
 }
-[data-theme="dark"] .topbar-btn-primary,
-[data-theme="dark"] .topbar-btn-primary:hover { color: #062b2c; }
 
 /* ──── Page content ──── */
 .page-content {
@@ -660,6 +683,9 @@ body.sidebar-collapsed .main-content { margin-left: var(--sidebar-collapsed); }
 
 /* ──── Mobile responsive ──── */
 @media (max-width: 991px) {
+  /* The sidebar is an off-canvas drawer here, so it takes no width. */
+  body,
+  body.sidebar-collapsed { --shell-offset: 0px; }
   .sidebar { transform: translateX(-100%); }
   .sidebar.show { transform: translateX(0); }
   .main-content { margin-left: 0 !important; }
@@ -693,21 +719,21 @@ body.sidebar-collapsed .main-content { margin-left: var(--sidebar-collapsed); }
 
 .btn { font-weight: 600; border-radius: var(--radius-md); font-size: .85rem; }
 .btn-primary {
-  background: var(--color-primary);
-  border-color: var(--color-primary);
-  color: #fff;
+  background: var(--action-gradient);
+  border-color: transparent;
+  color: var(--on-primary);
 }
 .btn-primary:hover,
 .btn-primary:focus {
   background: var(--color-primary-strong);
   border-color: var(--color-primary-strong);
-  color: #fff;
+  color: var(--on-primary);
 }
 .btn-outline-primary { color: var(--color-primary); border-color: var(--color-primary); }
 .btn-outline-primary:hover {
   background-color: var(--color-primary);
   border-color: var(--color-primary);
-  color: #fff;
+  color: var(--on-primary);
 }
 
 .card {
@@ -757,8 +783,8 @@ body.sidebar-collapsed .main-content { margin-left: var(--sidebar-collapsed); }
 .badge.bg-primary { background-color: var(--color-primary) !important; }
 
 .alert { border-radius: var(--radius-md); font-size: .85rem; }
-.alert-info { background-color: var(--color-primary-soft); border-color: rgba(1, 105, 111, .2); color: var(--color-text); }
-.alert-warning { background-color: rgba(232, 185, 35, .1); border-color: var(--color-accent); color: var(--color-text); }
+.alert-info { background-color: var(--color-primary-soft); border-color: color-mix(in srgb, var(--color-primary) 22%, transparent); color: var(--color-text); }
+.alert-warning { background-color: var(--amber-bg); border-color: color-mix(in srgb, var(--amber) 35%, transparent); color: var(--color-text); }
 
 /* Bind Bootstrap's own dark palette to the app tokens so components we do not
    style explicitly (list groups, tables, dropdowns, modals) stay legible. */
@@ -784,7 +810,7 @@ body.sidebar-collapsed .main-content { margin-left: var(--sidebar-collapsed); }
 [data-theme="dark"] .text-muted,
 [data-theme="dark"] .text-body-secondary { color: var(--color-text-muted) !important; }
 [data-theme="dark"] .text-secondary { color: #b0b0b0 !important; }
-[data-theme="dark"] .text-primary { color: #67e8f9 !important; }
+[data-theme="dark"] .text-primary { color: var(--color-primary) !important; }
 [data-theme="dark"] .text-success { color: #4ade80 !important; }
 [data-theme="dark"] .text-info { color: #7dd3fc !important; }
 [data-theme="dark"] .text-warning { color: #fcd34d !important; }
