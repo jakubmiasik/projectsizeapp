@@ -587,8 +587,9 @@
       <label>Documentation %<input type="number" data-bind="settings.docPct"></label>
       <label>Contingency %<input type="number" data-bind="settings.riskPct" id="de3-riskPct"></label>
       </div>
-      <div class="checks"><label><input type="checkbox" data-bind="settings.envDev"> DEV</label><label><input type="checkbox" data-bind="settings.envTest"> TEST</label><label><input type="checkbox" data-bind="settings.envProd"> PROD</label><label><input type="checkbox" data-bind="settings.envOther"> OTHER</label>
-      <label><input type="checkbox" data-bind="settings.maturityAsMultiplier"> Apply maturity multiplier to delivery effort</label></div>
+      <div class="checks" id="de3-envChecks"><label><input type="checkbox" data-bind="settings.envDev"> DEV</label><label><input type="checkbox" data-bind="settings.envTest"> TEST</label><label><input type="checkbox" data-bind="settings.envProd"> PROD</label><label><input type="checkbox" data-bind="settings.envOther"> OTHER</label>
+      <span class="help hidden" id="de3-envNote">Release environments are not part of a Discovery &amp; Assessment engagement, so TEST, PROD and OTHER add no hours.</span></div>
+      <div class="checks"><label><input type="checkbox" data-bind="settings.maturityAsMultiplier"> Apply maturity multiplier to delivery effort</label></div>
       <div class="form-grid" style="margin-top:10px"><label>Platform foundation<select data-bind="foundation"><option value="none">Existing and validated</option><option value="basic">Basic setup</option><option value="production">Production foundation</option><option value="enterprise">Enterprise foundation</option></select></label>
       <label>Governance level<select data-bind="governance"><option value="none">Not included</option><option value="basic">Basic standards</option><option value="operational">Operational governance</option><option value="enterprise">Enterprise governance design</option></select></label>
       <label class="otherOnly">OTHER environment name<input data-bind="settings.otherName"></label>
@@ -600,6 +601,7 @@
       <label>Objects sampled<input type="number" data-bind="discovery.sampledObjects"><span class="help">Representative sample</span></label>
       <label>Legacy assets inventoried<input type="number" data-bind="discovery.inventoriedAssets"><span class="help">Full inventory with lineage; do not double count with samples.</span></label>
       <label>Processes sampled<input type="number" data-bind="discovery.sampledProcesses"></label><label>Reports assessed<input type="number" data-bind="discovery.assessedReports"></label>
+      <label>Semantic models assessed<input type="number" data-bind="discovery.assessedModels"><span class="help">Tables, measures, RLS and refresh.</span></label>
       <label>Architecture complexity<select data-bind="discovery.archComplexity"><option value="0.8">Low</option><option value="1">Medium</option><option value="1.35">High</option></select></label>
       <label>Security / governance assessment<select data-bind="discovery.assessSecurity"><option value="none">Excluded</option><option value="conceptual">Conceptual</option><option value="detailed">Detailed</option></select></label>
       <label>PoC validation<select data-bind="discovery.poc"><option value="none">No</option><option value="light">Light validation</option><option value="technical">Technical PoC</option></select></label></div></section>

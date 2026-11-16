@@ -31,6 +31,17 @@
 #detailed-estimation-view .card h3{font-size:.7rem;text-transform:uppercase;letter-spacing:.08em;color:var(--ink-soft);margin:16px 0 8px;font-weight:700}
 #detailed-estimation-view .sticky{position:sticky;top:12px}
 #detailed-estimation-view .form-grid{display:grid;grid-template-columns:repeat(4,minmax(130px,1fr));gap:12px}
+/* Each cell is label text, control and an optional help note. Without subgrid
+   every cell is its own block, so a label that wraps to two lines or a help
+   note that one neighbour lacks pushes that column out of step with the rest
+   of the row. Subgrid puts all three parts on shared rows, so controls and
+   notes line up across the row whatever the text length. */
+@supports (grid-template-rows: subgrid){
+  #detailed-estimation-view .form-grid > label{display:grid;grid-template-rows:subgrid;grid-row:span 3;row-gap:0;align-content:start}
+  #detailed-estimation-view .form-grid > label > .de-lab{align-self:start}
+  #detailed-estimation-view .form-grid > label > input,#detailed-estimation-view .form-grid > label > select,#detailed-estimation-view .form-grid > label > textarea{align-self:start}
+  #detailed-estimation-view .form-grid > label > .help{align-self:start;margin-top:4px}
+}
 #detailed-estimation-view .two{grid-template-columns:repeat(2,minmax(120px,1fr))}
 #detailed-estimation-view label{font-weight:600;color:var(--ink);font-size:.8rem}
 #detailed-estimation-view input,#detailed-estimation-view select,#detailed-estimation-view textarea{width:100%;margin-top:5px;border:1px solid var(--line);border-radius:6px;padding:8px 10px;background:var(--surface);color:var(--ink)}
@@ -145,6 +156,8 @@
 #detailed-estimation-view .checks{display:flex;gap:16px;flex-wrap:wrap;margin-top:8px}
 #detailed-estimation-view .checks label{display:flex;gap:7px;align-items:center;font-weight:600}
 #detailed-estimation-view .checks input{width:16px;height:16px;margin:0;accent-color:var(--primary)}
+#detailed-estimation-view .checks.disabled label{opacity:.55;cursor:not-allowed}
+#detailed-estimation-view .checks .help{flex-basis:100%;margin:0}
 #detailed-estimation-view .hidden{display:none!important}
 #detailed-estimation-view footer{margin-top:24px;color:var(--ink-soft);font-size:.76rem;text-align:center}
 @media(max-width:1100px){
