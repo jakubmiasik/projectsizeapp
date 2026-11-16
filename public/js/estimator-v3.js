@@ -17,6 +17,7 @@ const RATE_DEFS = [
  ['assetInventory','Discovery','Legacy asset inventoried (full lineage)','h / asset',0,0.65,'ePlus 500h / 626 SSIS packages + procedures = 0.8h incl. reverse-engineering factor 1.25'],
  ['procSample','Discovery','Process sampled','h / process',1.2,1.2,'v2.1 retained'],
  ['reportAssess','Discovery','Report assessed (usage, KPI criticality)','h / report',0.35,0.8,'ePlus 40h / 38 reports incl. KPI criticality and SLA'],
+ ['modelAssess','Discovery','Semantic model assessed (tables, measures, RLS, refresh)','h / model',3,4,'Dataset inventory: tables and relationships, measure count and complexity, RLS roles and refresh / gateway dependencies'],
  ['archBase','Discovery','Target architecture & design (x complexity)','h',32,40,'ePlus 72h (high complexity); Forteq 26h non-functional design'],
  ['secAssessConceptual','Discovery','Security assessment – conceptual','h',16,16,'v2.1 retained'],
  ['secAssessDetailed','Discovery','Security assessment – detailed','h',32,32,'v2.1 retained'],
@@ -131,6 +132,7 @@ function compute(s) {
     line(w, 'd.assets', 'Legacy assets inventoried (full lineage)', d.inventoriedAssets, R.assetInventory, docQ);
     line(w, 'd.processes', 'Processes sampled', d.sampledProcesses, R.procSample, docQ);
     line(w, 'd.reports', 'Reports assessed', d.assessedReports, R.reportAssess, docQ);
+    line(w, 'd.models', 'Semantic models assessed', d.assessedModels, R.modelAssess, docQ);
     line(w, 'd.arch', 'Target architecture & design', 1, R.archBase, n(d.archComplexity) * docQ, 'x complexity ' + d.archComplexity + ' x documentation ' + docQ);
     line(w, 'd.security', 'Security / governance assessment', 1, lv('assessSecurity', d.assessSecurity), docQ);
     line(w, 'd.poc', 'PoC validation', 1, lv('poc', d.poc), docQ);
@@ -193,6 +195,11 @@ function compute(s) {
         `(${R.reportBase} + ${extra} pages x ${R.reportPage}) x complexity ${r.complexity} x action ${r.action}`);
     });
   }
+  /* Release environments are a scope section of their own: a project type that
+     does not include them (an assessment, for instance) never adds a TEST, PROD
+     or OTHER work package, whatever the checkboxes happen to say. */
+  const envOn = s.show.env !== false;
+  const useTest = envOn && !!s.settings.envTest, useProd = envOn && !!s.settings.envProd, useOther = envOn && !!s.settings.envOther;
   if (s.show.ops) {
     const O = s.ops || {};
     const w = wp('quality', 'Quality & Operations', 'Reconciliation, security validation, orchestration, monitoring and governance');
@@ -203,14 +210,16 @@ function compute(s) {
     line(w, 'q.mon', 'Monitoring (' + O.monitoring + ')', 1, lv('monitoring', O.monitoring), 1);
     /* KT is a launch activity, so it lives under Production Launch & Hypercare.
        Without a PROD environment there is no such package, so it stays here. */
-    if (!s.settings.envProd) line(w, 'q.kt', 'Knowledge-transfer sessions', O.ktSessions, R.ktSession, 1);
+    if (!useProd) line(w, 'q.kt', 'Knowledge-transfer sessions', O.ktSessions, R.ktSession, 1);
     line(w, 'q.purview', 'Purview / catalogue (' + O.purview + ')', 1, lv('purview', O.purview), 1);
     line(w, 'q.gov', 'Governance (' + s.governance + ')', 1, lv('governance', s.governance), 1);
   }
   /* ---- additional activities (outside the predefined scope) ---- */
   const CUS = (s.custom || []).map((c, i) => Object.assign({i}, c));
   const cLine = (w, c) => { line(w, 'c.' + c.i, c.name || ('Additional activity ' + (c.i + 1)), c.qty, c.rate, 1, 'Additional activity · ' + n(c.qty) + ' × ' + n(c.rate) + ' h'); const l = w.lines[w.lines.length - 1]; l.custom = true; l.notes = String(c.notes || '').trim(); };
-  const later = [s.settings.envTest && 'uat', s.settings.envProd && 'prod', s.settings.envOther && 'other'].filter(Boolean);
+  /* Targets an additional activity can be attached to include the release
+     packages, which only exist when the environments section is in scope. */
+  const later = [useTest && 'uat', useProd && 'prod', useOther && 'other'].filter(Boolean);
   const valid = new Set(wps.map(w => w.key).concat(later));
   CUS.forEach(c => { c.target = (c.wp && c.wp !== 'new' && valid.has(c.wp)) ? c.wp : 'x:' + (String(c.group || '').trim() || 'Additional activities'); });
   wps.forEach(w => CUS.filter(c => c.target === w.key).forEach(c => cLine(w, c)));
@@ -221,7 +230,7 @@ function compute(s) {
   const addLater = w => CUS.filter(c => c.target === w.key).forEach(c => cLine(w, c));
   const build = wps.reduce((a, w) => a + w.hours, 0);
   const T = s.test || {}, P = s.prod || {};
-  if (s.settings.envTest) {
+  if (useTest) {
     const w = wp('uat', 'TEST Environment & UAT', 'TEST setup, UAT cycles, tester support, defect allowance and evidence');
     line(w, 'u.setup', 'TEST environment setup', 1, R.testSetup, 1);
     line(w, 'u.cycles', 'UAT cycles', T.uatCycles, R.uatCycle, 1);
@@ -230,7 +239,7 @@ function compute(s) {
     line(w, 'u.evidence', 'Test evidence pack', 1, R.testEvidence, 1);
     addLater(w);
   }
-  if (s.settings.envProd) {
+  if (useProd) {
     const w = wp('prod', 'Production Launch & Hypercare', 'PROD setup, deployment waves, cutover, parallel run, hypercare, knowledge transfer and decommissioning plan');
     line(w, 'pr.setup', 'PROD environment setup', 1, R.prodSetup, 1);
     line(w, 'pr.waves', 'Deployment waves', P.waves, R.prodWave, 1);
@@ -242,7 +251,7 @@ function compute(s) {
     line(w, 'pr.decom', 'Decommissioning plan', P.decommission ? 1 : 0, R.decommission, 1);
     addLater(w);
   }
-  if (s.settings.envOther) {
+  if (useOther) {
     const w = wp('other', s.settings.otherName || 'OTHER Environment', 'Additional environment setup, deployment and support');
     const m = n(s.settings.otherComplexity || 1);
     line(w, 'o.setup', 'Setup', 1, R.otherSetup, m);
@@ -278,13 +287,13 @@ function sourceName(s, idx) {
 if (typeof module !== 'undefined') module.exports = {compute, RATE_DEFS, DEFAULT_RATES, V21_RATES, LEVELS, MATURITY, BENCH, TSHIRT};
 
 /* ===== Presets ===== */
-const SHOW_ALL = {discovery: true, sources: true, transform: true, legacy: true, models: true, reports: true, ops: true};
+const SHOW_ALL = {discovery: true, sources: true, transform: true, legacy: true, models: true, reports: true, ops: true, env: true};
 function baseState(over) {
   return Object.assign({
     meta: {client: '', projectType: 'platformMigration', architecture: 'Medallion Lakehouse', notes: ''},
     settings: {docQ: 1.0, maturity: 'planning', maturityAsMultiplier: false, pmPct: 10, docPct: 10, riskPct: 15, envDev: true, envTest: true, envProd: true, envOther: false, otherName: 'Training / Pre-production', otherComplexity: 1, hoursPerWeek: 32},
     show: Object.assign({}, SHOW_ALL), foundation: 'production', governance: 'operational',
-    discovery: {workshops: 5, assessedSources: 4, sampledObjects: 0, inventoriedAssets: 0, sampledProcesses: 0, assessedReports: 0, archComplexity: 1, assessSecurity: 'detailed', poc: 'none'},
+    discovery: {workshops: 5, assessedSources: 4, sampledObjects: 0, inventoriedAssets: 0, sampledProcesses: 0, assessedReports: 0, assessedModels: 0, archComplexity: 1, assessSecurity: 'detailed', poc: 'none'},
     sources: [], transforms: [], legacy: {etlLow: 0, etlMed: 0, etlHigh: 0, spSimple: 0, spComplex: 0, views: 0, framework: 1, retirement: 0},
     gold: {dimensions: 0, facts: 0, businessRules: 0, consumptionViews: 0, complexity: 1}, models: [], reports: [],
     ops: {reconcileObjects: 0, validateMeasures: 0, securityTests: 0, schedules: 2, monitoring: 'basic', ktSessions: 2, purview: 'none'},
@@ -477,16 +486,17 @@ if (typeof module !== 'undefined') module.exports = {renderSources, renderTransf
 /* ===== App glue ===== */
 const TYPES = {
   discovery: {name: 'Discovery & Assessment', show: ['discovery']},
-  pov: {name: 'Proof of Value / Pilot', show: ['discovery', 'sources', 'transform', 'models', 'ops']},
-  greenfield: {name: 'Greenfield Fabric Implementation', show: ['discovery', 'sources', 'transform', 'models', 'reports', 'ops']},
-  platformMigration: {name: 'Data Platform Migration / Rebuild', show: ['discovery', 'sources', 'transform', 'legacy', 'models', 'reports', 'ops']},
-  biMigration: {name: 'BI / Reporting Migration', show: ['discovery', 'sources', 'models', 'reports', 'ops']},
-  hybrid: {name: 'Discovery + Conditional Deployment', show: ['discovery', 'sources', 'transform', 'legacy', 'models', 'reports', 'ops']},
+  pov: {name: 'Proof of Value / Pilot', show: ['discovery', 'sources', 'transform', 'models', 'ops', 'env']},
+  greenfield: {name: 'Greenfield Fabric Implementation', show: ['discovery', 'sources', 'transform', 'models', 'reports', 'ops', 'env']},
+  platformMigration: {name: 'Data Platform Migration / Rebuild', show: ['discovery', 'sources', 'transform', 'legacy', 'models', 'reports', 'ops', 'env']},
+  biMigration: {name: 'BI / Reporting Migration', show: ['discovery', 'sources', 'models', 'reports', 'ops', 'env']},
+  hybrid: {name: 'Discovery + Conditional Deployment', show: ['discovery', 'sources', 'transform', 'legacy', 'models', 'reports', 'ops', 'env']},
 };
 /* The scope sections a project type can include. Each type's built-in list is
    the fallback; an administrator can recalibrate it in Admin → Calibration. */
 const SECTIONS = [['discovery', 'B · Discovery and assessment'], ['sources', 'C · Sources and ingestion'], ['transform', 'D · Transformation layer'], ['legacy', 'E · Legacy migration estate'],
-  ['models', 'F · Gold, semantic models and security'], ['reports', 'G · Reporting portfolio'], ['ops', 'H · Quality, operations and release']];
+  ['models', 'F · Gold, semantic models and security'], ['reports', 'G · Reporting portfolio'], ['ops', 'H · Quality, operations and release'],
+  ['env', 'A · Environments (TEST / PROD / OTHER)']];
 let ORG_TYPES = {};
 function typeSections(k) {
   const key = TYPES[k] ? k : 'platformMigration';
@@ -548,6 +558,7 @@ const INFO = {
   'discovery.inventoriedAssets': 'Full inventory of legacy assets (packages, procedures, jobs) with lineage. {assetInventory} h each × documentation quality.',
   'discovery.sampledProcesses': 'Business processes walked through end to end. {procSample} h each × documentation quality.',
   'discovery.assessedReports': 'Existing reports reviewed for usage and KPI criticality. {reportAssess} h each × documentation quality.',
+  'discovery.assessedModels': 'Existing semantic models reviewed: tables and relationships, measure count and complexity, RLS roles, refresh and gateway dependencies. {modelAssess} h each × documentation quality.',
   'discovery.archComplexity': {t: 'Multiplies the target architecture & design effort ({archBase} h base).', cx: 'arch'},
   'discovery.assessSecurity': 'Security and governance assessment. Conceptual {secAssessConceptual} h: access model on paper. Detailed {secAssessDetailed} h: RLS / OLS rules, groups and data classification.',
   'discovery.poc': 'Proof of concept before the build is committed. Light {pocLight} h: validate one pattern. Technical {pocTechnical} h: a working end-to-end slice.',
@@ -638,6 +649,21 @@ function addInfoIcons() {
     if (t) t.after(document.createRange().createContextualFragment(icon(f.dataset.bind)));
   });
   qsa('[data-info]').forEach(el => { if (INFO[el.dataset.info] && !el.querySelector('.de-info')) el.insertAdjacentHTML('beforeend', icon(el.dataset.info)); });
+}
+/* A form-grid cell is a caption, a control and sometimes a note. Wrapping the
+   caption (label text plus its info icon) in one element gives every cell the
+   same three-part shape, which is what lets CSS subgrid line the controls and
+   notes up across a row however long the captions are. */
+function groupLabelText() {
+  qsa('.form-grid > label').forEach(lb => {
+    if (lb.querySelector(':scope > .de-lab')) return;
+    const ctrl = [...lb.children].find(c => c.tagName === 'INPUT' || c.tagName === 'SELECT' || c.tagName === 'TEXTAREA');
+    if (!ctrl) return;
+    const cap = document.createElement('span');
+    cap.className = 'de-lab';
+    while (lb.firstChild && lb.firstChild !== ctrl) cap.appendChild(lb.firstChild);
+    lb.insertBefore(cap, ctrl);
+  });
 }
 let TIP = null;
 function showTip(ic) {
@@ -784,12 +810,23 @@ function writeVal(el, v) {
 function bindStatic() { qsa('[data-bind]').forEach(el => { if (!el.closest('#de3-sourceRows,#de3-transformRows,#de3-modelRows,#de3-reportRows,#de3-teamRows,#de3-customRows')) writeVal(el, getPath(S, el.dataset.bind)); }); }
 function applyVisibility() {
   const show = typeSections(S.meta.projectType);
-  S.show = {discovery: false, sources: false, transform: false, legacy: false, models: false, reports: false, ops: false};
+  S.show = {discovery: false, sources: false, transform: false, legacy: false, models: false, reports: false, ops: false, env: false};
   show.forEach(k => { S.show[k] = true; });
   qsa('[data-show]').forEach(c => c.classList.toggle('hidden', !S.show[c.dataset.show]));
-  qsa('.testOnly').forEach(c => c.classList.toggle('hidden', !S.settings.envTest));
-  qsa('.prodOnly').forEach(c => c.classList.toggle('hidden', !S.settings.envProd));
-  qsa('.otherOnly').forEach(c => c.classList.toggle('hidden', !S.settings.envOther));
+  /* Environments stay on screen when the project type excludes them, but are
+     disabled and explained, so nobody wonders where they went. applyReadOnly()
+     only re-enables what it disabled itself, so the two cannot fight. */
+  const env = S.show.env;
+  const envBox = $('de3-envChecks');
+  if (envBox) {
+    envBox.classList.toggle('disabled', !env);
+    qsa('#de3-envChecks input').forEach(el => { if (!env) { el.disabled = true; } else if (!el.dataset.roDisabled) { el.disabled = false; } });
+  }
+  const note = $('de3-envNote');
+  if (note) note.classList.toggle('hidden', env);
+  qsa('.testOnly').forEach(c => c.classList.toggle('hidden', !(env && S.settings.envTest)));
+  qsa('.prodOnly').forEach(c => c.classList.toggle('hidden', !(env && S.settings.envProd)));
+  qsa('.otherOnly').forEach(c => c.classList.toggle('hidden', !(env && S.settings.envOther)));
 }
 function renderTables() {
   $('de3-sourceRows').innerHTML = renderSources(S); $('de3-transformRows').innerHTML = renderTransforms(S); $('de3-modelRows').innerHTML = renderModels(S); $('de3-reportRows').innerHTML = renderReports(S); $('de3-teamRows').innerHTML = renderTeam(S, RES);
@@ -856,6 +893,7 @@ function init(rootEl) {
   if (!ROOT) return;
   $('de3-projectType').innerHTML = Object.entries(TYPES).map(([k, t]) => `<option value="${k}">${t.name}</option>`).join('');
   addInfoIcons();
+  groupLabelText();
   TIP = document.createElement('div'); TIP.className = 'de-tip'; TIP.setAttribute('role', 'tooltip'); TIP.hidden = true; ROOT.appendChild(TIP);
   const tipOn = e => { const ic = e.target.closest && e.target.closest('.de-info'); if (ic) showTip(ic); };
   const tipOff = e => { if (e.target.closest && e.target.closest('.de-info')) hideTip(); };
