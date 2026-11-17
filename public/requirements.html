@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="app-loading">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Requirements Generator</title>
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%230c7c59'/%3E%3Ctext x='32' y='42' text-anchor='middle' font-size='30' font-family='Arial' fill='white'%3ER%3C/text%3E%3C/svg%3E" />
+  <link rel="icon" type="image/svg+xml" href="/images/app-icon.svg" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" />
@@ -913,7 +913,15 @@
   </style>
 </head>
 <body>
-  <div class="app-layout">
+  <div id="app-loading-overlay" class="app-loading-overlay" role="dialog" aria-modal="true" aria-labelledby="app-loading-title" tabindex="-1">
+    <div class="app-loading-dialog">
+      <span id="app-loading-spinner" class="app-loading-spinner" aria-hidden="true"></span>
+      <h2 id="app-loading-title">Loading</h2>
+      <p id="app-loading-message" role="status">Loading requirements...</p>
+      <button id="app-loading-retry" type="button" class="btn" hidden>Reload page</button>
+    </div>
+  </div>
+  <div class="app-layout" inert aria-busy="true">
     <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
     <aside class="sidebar" id="appSidebar"></aside>
 
@@ -3177,29 +3185,35 @@ ${orderedSectionsHtml}
         steps: ['detailed', 'requirements']
       });
     }
-    loadShellUser();
-
     async function loadShellUser() {
-      try {
-        const resp = await fetch('/api/user');
-        if (resp.status === 401 || resp.status === 403) {
-          window.location.replace('/access-blocked.html');
-          return;
-        }
-        if (!resp.ok) return;
-        const user = await resp.json();
-        AppShell.setUser({ name: user.name, email: user.email });
-      } catch (err) {
-        // Signed-out or offline: the sidebar keeps its Sign In entry.
+      const resp = await fetch('/api/user');
+      if (resp.status === 401 || resp.status === 403) {
+        window.location.replace(resp.status === 401 ? '/' : '/access-blocked.html');
+        return false;
       }
+      if (!resp.ok) throw new Error('Unable to verify your access. Reload the page to try again.');
+      const user = await resp.json();
+      AppShell.setUser({ name: user.name, email: user.email });
+      return true;
     }
 
     initStaticEditors();
     attachEvents();
     applyMetaToPage();
-    loadRemoteData();
     initCompletionChecklist();
-    fetchEstimationSummary();
+    (async function initRequirements() {
+      let authenticated = false;
+      try {
+        authenticated = await loadShellUser();
+        if (!authenticated) return;
+        await Promise.all([loadRemoteData(), fetchEstimationSummary()]);
+      } catch (err) {
+        console.error('Requirements loading failed:', err);
+        AppShell.showLoadingError('The page could not be loaded. Reload the page to try again.');
+      } finally {
+        if (authenticated) AppShell.finishInitialLoading();
+      }
+    })();
 
     async function fetchEstimationSummary() {
       if (!appMeta.estimationId) return;

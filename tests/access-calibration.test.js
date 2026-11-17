@@ -18,15 +18,26 @@ before(async () => {
 });
 after(() => child?.kill());
 
-test('unapproved accounts get the maintenance page on every document entry and no API access', async () => {
-  for (const role of [null, 'unapproved', 'invalid']) {
+test('signed-out visitors get the normal landing document but no API access', async () => {
+  for (const url of ['/', '/index.html', '/requirements.html', '/unknown-workspace']) {
+    const response = await fetch(base + url);
+    assert.equal(response.status, 200);
+    const html = await response.text();
+    assert.match(html, /id="landing-section"/);
+    assert.doesNotMatch(html, /<title>Access blocked/);
+  }
+  assert.equal((await fetch(base + '/api/rate-defaults')).status, 401);
+});
+
+test('signed-in unapproved accounts get the maintenance page and no API access', async () => {
+  for (const role of ['unapproved', 'invalid']) {
     for (const url of ['/', '/index.html', '/requirements.html', '/unknown-workspace']) {
       const response = await fetch(base + url, {headers: headers(role)});
-      assert.equal(response.status, role ? 403 : 200);
+      assert.equal(response.status, 403);
       assert.match(await response.text(), /Page under maintenance/);
     }
     const response = await fetch(base + '/api/rate-defaults', {headers: headers(role)});
-    assert.equal(response.status, role ? 403 : 401);
+    assert.equal(response.status, 403);
   }
 });
 
@@ -58,6 +69,24 @@ test('only admin can persist recipes; invalid writes do not replace the saved re
   assert.match((await response.json()).error, /cycle/);
   response = await put('admin', {rates: {modelAssess: 7}});
   assert.equal((await response.json()).sizing.pmPercent, 17, 'older clients preserve the sizing recipe');
+});
+
+test('sharing requires prior administrator approval and never provisions access', async () => {
+  for (const role of ['admin', 'explorer']) {
+    const share = email => fetch(base + '/api/estimations/test-group/share', {
+      method: 'POST', headers: {...headers(role), 'Content-Type': 'application/json'}, body: JSON.stringify({email})
+    });
+    for (const recipient of ['unapproved@test.local', 'invalid@test.local']) {
+      const response = await share(recipient);
+      assert.equal(response.status, 403);
+      assert.match((await response.json()).error, /administrator must add/);
+    }
+    const approvedRecipient = role === 'admin' ? 'explorer@test.local' : 'admin@test.local';
+    const response = await share(approvedRecipient);
+    assert.equal(response.status, 201);
+    assert.equal((await response.json()).email, approvedRecipient);
+  }
+  assert.equal((await fetch(base + '/api/user', {headers: headers('unapproved')})).status, 403);
 });
 
 test('empty access list never grants implicit Explorer access', async () => {

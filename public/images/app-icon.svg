@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024" role="img" aria-labelledby="title">
+  <title id="title">Project estimator app icon</title>
+  <defs>
+    <linearGradient id="mint" x2="100%" y2="100%">
+      <stop stop-color="#CEF9E3"/>
+      <stop offset="1" stop-color="#A0FAC6"/>
+    </linearGradient>
+    <linearGradient id="display" x2="100%" y2="100%">
+      <stop stop-color="#D5FBE7"/>
+      <stop offset="1" stop-color="#BAF8D4"/>
+    </linearGradient>
+  </defs>
+  <rect width="1024" height="1024" fill="url(#mint)"/>
+  <rect x="202" y="182" width="621" height="683" rx="123" fill="#064F21"/>
+  <rect x="278" y="262" width="468" height="309" rx="52" fill="url(#display)"/>
+  <g fill="#064F21">
+    <rect x="334" y="434" width="101" height="89" rx="18"/>
+    <rect x="462" y="380" width="101" height="143" rx="18"/>
+    <rect x="590" y="317" width="101" height="206" rx="18"/>
+  </g>
+  <g fill="url(#display)">
+    <rect x="296" y="632" width="185" height="150" rx="39"/>
+    <rect x="544" y="632" width="185" height="150" rx="39"/>
+  </g>
+</svg>

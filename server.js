@@ -25,7 +25,7 @@ app.use(express.json({ limit: '25mb' }));
 // Gate document entry points too, not just data APIs. Static assets remain public.
 async function gateWorkspace(req, res, next) {
   const user = getUser(req);
-  if (!user) return res.sendFile(path.join(__dirname, 'public', 'access-blocked.html'));
+  if (!user) return res.sendFile(path.join(__dirname, 'public', 'index.html'));
   try {
     const access = await resolveUserAccess(user);
     if (access.role) return next();
@@ -476,20 +476,11 @@ app.post('/api/estimations/:groupId/share', requireAuth, async (req, res) => {
       return res.status(400).json({ error: 'You cannot share an estimation with yourself' });
     }
 
-    // People now come from the Entra directory, so the recipient often has no
-    // app_users row yet. Provision them as an explorer so the share is usable
-    // the moment they sign in, rather than failing with "User not found".
-    let targetUser = await db.getAppUserByEmail(email);
-    if (!targetUser) {
-      const displayName = String(req.body?.displayName || '').trim();
-      try {
-        targetUser = await db.addAppUser({ email, displayName, role: 'explorer' });
-      } catch (err) {
-        // A concurrent share of the same person loses the insert race; the row
-        // it wanted now exists, which is all this needs.
-        targetUser = await db.getAppUserByEmail(email);
-        if (!targetUser) throw err;
-      }
+    const targetUser = await db.getAppUserByEmail(email);
+    if (!targetUser || !isValidRole(targetUser.role)) {
+      return res.status(403).json({
+        error: 'An administrator must add this person as an Admin or Explorer in Manage Access before you can share with them.'
+      });
     }
 
     const share = await db.shareEstimation(req.params.groupId, req.user.oid, req.user.name, targetUser.email);

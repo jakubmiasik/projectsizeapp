@@ -11,6 +11,13 @@ const db = {
   getRateDefaults: async () => structuredClone(stored),
   listAppUsers: async () => [],
   listAllEstimations: async () => [],
+  listEstimationVersions: async () => [{id: 'test-group'}],
+  getAppUserByEmail: async email => {
+    const user = await db.getUserRole(email);
+    return user ? {...user, email} : null;
+  },
+  addAppUser: async () => { throw new Error('Sharing must not provision app access'); },
+  shareEstimation: async (_groupId, _oid, _name, email) => ({email}),
   saveRateDefaults: async (rates, meta, projectTypes, sizing) => {
     stored = {rates, projectTypes: projectTypes || stored.projectTypes,
       sizing: sizing === undefined ? stored.sizing : sizing, updatedBy: meta.userName};

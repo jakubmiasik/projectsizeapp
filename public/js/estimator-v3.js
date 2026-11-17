@@ -11,24 +11,24 @@
 /* ===== Fabric Project Estimator v3 – calculation engine (pure, no DOM) ===== */
 const RATE_DEFS = [
  // key, group, label, unit, v21, hist, basis
- ['workshop','Discovery','Workshop (prep, run, write-up)','h / workshop',6,6,'v2.1 retained; ePlus up to 6 workshops within 40h business discovery'],
+ ['workshop','Discovery','Workshop (prep, run, write-up)','h / workshop',6,6,'v2.1 retained, ePlus up to 6 workshops within 40h business discovery'],
  ['srcAssess','Discovery','Source system assessed','h / source',3,5,'ePlus source & connectivity assessment 20h / 4 sources'],
  ['objSample','Discovery','Object sampled (representative)','h / object',0.18,0.18,'v2.1 retained (sample-based)'],
  ['assetInventory','Discovery','Legacy asset inventoried (full lineage)','h / asset',0,0.65,'ePlus 500h / 626 SSIS packages + procedures = 0.8h incl. reverse-engineering factor 1.25'],
  ['procSample','Discovery','Process sampled','h / process',1.2,1.2,'v2.1 retained'],
  ['reportAssess','Discovery','Report assessed (usage, KPI criticality)','h / report',0.35,0.8,'ePlus 40h / 38 reports incl. KPI criticality and SLA'],
  ['modelAssess','Discovery','Semantic model assessed (tables, measures, RLS, refresh)','h / model',3,4,'Dataset inventory: tables and relationships, measure count and complexity, RLS roles and refresh / gateway dependencies'],
- ['archBase','Discovery','Target architecture & design (x complexity)','h',32,40,'ePlus 72h (high complexity); Forteq 26h non-functional design'],
+ ['archBase','Discovery','Target architecture & design (x complexity)','h',32,40,'ePlus 72h (high complexity), Forteq 26h non-functional design'],
  ['secAssessConceptual','Discovery','Security assessment – conceptual','h',16,16,'v2.1 retained'],
  ['secAssessDetailed','Discovery','Security assessment – detailed','h',32,32,'v2.1 retained'],
  ['pocLight','Discovery','PoC validation – light','h',32,32,'v2.1 retained'],
- ['pocTechnical','Discovery','PoC validation – technical','h',64,64,'v2.1 retained; DB PoVs 60–125h'],
+ ['pocTechnical','Discovery','PoC validation – technical','h',64,64,'v2.1 retained, DB PoVs 60–125h'],
  ['foundationBasic','Platform','Foundation – basic setup','h',24,24,'ePlus platform setup 24h'],
  ['foundationProduction','Platform','Foundation – production (envs, Git, metadata framework)','h',60,84,'ePlus platform 24h + metadata framework 60h'],
  ['foundationEnterprise','Platform','Foundation – enterprise','h',100,116,'Energy Saving Trust platform foundation 116h'],
- ['srcConnector','Ingestion','Source connector (x connectivity)','h / source',12,12,'v2.1 retained; ePlus 16h/source (ODBC/SFTP), KB calibration 1–8h'],
- ['ingestObj','Ingestion','Ingestion object (x connectivity x load)','h / object',1.2,1.0,'ePlus 156h / 225 objects with metadata framework (0.7h); Forteq ~2.3h'],
- ['transformObj','Transformation','Transformation (x type x complexity)','h / transformation',2,2,'Medium-complexity Silver-layer transformation (notebook / dataflow incl. unit test); new in v3'],
+ ['srcConnector','Ingestion','Source connector (x connectivity)','h / source',12,12,'v2.1 retained, ePlus 16h/source (ODBC/SFTP), KB calibration 1–8h'],
+ ['ingestObj','Ingestion','Ingestion object (x connectivity x load)','h / object',1.2,1.0,'ePlus 156h / 225 objects with metadata framework (0.7h), Forteq ~2.3h'],
+ ['transformObj','Transformation','Transformation (x type x complexity)','h / transformation',2,2,'Medium-complexity Silver-layer transformation (notebook / dataflow incl. unit test), new in v3'],
  ['etlLow','Legacy','Low-complexity ETL asset','h / asset',0.8,0.8,'ePlus 150h / 200 key-mapping packages (0.75h)'],
  ['etlMed','Legacy','Medium ETL asset','h / asset',2.2,2.0,'ePlus 400h / 200 fact/dimension packages'],
  ['etlHigh','Legacy','High ETL / controller','h / asset',7,7,'v2.1 retained'],
@@ -40,23 +40,23 @@ const RATE_DEFS = [
  ['businessRule','Gold','Complex business rule','h / rule',12,12,'v2.1 retained'],
  ['consumptionView','Gold','Consumption view','h / view',0.8,0.5,'ePlus 70h / 137 views'],
  ['smBase','Semantic','Semantic model base','h / model',24,16,'KB hrsPerSemanticModel median 16 (Forteq 16, EST 16, ePlus 10, Ali 24)'],
- ['smTable','Semantic','Model table','h / table',1.1,1.1,'v2.1 retained; ePlus 120h for 50 tables / 440 measures'],
+ ['smTable','Semantic','Model table','h / table',1.1,1.1,'v2.1 retained, ePlus 120h for 50 tables / 440 measures'],
  ['smMeasureMig','Semantic','Migrated measure (DAX reused)','h / measure',0.22,0.22,'ePlus measures reused largely as-is'],
- ['smMeasureNew','Semantic','New measure / KPI (DAX authored)','h / measure',0.22,1,'Forteq 1h/KPI (back-test fit); KB hrsPerKpi range 1–3'],
+ ['smMeasureNew','Semantic','New measure / KPI (DAX authored)','h / measure',0.22,1,'Forteq 1h/KPI (back-test fit), KB hrsPerKpi range 1–3'],
  ['smCalc','Semantic','Calculation object','h / object',1.5,1.5,'v2.1 retained'],
  ['secStatic','Semantic','Security – static RLS','h / model',16,16,'v2.1 retained'],
  ['secDynamic','Semantic','Security – dynamic RLS','h / model',40,40,'v2.1 retained'],
  ['secHierarchy','Semantic','Security – hierarchy / OLS / CLS','h / model',64,60,'ePlus dynamic RLS 8-level hierarchy 60h'],
  ['reportBase','Reports','Report base','h / report',5,12,'KB hrsPerReport median 12 (ePlus 12, Ali 16, EST 16, Forteq 10)'],
  ['reportPage','Reports','Additional page','h / page',1.2,3,'KB tab impact ~30% of report base'],
- ['reconcileObj','Quality','Object reconciled','h / object',0.45,0.25,'ePlus 60h reconciliation framework / 366 objects (0.16h); higher on small scopes (Forteq)'],
+ ['reconcileObj','Quality','Object reconciled','h / object',0.45,0.25,'ePlus 60h reconciliation framework / 366 objects (0.16h), higher on small scopes (Forteq)'],
  ['measureValidate','Quality','Measure validated (parity)','h / measure',0.12,0.08,'ePlus 40h / 540 measures'],
- ['securityTest','Quality','Security scenario tested','h / scenario',2,2,'v2.1 retained; ePlus 20h security testing'],
+ ['securityTest','Quality','Security scenario tested','h / scenario',2,2,'v2.1 retained, ePlus 20h security testing'],
  ['schedule','Quality','Schedule / orchestration','h / schedule',4,6,'ePlus orchestration 24h / 4 SQL Agent jobs'],
  ['monitoringBasic','Quality','Monitoring – basic alerts','h',16,10,'ePlus failure notifications'],
  ['monitoringDashboard','Quality','Monitoring – dashboard + alerts','h',32,20,'ePlus monitoring & alerting 20h'],
  ['monitoringFramework','Quality','Monitoring – operational framework','h',56,44,'ePlus orchestration & monitoring WP 44h'],
- ['ktSession','Production','Knowledge-transfer session','h / session',6,6,'v2.1 retained; ePlus KT 24h'],
+ ['ktSession','Production','Knowledge-transfer session','h / session',6,6,'v2.1 retained, ePlus KT 24h'],
  ['purviewScan','Quality','Purview – workspace scan','h',16,16,'v2.1 retained'],
  ['purviewLineage','Quality','Purview – scan + lineage','h',40,40,'Milwaukee scanning + lineage 40h'],
  ['purviewIntegration','Quality','Purview – governance integration','h',72,74,'Milwaukee Purview governance scope 74h'],
@@ -468,7 +468,7 @@ function renderBreakdown(res) {
   return res.wps.map(w => `<details class="wp" open style="--wp:${w.custom ? '#c026d3' : (WP_COLORS[w.key] || '#4a6b5c')}"><summary><span>${esc(w.name)}</span><span class="pill strong">${fmt(w.hours, 1)} h</span></summary><p class="small">${esc(w.desc)}</p>
     <table class="grid"><thead><tr><th>Activity</th><th class="r">Qty</th><th class="r">Rate (h)</th><th class="r">Multiplier</th><th class="r">Calculated</th><th class="r">Override h</th><th class="r">Final</th></tr></thead><tbody>
     ${w.lines.map(l => `<tr class="${l.overridden ? 'ovr' : ''}${l.calc === 0 && !l.overridden ? ' zero' : ''}"><td>${esc(l.label)}${l.custom ? ' <i class="badge add">Additional</i>' : ''}${l.formula ? `<div class="small">${esc(l.formula)}</div>` : ''}${l.notes ? `<div class="small l-notes">${esc(l.notes)}</div>` : ''}</td><td class="r">${fmt(l.qty, l.qty % 1 ? 1 : 0)}</td><td class="r">${fmt(l.rate, 2)}</td><td class="r">${fmt(l.mult, 2)}</td><td class="r">${fmt(l.calc, 1)}</td><td class="r"><input class="ov" type="number" step="0.5" data-ov="${esc(l.id)}" value="${l.overridden ? esc(l.hours) : ''}" placeholder="auto"></td><td class="r"><b>${fmt(l.final, 1)}</b></td></tr>`).join('')}
-    </tbody></table></details>`).join('') + `<p class="small">Type hours in <b>Override h</b> to fix any activity; leave blank to use the calculated value. Overridden lines are highlighted.</p>`;
+    </tbody></table></details>`).join('') + `<p class="small">Type hours in <b>Override h</b> to fix any activity, leave blank to use the calculated value. Overridden lines are highlighted.</p>`;
 }
 /* A changed rate asks for a justification. The field is always rendered and
    only shown on changed rows, so typing a rate never rebuilds the table. */
@@ -508,7 +508,7 @@ function typeSections(k) {
    numbers follow the calibration. `cx` lists the levels of a complexity-type
    input from CX below. */
 const CX = {
-  docQ: ['Documentation quality', [['Good', '×1.00', 'Up-to-date design docs, data dictionary and lineage exist; owners can answer questions.'], ['Partial', '×1.10', 'A gap workbook or partial specs exist, but key definitions conflict or are missing.'], ['Limited / reverse-engineering', '×1.25', 'Logic lives only in code (SSIS, procedures, Cognos); it has to be read to be understood.']]],
+  docQ: ['Documentation quality', [['Good', '×1.00', 'Up-to-date design docs, data dictionary and lineage exist, owners can answer questions.'], ['Partial', '×1.10', 'A gap workbook or partial specs exist, but key definitions conflict or are missing.'], ['Limited / reverse-engineering', '×1.25', 'Logic lives only in code (SSIS, procedures, Cognos), it has to be read to be understood.']]],
   arch: ['Architecture complexity', [['Low', '×0.8', 'One source family, standard medallion lakehouse, no special security or latency needs.'], ['Medium', '×1.0', 'Several sources and a few integration patterns, an existing platform to extend.'], ['High', '×1.35', 'Many sources, hybrid lakehouse / warehouse or near-real-time, several domains, strict regulatory constraints.']]],
   connect: ['Connectivity', [['Native / simple', '×0.8', 'Fabric shortcut, mirroring, Azure SQL, Dataverse.'], ['Standard gateway', '×1.0', 'On-premises SQL Server or Oracle through the data gateway / self-hosted IR.'], ['API / ODBC / files', '×1.35', 'REST APIs, ODBC, SFTP, CSV / Excel / TXT drops.'], ['Custom / constrained', '×1.7', 'SAP, mainframe, throttled or paged APIs, VPN-only access, custom views nobody owns.']]],
   load: ['Load pattern', [['Full load', '×0.8', 'Small reference tables reloaded every run.'], ['Incremental', '×1.0', 'Watermark or CDC on a modified date / key.'], ['History + incremental', '×1.25', 'Years of history backfilled once, then daily deltas.'], ['Near-real-time', '×1.6', 'Eventstreams or frequent micro-batches, minutes of latency.']]],
@@ -524,15 +524,15 @@ const CX = {
 };
 const INFO = {
   'sec.endorse': 'Where the estimate stands. Draft while it is worked on, Proposed when it is submitted for endorsement, Final once endorsed – a Final estimate is locked. Each step records who moved it, when and an optional comment. No effect on hours.',
-  'sec.strategy': 'How the engagement is framed. Project type decides which sections below are included; maturity, documentation quality and the PM / documentation / contingency percentages scale the whole estimate.',
+  'sec.strategy': 'How the engagement is framed. Project type decides which sections below are included, maturity, documentation quality and the PM / documentation / contingency percentages scale the whole estimate.',
   'sec.discovery': 'Effort to understand the current estate and design the target before building. Hours mostly scale with documentation quality.',
   'sec.sources': 'One row per source system or group of similar sources. Each row costs one connector plus an amount per object, both scaled by connectivity and load pattern.',
   'sec.transform': 'Logic between ingestion and Gold. Hours = transformations × {transformObj} h × type × complexity.',
-  'sec.legacy': 'Existing ETL, procedures and views that have to be rebuilt on the new platform. Retired assets and a reusable framework reduce the hours; poor documentation increases them.',
+  'sec.legacy': 'Existing ETL, procedures and views that have to be rebuilt on the new platform. Retired assets and a reusable framework reduce the hours, poor documentation increases them.',
   'sec.models': 'Curated facts and dimensions, business rules and the Power BI semantic models with their security.',
   'sec.reports': 'Reports grouped by technology or kind. Hours per report = base + extra pages, scaled by complexity and by what has to happen to the report.',
   'sec.ops': 'Testing, operations and release: reconciliation, security tests, schedules, monitoring, KT, catalogue, UAT and the production launch.',
-  'sec.custom': 'Anything the sections above do not cover. Hours = quantity × hours per unit; they count as delivery effort, so PM, documentation and contingency apply.',
+  'sec.custom': 'Anything the sections above do not cover. Hours = quantity × hours per unit, they count as delivery effort, so PM, documentation and contingency apply.',
   'sec.team': 'Who delivers the work. FTE does not change total hours – it decides how long the timeline is and how hours split between roles.',
   'meta.client': 'The opportunity this estimate belongs to. It comes from Client Name on the sizing page and follows it, so it cannot be changed here. No effect on hours.',
   'meta.projectType': 'The kind of engagement. It decides which scope sections (B–H) are included – sections that are left out add no hours. Administrators set the sections per type in Admin → Calibration.',
@@ -541,7 +541,7 @@ const INFO = {
   'settings.docQ': {t: 'How well the current estate is documented. Multiplies Discovery and Legacy rebuild hours.', cx: 'docQ'},
   'settings.pmPct': 'Project management as a percentage of delivery effort, added on top of it.',
   'settings.docPct': 'Documentation (design, runbooks, hand-over) as a percentage of delivery effort, added on top of it.',
-  'settings.riskPct': 'Contingency as a percentage of delivery effort, added on top of it. Estimate maturity sets it; you can type your own value.',
+  'settings.riskPct': 'Contingency as a percentage of delivery effort, added on top of it. Estimate maturity sets it, you can type your own value.',
   'settings.envDev': 'Development environment. It is where the build happens, so it adds no separate hours.',
   'settings.envTest': 'Adds the TEST Environment & UAT work package: setup {testSetup} h, {uatCycle} h per UAT cycle, {uatTester} h per tester, a {uatDefectPct}% defect allowance on build hours and a {testEvidence} h evidence pack.',
   'settings.envProd': 'Adds Production Launch & Hypercare: PROD setup, deployment waves, cutover, parallel run, hypercare, knowledge transfer and the decommissioning plan.',
@@ -613,7 +613,7 @@ const INFO = {
   'custom.wp': 'Add the hours to an existing work package (its bar grows) or give the activity its own bar on the timeline.',
   'custom.qty': 'How many units of the activity.',
   'custom.rate': 'Hours per unit. Hours = quantity × hours per unit.',
-  'settings.hoursPerWeek': 'Productive hours one FTE delivers per week – 32 h means 80% utilisation. Lower values make the timeline longer; total hours do not change.',
+  'settings.hoursPerWeek': 'Productive hours one FTE delivers per week – 32 h means 80% utilisation. Lower values make the timeline longer, total hours do not change.',
   'team.role': 'A role on the delivery team.',
   'team.fte': 'Share of a full-time person on the project. The sum of FTE sets the team capacity on the timeline.',
 };
@@ -1124,7 +1124,7 @@ function initColumnResize() {
 const STAGES = {
   draft: {label: 'Draft', desc: 'Being worked on. Numbers can change at any time.'},
   proposed: {label: 'Proposed', desc: 'Submitted for endorsement. Still editable, so review comments can be applied.'},
-  final: {label: 'Final', desc: 'Endorsed. The estimate is locked; move it back to Draft to change anything.'},
+  final: {label: 'Final', desc: 'Endorsed. The estimate is locked, move it back to Draft to change anything.'},
 };
 const STAGE_ACTIONS = {draft: [['proposed', 'Propose for endorsement', 'primary']], proposed: [['final', 'Endorse as Final', 'primary'], ['draft', 'Back to Draft', 'ghost']], final: [['draft', 'Reopen as Draft', 'ghost']]};
 let CURRENT_USER = null;

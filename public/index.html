@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="light">
+<html lang="en" data-theme="light" class="app-loading">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Fabric Project Sizing</title>
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%230c7c59'/%3E%3Ctext x='32' y='42' text-anchor='middle' font-size='28' font-family='Arial' fill='white'%3EF%3C/text%3E%3C/svg%3E" />
+  <link rel="icon" type="image/svg+xml" href="/images/app-icon.svg" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" />
@@ -236,6 +236,7 @@
     .header-notice{padding:.2rem .6rem;border-radius:999px;background:var(--color-primary-soft);color:var(--color-primary-strong);font-weight:600;font-size:var(--text-xs);margin-left:.5rem}
     .landing{padding:var(--space-6) 0;min-height:calc(100vh - 120px);display:flex;align-items:center}
     .landing-hero{max-width:720px;margin:0 auto;text-align:center;padding:var(--space-6)}
+    .landing-app-icon{display:block;width:88px;height:88px;border-radius:22px;margin:0 auto var(--space-4)}
     .landing-hero-badge{display:inline-flex;align-items:center;gap:.4rem;padding:.38rem .75rem;border-radius:999px;background:var(--color-primary-soft);color:var(--color-primary-strong);font-size:var(--text-xs);font-weight:900;letter-spacing:.06em;text-transform:uppercase;margin-bottom:var(--space-4)}
     .landing-hero-title{font-size:var(--fs-display);font-weight:800;padding-bottom:.1em;line-height:1.05;letter-spacing:-.04em;margin:0 0 var(--space-3) 0;color:var(--color-text);background:linear-gradient(100deg,var(--primary-strong) 0%,var(--primary) 35%,var(--teal) 60%,var(--indigo) 100%);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
     .landing-hero-desc{max-width:600px;margin:0 auto var(--space-5) auto;color:var(--color-text-muted);font-size:var(--text-base);line-height:1.7}
@@ -283,7 +284,15 @@
   </style>
 </head>
 <body>
-  <div class="app-layout">
+  <div id="app-loading-overlay" class="app-loading-overlay" role="dialog" aria-modal="true" aria-labelledby="app-loading-title" tabindex="-1">
+    <div class="app-loading-dialog">
+      <span id="app-loading-spinner" class="app-loading-spinner" aria-hidden="true"></span>
+      <h2 id="app-loading-title">Loading</h2>
+      <p id="app-loading-message" role="status">Loading your workspace...</p>
+      <button id="app-loading-retry" type="button" class="btn" hidden>Reload page</button>
+    </div>
+  </div>
+  <div class="app-layout" inert aria-busy="true">
     <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
     <aside class="sidebar" id="appSidebar"></aside>
 
@@ -330,6 +339,7 @@
     <!-- Landing page for unauthenticated users -->
     <section class="landing container" id="landing-section">
       <div class="landing-hero">
+        <img class="landing-app-icon" src="/images/app-icon.svg" width="88" height="88" alt="" />
         <div class="landing-hero-badge"><span class="material-symbols-rounded" aria-hidden="true">auto_awesome</span> Microsoft Fabric</div>
         <h1 class="landing-hero-title">Fabric Project Sizing</h1>
         <p class="landing-hero-desc">Estimate scope and effort of Microsoft Fabric implementations — combining engineering complexity, governance, semantic modeling, reporting and delivery context into a single hours-based estimate.</p>
@@ -544,7 +554,7 @@
       <div class="tabs" id="de3-tabs"><button type="button" class="tab active" data-tab="scope">Scope</button><!-- FPS-VIEW:architecture TAB START --><button type="button" class="tab" data-tab="architecture">Architecture</button><!-- FPS-VIEW:architecture TAB END --><!-- FPS-VIEW:process TAB START --><button type="button" class="tab" data-tab="process">Delivery process</button><!-- FPS-VIEW:process TAB END --><button type="button" class="tab" data-tab="inputs">Scope inputs</button><button type="button" class="tab" data-tab="timeline">Timeline</button><button type="button" class="tab" data-tab="activities">Activity hours</button><button type="button" class="tab" data-tab="calibration">Calibration</button></div>
 
       <div class="tabpane active" id="de3-pane-scope"><section class="card"><h2>Scope</h2>
-      <p class="small" style="margin:0">The written scope behind the numbers. Choose <b>✎ Edit</b> on a section to change it, then paste content from Word, Outlook, Excel or another estimate – headings, lists, tables and links are kept, other formatting is cleaned up. While editing you can set the text size, drag table column borders, rename, reorder or remove the section; add predefined or custom sections at the bottom. Sections go back to reading mode when you save. The Scope tab is saved with the estimation.</p></section>
+      <p class="small" style="margin:0">The written scope behind the numbers. Choose <b>✎ Edit</b> on a section to change it, then paste content from Word, Outlook, Excel or another estimate – headings, lists, tables and links are kept, other formatting is cleaned up. While editing you can set the text size, drag table column borders, rename, reorder or remove the section, add predefined or custom sections at the bottom. Sections go back to reading mode when you save. The Scope tab is saved with the estimation.</p></section>
       <div id="de3-scope"></div></div>
 
       <!-- Optional views, filled by /js/estimation-views.js. Download writes
@@ -602,7 +612,7 @@
       <section class="card" data-show="discovery"><h2 data-info="sec.discovery"><span class="num">B</span>Discovery and assessment</h2><div class="form-grid">
       <label>Workshops<input type="number" data-bind="discovery.workshops"></label><label>Sources assessed<input type="number" data-bind="discovery.assessedSources"></label>
       <label>Objects sampled<input type="number" data-bind="discovery.sampledObjects"><span class="help">Representative sample</span></label>
-      <label>Legacy assets inventoried<input type="number" data-bind="discovery.inventoriedAssets"><span class="help">Full inventory with lineage; do not double count with samples.</span></label>
+      <label>Legacy assets inventoried<input type="number" data-bind="discovery.inventoriedAssets"><span class="help">Full inventory with lineage, do not double count with samples.</span></label>
       <label>Processes sampled<input type="number" data-bind="discovery.sampledProcesses"></label><label>Reports assessed<input type="number" data-bind="discovery.assessedReports"></label>
       <label>Semantic models assessed<input type="number" data-bind="discovery.assessedModels"><span class="help">Tables, measures, RLS and refresh.</span></label>
       <label>Architecture complexity<select data-bind="discovery.archComplexity"><option value="0.8">Low</option><option value="1">Medium</option><option value="1.35">High</option></select></label>
@@ -932,7 +942,7 @@
       block.dataset.sizingSection = section.id;
       block.style.setProperty('--sec-c', sectionColors[section.id] || 'var(--color-primary)');
       block.innerHTML = `
-        <h3><span class="group-num">${idx + 1}</span> ${escapeHtml(section.title)} <span class="info-icon">i<span class="info-tooltip">${escapeHtml(sectionInfoDescriptions[section.id] || 'High-level scope allowance; configurable in Admin > Calibration.')}</span></span></h3>
+        <h3><span class="group-num">${idx + 1}</span> ${escapeHtml(section.title)} <span class="info-icon">i<span class="info-tooltip">${escapeHtml(sectionInfoDescriptions[section.id] || 'High-level scope allowance, configurable in Admin > Calibration.')}</span></span></h3>
         <div class="section-adjustment">
           <label for="${section.id}-multiplier">
             <span>Section multiplier</span>
@@ -1177,7 +1187,7 @@
       const tshirtRange = getTshirtRange(tshirt);
       const timelineRange = getTimelineRange(tshirt, resourcePlan.capacityRatio);
 
-      document.getElementById('narrative').textContent = `Recipe: choice hours + dependent section base hours × configured percentage; then section uplifts, safety buffer and ${sizingRecipe.pmPercent}% PM. Timeline assumes ${sizingRecipe.productivePercent}% productive time. Excluded sections contribute zero hours.`;
+      document.getElementById('narrative').textContent = `Recipe: choice hours + dependent section base hours × configured percentage, then section uplifts, safety buffer and ${sizingRecipe.pmPercent}% PM. Timeline assumes ${sizingRecipe.productivePercent}% productive time. Excluded sections contribute zero hours.`;
       document.getElementById('buffer-summary').textContent = bufferPercent > 0
         ? `Safety buffer of ${formatWhole(bufferPercent)}% adds ${formatWhole(bufferedTotalHours - totalHours)} hours to the estimate.`
         : 'No safety buffer applied.';
@@ -1504,6 +1514,8 @@
 
     // Cloud save/load functionality
     (async function initCloud() {
+      let authenticated = false;
+      let leavingPage = false;
       const headerActions = document.getElementById('header-actions');
       const landingSection = document.getElementById('landing-section');
       const appSection = document.getElementById('app-section');
@@ -1563,6 +1575,7 @@
       }
 
       function showAccessDeniedLanding() {
+        leavingPage = true;
         window.location.replace('/access-blocked.html');
       }
 
@@ -1588,15 +1601,17 @@
           return;
         }
 
-        if (!res.ok) {
+        if (res.status === 401) {
           showUnauthenticatedLanding();
           return;
         }
+        if (!res.ok) throw new Error('Unable to verify your access. Reload the page to try again.');
 
         removeHeaderButton('header-sign-in-btn');
         removeHeaderButton('header-sign-out-btn');
 
         const user = payload;
+        authenticated = true;
         currentUserRole = user.role || null;
 
         setLandingMode(false);
@@ -1729,10 +1744,15 @@
         }
 
         async function loadEstimationById(id, { shared = false } = {}) {
-          const estimation = await fetchJson(shared ? `/api/estimations/shared/${id}` : `/api/estimations/${id}`, {}, 'Failed to load');
-          importState(estimation.data);
-          setLoadedEstimationState(estimation);
-          closeOverlay(overlay);
+          const finishLoading = AppShell.showLoading('Loading estimation...');
+          try {
+            const estimation = await fetchJson(shared ? `/api/estimations/shared/${id}` : `/api/estimations/${id}`, {}, 'Failed to load');
+            importState(estimation.data);
+            setLoadedEstimationState(estimation);
+            closeOverlay(overlay);
+          } finally {
+            finishLoading();
+          }
         }
 
         async function saveEstimationRequest(url, method, payload, successMessage) {
@@ -2889,8 +2909,12 @@
           }
           if (typeof window.__syncDetailedView === 'function') window.__syncDetailedView();
         }
-      } catch {
-        showUnauthenticatedLanding();
+      } catch (err) {
+        console.error('Workspace loading failed:', err);
+        if (authenticated) AppShell.toast('The page could not be loaded. Please reload to try again.', 'error');
+        else AppShell.showLoadingError('Unable to verify your access. Reload the page to try again.');
+      } finally {
+        if (!leavingPage) AppShell.finishInitialLoading();
       }
     })();
 
@@ -3243,7 +3267,7 @@ ${viewsJson}<script>${asScript(viewsJs)}<\/script>
 
   <footer class="app-footer" id="app-footer">
     <div class="container footer-inner">
-      <p class="footer-copy">&copy; 2026 SoftwareOne (created by Jakub Miasik). All rights reserved.</p>
+      <p class="footer-copy">&copy; 2026 created by Jakub Miasik. All rights reserved.</p>
     </div>
   </footer>
 
@@ -3348,7 +3372,7 @@ ${viewsJson}<script>${asScript(viewsJs)}<\/script>
           <h4 class="admin-cal-section-title">High-level Sizing recipe</h4>
           <div id="admin-sizing-calibration"></div>
           <h4 class="admin-cal-section-title">Scope sections per project type</h4>
-          <p class="modal-copy">Tick the scope input sections each project type includes. A section that is not ticked is hidden on the Project Estimate and adds no hours. Highlighted rows differ from the built-in setup; like the rates, a change here also reaches saved estimations the next time they are opened.</p>
+          <p class="modal-copy">Tick the scope input sections each project type includes. A section that is not ticked is hidden on the Project Estimate and adds no hours. Highlighted rows differ from the built-in setup, like the rates, a change here also reaches saved estimations the next time they are opened.</p>
           <div id="admin-calibration-types"></div>
           <h4 class="admin-cal-section-title">Hours per activity unit</h4>
           <div id="admin-calibration-groups"></div>

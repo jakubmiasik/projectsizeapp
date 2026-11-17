@@ -38,8 +38,8 @@
       id, title, scope, options: choices.map(([label, hours, sub]) => ({label, hours, sub, source: '', percent: 0}))
     });
     sections.unshift(extra('discovery', 'Discovery & assessment', 'discovery', [
-      ['Focused review', 24, 'A few workshops; inventory sources, reports and semantic models.'],
-      ['Standard assessment', 56, 'Review platform, transformations, semantic models, RLS and refresh; propose a roadmap.'],
+      ['Focused review', 24, 'A few workshops, inventory sources, reports and semantic models.'],
+      ['Standard assessment', 56, 'Review platform, transformations, semantic models, RLS and refresh, propose a roadmap.'],
       ['Enterprise assessment', 120, 'Multiple domains, legacy dependencies and a phased delivery roadmap.'],
       ['Not in scope', 0, 'No discovery or assessment work.']
     ]));
