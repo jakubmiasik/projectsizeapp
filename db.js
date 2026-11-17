@@ -193,6 +193,15 @@ async function initialize() {
       updated_by_oid NVARCHAR(100) NULL,
       updated_by_name NVARCHAR(200) NULL
     );
+
+    IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='sizing_recipe' AND xtype='U')
+    CREATE TABLE sizing_recipe (
+      id INT PRIMARY KEY CHECK (id = 1),
+      recipe NVARCHAR(MAX) NOT NULL,
+      updated_at DATETIME2 DEFAULT GETUTCDATE(),
+      updated_by_oid NVARCHAR(100) NULL,
+      updated_by_name NVARCHAR(200) NULL
+    );
   `);
   console.log('Database initialized');
 }
@@ -985,6 +994,8 @@ async function getRateDefaults() {
     .query('SELECT rate_key, rate, updated_at, updated_by_name FROM rate_defaults');
   const types = await p.request()
     .query('SELECT project_type, sections, updated_at, updated_by_name FROM project_type_sections');
+  const sizing = await p.request()
+    .query('SELECT recipe, updated_at, updated_by_name FROM sizing_recipe WHERE id = 1');
   const rates = {};
   const projectTypes = {};
   let updatedAt = null;
@@ -1006,11 +1017,13 @@ async function getRateDefaults() {
     } catch (_) { /* a row that does not parse falls back to the built-in sections */ }
     track(row);
   }
-  return { rates, projectTypes, updatedAt, updatedBy };
+  const sizingRow = sizing.recordset[0];
+  if (sizingRow) track(sizingRow);
+  return { rates, projectTypes, sizing: sizingRow ? JSON.parse(sizingRow.recipe) : null, updatedAt, updatedBy };
 }
 
 /* projectTypes is optional: leaving it out keeps the stored sections. */
-async function saveRateDefaults(rates, { userOid = null, userName = null } = {}, projectTypes) {
+async function saveRateDefaults(rates, { userOid = null, userName = null } = {}, projectTypes, sizing) {
   const p = await getPool();
   const entries = Object.entries(rates || {})
     .filter(([key, value]) => key && Number.isFinite(Number(value)));
@@ -1038,6 +1051,15 @@ async function saveRateDefaults(rates, { userOid = null, userName = null } = {},
           .query(`INSERT INTO project_type_sections (project_type, sections, updated_by_oid, updated_by_name)
                   VALUES (@type, @sections, @oid, @name)`);
       }
+    }
+    if (sizing !== undefined) {
+      await new sql.Request(tx).query('DELETE FROM sizing_recipe WHERE id = 1');
+      await new sql.Request(tx)
+        .input('recipe', sql.NVarChar(sql.MAX), JSON.stringify(sizing))
+        .input('oid', sql.NVarChar(100), userOid)
+        .input('name', sql.NVarChar(200), userName)
+        .query(`INSERT INTO sizing_recipe (id, recipe, updated_by_oid, updated_by_name)
+                VALUES (1, @recipe, @oid, @name)`);
     }
     await tx.commit();
   } catch (err) {

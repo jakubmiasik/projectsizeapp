@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" />
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+  <link rel="stylesheet" href="/css/material-icons.css" />
   <!-- Shared design system: tokens, dark mode, sidebar shell, density -->
   <link rel="stylesheet" href="/css/app-shell.css" />
   <!-- Project Estimate view; scoped to #detailed-estimation-view -->
@@ -330,15 +330,15 @@
     <!-- Landing page for unauthenticated users -->
     <section class="landing container" id="landing-section">
       <div class="landing-hero">
-        <div class="landing-hero-badge">✨ Microsoft Fabric</div>
+        <div class="landing-hero-badge"><span class="material-symbols-rounded" aria-hidden="true">auto_awesome</span> Microsoft Fabric</div>
         <h1 class="landing-hero-title">Fabric Project Sizing</h1>
         <p class="landing-hero-desc">Estimate scope and effort of Microsoft Fabric implementations — combining engineering complexity, governance, semantic modeling, reporting and delivery context into a single hours-based estimate.</p>
         <div class="landing-nav-pills">
-          <span class="landing-pill" style="--pill-c:var(--indigo)">📊 T-Shirt Sizing</span>
-          <span class="landing-pill" style="--pill-c:var(--sky)">⚙️ Detailed Estimation</span>
-          <span class="landing-pill" style="--pill-c:var(--teal)">📋 Requirements</span>
-          <span class="landing-pill" style="--pill-c:var(--violet)">💾 Version Control</span>
-          <span class="landing-pill" style="--pill-c:var(--pink)">👥 Sharing</span>
+          <span class="landing-pill" style="--pill-c:var(--indigo)"><i class="bi bi-speedometer2" aria-hidden="true"></i> T-Shirt Sizing</span>
+          <span class="landing-pill" style="--pill-c:var(--sky)"><i class="bi bi-calculator" aria-hidden="true"></i> Detailed Estimation</span>
+          <span class="landing-pill" style="--pill-c:var(--teal)"><i class="bi bi-list-check" aria-hidden="true"></i> Requirements</span>
+          <span class="landing-pill" style="--pill-c:var(--violet)"><i class="bi bi-save" aria-hidden="true"></i> Version Control</span>
+          <span class="landing-pill" style="--pill-c:var(--pink)"><i class="bi bi-share" aria-hidden="true"></i> Sharing</span>
         </div>
         <button class="btn btn-primary landing-sign-in-btn" id="landing-sign-in">Sign in with Microsoft</button>
         <p class="landing-auth-note">Protected by Microsoft Entra ID</p>
@@ -417,6 +417,9 @@
           <div class="project-intro">
             <h2 class="section-title">Project estimator</h2>
             <p class="project-copy">Use the questionnaire below to describe the anticipated scope of your Fabric implementation.</p>
+            <label for="sizing-project-type"><strong>Project type</strong></label>
+            <select id="sizing-project-type" class="opp-status-select"></select>
+            <p class="project-copy" id="sizing-scope-note">High-level sizing is independent of Project Estimate. Changing this type does not overwrite your detailed estimate.</p>
           </div>
           <ul class="meta-list" aria-label="Questionnaire details">
             <li class="meta-label">Selection: 1 option per section</li>
@@ -665,6 +668,8 @@
   <script src="/js/estimator-v3.js"></script>
   <script src="/js/estimation-views.js"></script>
 
+  <script src="/js/sizing-recipe.js"></script>
+  <script src="/js/sizing-calibration.js"></script>
   <script>
     // Each section's accent, by the kind of work it sizes: teal data and
     // ingestion, sky engineering, indigo modelling, violet governance, amber
@@ -679,17 +684,11 @@
     };
 
     const sectionIcons = {
-      sources: '🔌',
-      objects: '📦',
-      volume: '🗄️',
-      transform: '⚙️',
-      governance: '🛡️',
-      semantic: '🧠',
-      reports: '📊',
-      gold: '🥇',
-      latency: '⏱️',
-      methodology: '🏗️',
-      delivery: '🤝'
+      sources: 'database', objects: 'inventory_2', volume: 'database',
+      transform: 'engineering', governance: 'shield', semantic: 'schema',
+      reports: 'analytics', gold: 'workspace_premium', latency: 'schedule',
+      methodology: 'construction', delivery: 'handshake', discovery: 'analytics',
+      legacy: 'inventory_2', operations: 'checklist', environments: 'layers'
     };
 
     const timelinePhases = [
@@ -708,7 +707,7 @@
       { label: 'XL', from: 1000, to: Infinity }
     ];
 
-    const sections = [
+    const builtInSizingSections = [
       { id:'sources', title:'Source system', options: [
         {label:'1', hours:4, sub:'Simple ingestion for one transactional data source'},
         {label:'2-3', hours:12, sub:'Small set of connected source systems'},
@@ -819,6 +818,35 @@
       delivery: 'Scale of delivery effort including number of stakeholders and organisational reach.',
     };
 
+    const sizingDefaults = SizingRecipe.defaults(builtInSizingSections);
+    let sizingRecipe = structuredClone(sizingDefaults);
+    let orgSizingRecipe = null;
+    let sizingRecipePinned = false;
+    let sections = sizingRecipe.sections;
+    const sizingTypeInput = document.getElementById('sizing-project-type');
+    sizingTypeInput.innerHTML = Object.entries(SizingRecipe.types).map(([key, name]) =>
+      `<option value="${key}">${name}</option>`).join('');
+    sizingTypeInput.value = 'platformMigration';
+
+    function applySizingRecipe(recipe, selections) {
+      const saved = selections || {};
+      if (!selections) sections.forEach(s => {
+        saved[s.id] = {
+          value: document.querySelector(`input[name="${s.id}"]:checked`)?.value,
+          multiplier: document.querySelector(`[data-section-multiplier="${s.id}"]`)?.value
+        };
+      });
+      sizingRecipe = structuredClone(SizingRecipe.validate(recipe || sizingDefaults));
+      sections = sizingRecipe.sections;
+      renderSizingQuestions(saved);
+      calculate();
+    }
+
+    function applyOrgSizingRecipe(recipe) {
+      orgSizingRecipe = recipe ? structuredClone(SizingRecipe.validate(recipe)) : null;
+      if (!sizingRecipePinned) applySizingRecipe(orgSizingRecipe);
+    }
+
     function roundUp(value) {
       return Math.ceil(Number(value) || 0);
     }
@@ -833,13 +861,6 @@
 
     function multiplyHours(hours, factor) {
       return roundUp(hours * factor);
-    }
-
-    function getOptionHours(sectionId, option, selectedBySection) {
-      if (sectionId !== 'transform') return option.hours;
-      const objectsEstimate = selectedBySection.objects?.baseHours || 0;
-      const transformFactor = option.transform.objectsPercent * option.transform.factorA * option.transform.factorB;
-      return roundUp(objectsEstimate * transformFactor);
     }
 
     function getTshirt(hours) {
@@ -859,7 +880,7 @@
 
     function calculateTimelineWeeks(hours, capacityRatio = 1) {
       const safeRatio = Math.max(capacityRatio || 1, 0.01);
-      const baselineWeeks = roundUp((hours / 0.7) / 40);
+      const baselineWeeks = roundUp((hours / (sizingRecipe.productivePercent / 100)) / 40);
       return roundUp(baselineWeeks / safeRatio);
     }
 
@@ -867,10 +888,10 @@
       const band = tshirtBands.find(b => b.label === tshirt);
       if (!band) return '—';
       const safeRatio = Math.max(capacityRatio || 1, 0.01);
-      const baselineMinWeeks = Math.ceil((band.from / 0.7) / 40);
+      const baselineMinWeeks = Math.ceil((band.from / (sizingRecipe.productivePercent / 100)) / 40);
       const minWeeks = Math.ceil(baselineMinWeeks / safeRatio);
       if (band.to === Infinity) return `${minWeeks}+ weeks`;
-      const baselineMaxWeeks = Math.floor((band.to / 0.7) / 40);
+      const baselineMaxWeeks = Math.floor((band.to / (sizingRecipe.productivePercent / 100)) / 40);
       const maxWeeks = Math.max(minWeeks, Math.floor(baselineMaxWeeks / safeRatio));
       return `${minWeeks}–${maxWeeks} weeks`;
     }
@@ -901,13 +922,17 @@
     }
 
     const questionRoot = document.getElementById('questions');
+    function renderSizingQuestions(saved = {}) {
+    questionRoot.innerHTML = '';
     sections.forEach((section, idx) => {
-      const defaultIndex = 0;
+      const defaultIndex = section.options[saved[section.id]?.value] ? Number(saved[section.id].value) : 0;
       const block = document.createElement('section');
       block.className = 'group';
+      block.hidden = !sizingRecipe.projectTypes[sizingTypeInput.value].includes(section.id);
+      block.dataset.sizingSection = section.id;
       block.style.setProperty('--sec-c', sectionColors[section.id] || 'var(--color-primary)');
       block.innerHTML = `
-        <h3><span class="group-num">${idx + 1}</span> ${section.title} <span class="info-icon">i<span class="info-tooltip">${sectionInfoDescriptions[section.id] || ''}</span></span></h3>
+        <h3><span class="group-num">${idx + 1}</span> ${escapeHtml(section.title)} <span class="info-icon">i<span class="info-tooltip">${escapeHtml(sectionInfoDescriptions[section.id] || 'High-level scope allowance; configurable in Admin > Calibration.')}</span></span></h3>
         <div class="section-adjustment">
           <label for="${section.id}-multiplier">
             <span>Section multiplier</span>
@@ -921,15 +946,29 @@
         <div class="options">
           ${section.options.map((opt, i) => `
             <div class="option">
-              <input type="radio" name="${section.id}" id="${section.id}-${i}" value="${i}" data-label="${opt.label}" ${i === defaultIndex ? 'checked' : ''}>
+              <input type="radio" name="${section.id}" id="${section.id}-${i}" value="${i}" data-label="${escapeHtml(opt.label)}" ${i === defaultIndex ? 'checked' : ''}>
               <label for="${section.id}-${i}">
-                <span class="option-title">${opt.label}</span>
-                <span class="sub">${opt.sub ? opt.sub : `${formatWhole(opt.hours)} h`}</span>
+                <span class="option-title">${escapeHtml(opt.label)}</span>
+                <span class="sub">${escapeHtml(opt.sub || `${formatWhole(opt.hours)} h`)}</span>
               </label>
             </div>
           `).join('')}
         </div>`;
       questionRoot.appendChild(block);
+      block.querySelector('[data-section-multiplier]').value = saved[section.id]?.multiplier || '0';
+    });
+    }
+    renderSizingQuestions();
+    function syncSizingScope() {
+      let number = 0;
+      questionRoot.querySelectorAll('[data-sizing-section]').forEach(block => {
+        block.hidden = !sizingRecipe.projectTypes[sizingTypeInput.value].includes(block.dataset.sizingSection);
+        if (!block.hidden) block.querySelector('.group-num').textContent = String(++number);
+      });
+    }
+    sizingTypeInput.addEventListener('change', () => {
+      syncSizingScope();
+      calculate();
     });
 
     const bufferInput = document.getElementById('buffer');
@@ -963,6 +1002,7 @@
     }
 
     function setLoadedEstimationState(estimation) {
+      if (estimation) sizingRecipePinned = true;
       loadedEstimation = estimation ? {
         id: estimation.id,
         title: estimation.title,
@@ -1105,23 +1145,18 @@
     }
 
     function calculate() {
+      syncSizingScope();
       const chosen = [];
-      const selectedBySection = {};
+      const selections = {};
       let totalHours = 0;
 
       sections.forEach(section => {
         const input = document.querySelector(`input[name="${section.id}"]:checked`);
-        const option = section.options[Number(input.value)];
         const multiplierInput = document.querySelector(`[data-section-multiplier="${section.id}"]`);
-        const multiplierPercent = Math.max(0, Number(multiplierInput?.value) || 0);
-        const baseHours = getOptionHours(section.id, option, selectedBySection);
-        const hours = multiplyHours(baseHours, 1 + multiplierPercent / 100);
+        selections[section.id] = {value: input?.value, multiplier: multiplierInput?.value};
+      });
+      SizingRecipe.evaluate(sizingRecipe, sizingTypeInput.value, selections).forEach(({section, option, baseHours, hours, multiplierPercent}) => {
         totalHours += hours;
-        selectedBySection[section.id] = {
-          option,
-          baseHours,
-          hours
-        };
         chosen.push({
           sectionId: section.id,
           section: section.title,
@@ -1134,7 +1169,7 @@
 
       const bufferPercent = Math.max(0, Number(bufferInput.value) || 0);
       const bufferedTotalHours = multiplyHours(totalHours, 1 + bufferPercent / 100);
-      const pmHours = roundUp(bufferedTotalHours * 0.10);
+      const pmHours = roundUp(bufferedTotalHours * sizingRecipe.pmPercent / 100);
       const totalWithPM = bufferedTotalHours + pmHours;
       const resourcePlan = getResourcePlan();
       const totalWeeks = calculateTimelineWeeks(totalWithPM, resourcePlan.capacityRatio);
@@ -1142,7 +1177,7 @@
       const tshirtRange = getTshirtRange(tshirt);
       const timelineRange = getTimelineRange(tshirt, resourcePlan.capacityRatio);
 
-      document.getElementById('narrative').textContent = 'Transformation complexity is derived from the selected Objects to ingest estimate using the formula shown in each transformation option.';
+      document.getElementById('narrative').textContent = `Recipe: choice hours + dependent section base hours × configured percentage; then section uplifts, safety buffer and ${sizingRecipe.pmPercent}% PM. Timeline assumes ${sizingRecipe.productivePercent}% productive time. Excluded sections contribute zero hours.`;
       document.getElementById('buffer-summary').textContent = bufferPercent > 0
         ? `Safety buffer of ${formatWhole(bufferPercent)}% adds ${formatWhole(bufferedTotalHours - totalHours)} hours to the estimate.`
         : 'No safety buffer applied.';
@@ -1160,7 +1195,7 @@
           <td>${formatWhole(bufferedTotalHours)}</td>
         </tr>
         <tr>
-          <th>Project Management (10%)</th>
+          <th>Project Management (${sizingRecipe.pmPercent}%)</th>
           <td>${formatWhole(pmHours)}</td>
         </tr>
         <tr>
@@ -1188,11 +1223,11 @@
         <tr>
           <td>
             <div class="section-cell">
-              <span class="section-icon">${sectionIcons[c.sectionId] || '•'}</span>
-              <span class="section-name">${c.section}</span>
+              <span class="section-icon material-symbols-rounded" aria-hidden="true">${sectionIcons[c.sectionId] || 'calculate'}</span>
+              <span class="section-name">${escapeHtml(c.section)}</span>
             </div>
           </td>
-          <td class="section-choice">${c.label}</td>
+          <td class="section-choice">${escapeHtml(c.label)}</td>
         </tr>`).join('');
 
       // Ranked by the hours each section adds; the bar is relative to the
@@ -1201,10 +1236,10 @@
       const topHours = Math.max(1, top[0]?.hours || 0);
       document.getElementById('highlights').innerHTML = top.map(item => `
         <li class="driver" style="--sec-c:${sectionColors[item.sectionId] || 'var(--color-primary)'}">
-          <span class="driver-icon" aria-hidden="true">${sectionIcons[item.sectionId] || '•'}</span>
+          <span class="driver-icon material-symbols-rounded" aria-hidden="true">${sectionIcons[item.sectionId] || 'calculate'}</span>
           <span class="driver-text">
-            <span class="driver-section">${item.section}</span>
-            <strong class="driver-choice">${item.label}</strong>
+            <span class="driver-section">${escapeHtml(item.section)}</span>
+            <strong class="driver-choice">${escapeHtml(item.label)}</strong>
           </span>
           <span class="driver-bar" aria-hidden="true"><i style="width:${Math.max(4, (item.hours / topHours) * 100)}%"></i></span>
         </li>`).join('');
@@ -1212,6 +1247,9 @@
 
     document.getElementById('form').addEventListener('change', (event) => {
       if (event.target.matches('input[type="radio"], input[data-section-multiplier]')) calculate();
+    });
+    questionRoot.addEventListener('input', event => {
+      if (event.target.matches('[data-section-multiplier]')) calculate();
     });
     bufferInput.addEventListener('input', calculate);
     addResourceRoleButton.addEventListener('click', () => {
@@ -1245,6 +1283,10 @@
         document.getElementById('use-case-explanation').innerHTML = '';
         document.getElementById('additional-notes').innerHTML = '';
         bufferInput.value = 0;
+        sizingRecipePinned = false;
+        sizingTypeInput.value = 'platformMigration';
+        applySizingRecipe(orgSizingRecipe);
+        sizingTypeInput.dispatchEvent(new Event('change'));
         setLoadedEstimationState(null);
         resetResourceRoles();
         calculate();
@@ -1263,7 +1305,9 @@
       const useCaseExplanation = document.getElementById('use-case-explanation').innerHTML.trim();
       const additionalNotes = document.getElementById('additional-notes').innerHTML.trim();
       const opportunityStatus = document.getElementById('opportunity-status').value;
-      const state = { clientName, opportunityStatus, clientDescription, useCaseExplanation, additionalNotes, sections: {}, buffer: bufferInput.value, resourceRoles: [] };
+      const state = { clientName, opportunityStatus, clientDescription, useCaseExplanation, additionalNotes,
+        sizingProjectType: sizingTypeInput.value, sizingRecipe: structuredClone(sizingRecipe),
+        sections: {}, buffer: bufferInput.value, resourceRoles: [] };
       sections.forEach(section => {
         const checked = document.querySelector(`input[name="${section.id}"]:checked`);
         const multiplierEl = document.querySelector(`[data-section-multiplier="${section.id}"]`);
@@ -1289,6 +1333,10 @@
     }
 
     function importState(state) {
+      sizingTypeInput.value = Object.hasOwn(SizingRecipe.types, state.sizingProjectType) ? state.sizingProjectType : 'platformMigration';
+      // Keep the recipe used by a saved version, including any custom sections.
+      sizingRecipePinned = Boolean(state.sizingRecipe);
+      applySizingRecipe(state.sizingRecipe || orgSizingRecipe, state.sections || {});
       if (state.clientName !== undefined) {
         document.getElementById('client-name').value = state.clientName;
       }
@@ -1515,18 +1563,7 @@
       }
 
       function showAccessDeniedLanding() {
-        removeHeaderButton('header-sign-in-btn');
-        ensureHeaderButton('header-sign-out-btn', '<i class="bi bi-box-arrow-right"></i> Sign Out', 'Sign out', goToLogout);
-        setLandingMode(true);
-        landingSection.style.display = '';
-        appSection.style.display = 'none';
-        landingHeroTitle.textContent = 'Access Denied';
-        landingHeroDesc.textContent = 'You are authenticated but do not have access to this application. Please contact an administrator.';
-        landingPills.style.display = 'none';
-        landingActionBtn.style.display = '';
-        landingActionBtn.textContent = 'Sign out';
-        landingActionBtn.onclick = goToLogout;
-        landingAuthNote.style.display = 'none';
+        window.location.replace('/access-blocked.html');
       }
 
       function applyRoleVisibility() {
@@ -1579,13 +1616,20 @@
         // Every estimation starts from the organisation calibration, so it has
         // to reach the estimator before the first estimate is opened. A failure
         // here is not fatal – the engine's built-in rates still apply.
-        fetch('/api/rate-defaults')
-          .then((r) => (r.ok ? r.json() : null))
+        await fetch('/api/rate-defaults')
+          .then((r) => {
+            if (!r.ok) throw new Error('Calibration defaults could not be loaded. Built-in defaults remain in use.');
+            return r.json();
+          })
           .then((payload) => {
             if (payload && window.deApplyOrgRates) window.deApplyOrgRates(payload.rates || {});
             if (payload && window.deApplyOrgProjectTypes) window.deApplyOrgProjectTypes(payload.projectTypes || {});
+            if (payload) applyOrgSizingRecipe(payload.sizing || null);
           })
-          .catch((err) => console.warn('Calibration defaults unavailable:', err));
+          .catch((err) => {
+            console.warn('Calibration defaults unavailable:', err);
+            AppShell.toast(err.message, 'error');
+          });
 
         const overlay = document.getElementById('load-modal');
         const listEl = document.getElementById('estimation-list');
@@ -2039,8 +2083,12 @@
           if (tabName === 'calibration') {
             renderAdminCalibration();
             renderAdminProjectTypes();
+            SizingCalibration.render(document.getElementById('admin-sizing-calibration'), orgSizingRecipe || sizingDefaults);
             loadAdminCalibration()
-              .then(() => { renderAdminCalibration(); renderAdminProjectTypes(); })
+              .then(() => {
+                renderAdminCalibration(); renderAdminProjectTypes();
+                SizingCalibration.render(document.getElementById('admin-sizing-calibration'), orgSizingRecipe || sizingDefaults);
+              })
               .catch((err) => setAdminCalibrationStatus(err.message, true));
           }
         }
@@ -2118,6 +2166,7 @@
           const parts = [];
           if (count) parts.push(`${count} rate${count === 1 ? '' : 's'} overridden`);
           if (types) parts.push(`${types} project type${types === 1 ? '' : 's'} with custom sections`);
+          if (orgSizingRecipe) parts.push('Sizing recipe configured');
           if (!parts.length) return 'No overrides – every rate and project type uses the built-in default.';
           return parts.join(' · ') + (updatedBy ? ` · last changed by ${updatedBy}` : '');
         }
@@ -2150,13 +2199,14 @@
           adminTypesSaved = payload.projectTypes || {};
           if (window.deApplyOrgRates) window.deApplyOrgRates(adminRatesSaved);
           if (window.deApplyOrgProjectTypes) window.deApplyOrgProjectTypes(adminTypesSaved);
+          applyOrgSizingRecipe(payload.sizing || null);
           setAdminCalibrationStatus(adminCalibrationSummary(payload.updatedBy));
           return adminRatesSaved;
         }
 
         function renderAdminEstimationDetails(estimation, meta) {
           const state = estimation.data || {};
-          const selectedSections = sections.map((section) => {
+          const selectedSections = (state.sizingRecipe || orgSizingRecipe || sizingDefaults).sections.map((section) => {
             const selectedValue = state.sections?.[section.id]?.value;
             if (selectedValue === undefined) return null;
             const selectedOption = section.options[Number(selectedValue)];
@@ -2544,10 +2594,11 @@
             button.disabled = true;
             setAdminCalibrationStatus('Saving…');
             try {
+              const sizing = SizingCalibration.collect();
               const res = await fetch('/api/rate-defaults', {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ rates, projectTypes })
+                body: JSON.stringify({ rates, projectTypes, sizing })
               });
               const payload = await readJsonResponse(res, 'Saving the calibration defaults');
               if (!res.ok) throw new Error(payload.error || 'Failed to save calibration defaults');
@@ -2555,8 +2606,10 @@
               adminTypesSaved = payload.projectTypes || {};
               if (window.deApplyOrgRates) window.deApplyOrgRates(adminRatesSaved);
               if (window.deApplyOrgProjectTypes) window.deApplyOrgProjectTypes(adminTypesSaved);
+              applyOrgSizingRecipe(payload.sizing || null);
               renderAdminCalibration();
               renderAdminProjectTypes();
+              SizingCalibration.render(document.getElementById('admin-sizing-calibration'), orgSizingRecipe || sizingDefaults);
               const summary = `Calibration saved · ${adminCalibrationSummary()}`;
               setAdminCalibrationStatus(summary);
               AppShell.toast(summary, 'success');
@@ -2578,6 +2631,7 @@
           });
 
           document.getElementById('admin-calibration-reset').addEventListener('click', () => {
+            SizingCalibration.render(document.getElementById('admin-sizing-calibration'), sizingDefaults);
             document.querySelectorAll('#admin-calibration-groups [data-admin-rate]').forEach((input) => {
               input.value = '';
               input.closest('tr').classList.remove('changed');
@@ -3033,10 +3087,12 @@ ${viewsJson}<script>${asScript(viewsJs)}<\/script>
         useCaseExplanation: rich(raw.useCaseExplanation),
         additionalNotes: rich(raw.additionalNotes),
         sections: {},
+        sizingProjectType: Object.hasOwn(SizingRecipe.types, raw.sizingProjectType) ? raw.sizingProjectType : 'platformMigration',
+        sizingRecipe: raw.sizingRecipe ? structuredClone(SizingRecipe.validate(raw.sizingRecipe)) : undefined,
         buffer: number(raw.buffer, 0, 1000) ?? '0',
         resourceRoles: []
       };
-      sections.forEach((section) => {
+      (state.sizingRecipe || orgSizingRecipe || sizingDefaults).sections.forEach((section) => {
         const entry = raw.sections && typeof raw.sections === 'object' ? raw.sections[section.id] : null;
         if (!entry || typeof entry !== 'object') return;
         const value = String(entry.value ?? '');
@@ -3254,7 +3310,7 @@ ${viewsJson}<script>${asScript(viewsJs)}<\/script>
   <div class="modal-overlay" id="admin-modal">
     <div class="modal" style="width:min(1000px,calc(100% - 2rem))">
       <button class="modal-close">&times;</button>
-      <h3>⚙️ Admin Panel</h3>
+      <h3><i class="bi bi-gear" aria-hidden="true"></i> Admin Panel</h3>
       <div id="admin-panel-content">
         <div class="admin-tabs">
           <button class="admin-tab active" data-tab="users">Users</button>
@@ -3286,9 +3342,11 @@ ${viewsJson}<script>${asScript(viewsJs)}<\/script>
           <ul id="admin-estimations-list" class="estimation-list"></ul>
         </div>
         <div id="admin-tab-calibration" class="admin-tab-content" style="display:none">
-          <h4>Estimation calibration</h4>
-          <p class="modal-copy">These rates are the organisation defaults every estimation falls back to. An estimation keeps its own value only for a rate someone overrode on its Calibration tab — every other rate follows this card, so a change here also reaches saved estimations the next time they are opened. Leave a field empty to fall back to the built-in rate.</p>
+          <h4>Sizing and estimation calibration</h4>
+          <p class="modal-copy">Configure high-level Sizing separately from the detailed Project Estimate below. Saved Sizing versions retain their recipe. Detailed activity rates follow organisation defaults unless overridden on the estimation's own Calibration tab.</p>
           <div id="admin-calibration-status" class="muted" style="font-size:var(--text-xs);margin-bottom:var(--space-3)"></div>
+          <h4 class="admin-cal-section-title">High-level Sizing recipe</h4>
+          <div id="admin-sizing-calibration"></div>
           <h4 class="admin-cal-section-title">Scope sections per project type</h4>
           <p class="modal-copy">Tick the scope input sections each project type includes. A section that is not ticked is hidden on the Project Estimate and adds no hours. Highlighted rows differ from the built-in setup; like the rates, a change here also reaches saved estimations the next time they are opened.</p>
           <div id="admin-calibration-types"></div>
