@@ -131,8 +131,8 @@ const puppeteer = require(process.env.PUPPETEER_PATH || 'puppeteer-core');
     assert.equal((await blocked.goto(base, {waitUntil: 'networkidle0'})).status(), 403);
     assert.match(await blocked.$eval('main', el => el.textContent), /Page under maintenance/);
     assert.equal((await blocked.goto(base + '/requirements.html', {waitUntil: 'networkidle0'})).status(), 403);
-    assert.equal(await blocked.$eval('#access-signout', el => el.hidden), false);
-    assert.equal(await blocked.$eval('#access-action', el => el.hidden), true);
+    assert.equal(await blocked.$eval('main', el => el.textContent.trim().replace(/\s+/g, ' ')),
+      'Access blocked Page under maintenance');
     if (process.env.ARTIFACT_DIR) await blocked.screenshot({path: path.join(process.env.ARTIFACT_DIR, 'access-blocked.png')});
     console.log('Sizing, admin save/reload, snapshot/file round trip, icons, responsive layout and blocked access passed.');
   } finally {

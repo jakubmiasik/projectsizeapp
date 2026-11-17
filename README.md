@@ -68,7 +68,8 @@ recipient as an **Admin** or **Explorer** in **Manage Access**.
 
 Signed-out visitors see the normal landing page with Microsoft sign-in.
 After sign-in, all workspace entry points show **Access blocked / Page under
-maintenance** to unapproved accounts; only an explicit `admin`
+maintenance** to unapproved accounts, with no account-approval explanation or
+account actions on that page. Only an explicit `admin`
 or `explorer` entry in `app_users` grants workspace/API access. An empty access
 list no longer grants Explorer access automatically. On a new installation,
 provision the first administrator in `app_users` through your database's

@@ -12,25 +12,13 @@
     body { min-height:100vh; display:grid; place-items:center; padding:24px; background:var(--color-bg); color:var(--color-text); }
     main { max-width:540px; padding:40px; border:1px solid var(--color-border); border-radius:20px; background:var(--color-surface); text-align:center; }
     .access-icon { width:72px; height:72px; border-radius:18px; }
-    p { color:var(--color-text-muted); line-height:1.6; }
-    .access-actions { display:flex; flex-wrap:wrap; gap:12px; justify-content:center; margin-top:24px; }
-    a { color:var(--color-primary); }
   </style>
 </head>
 <body>
   <main>
     <img class="access-icon" src="/images/app-icon.svg" width="72" height="72" alt="">
-    <p>Fabric Project Sizing</p>
     <h1>Access blocked</h1>
     <h2>Page under maintenance</h2>
-    <p>The workspace is currently available only to approved Admin and Explorer users.
-      If you need access, contact your application administrator.</p>
-    <p id="access-status" role="status">Sign in with your approved account to continue.</p>
-    <div class="access-actions">
-      <a id="access-action" href="/.auth/login/aad?post_login_redirect_uri=/">Sign in with Microsoft</a>
-      <a id="access-signout" href="/.auth/logout?post_logout_redirect_uri=/" hidden>Sign out / switch account</a>
-    </div>
   </main>
-  <script src="/js/access-blocked.js"></script>
 </body>
 </html>
