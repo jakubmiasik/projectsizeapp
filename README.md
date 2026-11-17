@@ -65,3 +65,46 @@ step in the portal.
 
 Sharing an estimation with someone who has no app access provisions them as an
 **Explorer** automatically, so the share is usable the moment they sign in.
+
+All workspace entry points show **Access blocked / Page under maintenance** to
+unapproved accounts. Signed-out visitors can sign in; only an explicit `admin`
+or `explorer` entry in `app_users` grants workspace/API access. An empty access
+list no longer grants Explorer access automatically. On a new installation,
+provision the first administrator in `app_users` through your database's
+administrative connection.
+
+## High-level sizing calibration
+
+Sizing offers the same six project types as Project Estimate. Its questionnaire
+groups detailed scope into discovery (including semantic-model assessment),
+ingestion, transformation, legacy migration, modelling, reporting, operations
+and release environments. Discovery excludes implementation environments.
+The two estimates remain independent; choosing a Sizing type does not overwrite
+Project Estimate.
+
+In **Admin Panel → Calibration → High-level Sizing recipe**, administrators can:
+
+- Choose included sections for each project type and add custom sections/choices.
+- Edit choice descriptions, fixed hours and a percentage of another section's
+  base hours. Dependencies must be acyclic; excluded dependencies contribute zero.
+- Adjust PM uplift and productive-time percentage used for timeline bands.
+
+The recipe is: round up each choice's fixed hours plus dependency percentage,
+apply each section's uplift, sum, apply safety buffer, then add rounded-up PM.
+“Not in scope” choices contribute zero by default. Dependencies exclude local
+section uplifts to prevent double counting.
+
+**Save defaults** publishes the recipe to Azure SQL alongside detailed calibration
+in one transaction. New sizings use those defaults. Saved versions and downloaded
+estimation files retain their Sizing recipe and project type, including custom
+sections. Older records without a recipe use current defaults. Retire a section
+by excluding it from every type rather than changing existing choice indexes.
+
+Icons use a self-hosted subset of Google's **Material Symbols Rounded**; the
+Apache-2.0 license is included in `public/fonts/Material-Symbols-LICENSE.txt`.
+
+Run the focused automated checks with `node --test tests/*.test.js`.
+For the browser integration check, install `puppeteer-core` in your test
+environment, set `PUPPETEER_PATH` to its module directory and `CHROME_PATH` to
+Chrome, then run `node tests/sizing-browser.js`. The fixture boots the real
+Express app with an in-memory database substitute; it never uses production data.

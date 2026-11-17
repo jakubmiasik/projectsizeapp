@@ -6,6 +6,27 @@
    (requirements generator) so both pages look and behave the same.
    ══════════════════════════════════════════════════════════════ */
 
+/* Configurable high-level sizing. */
+[data-sizing-section][hidden] { display:none !important; }
+.sizing-recipe-scroll { overflow-x:auto; margin:12px 0; }
+.sizing-recipe-globals { display:flex; flex-wrap:wrap; gap:16px; margin:16px 0; }
+#admin-sizing-calibration input:not([type="checkbox"]),
+#admin-sizing-calibration select {
+  border:1px solid var(--color-border);
+  border-radius:6px;
+  padding:6px 8px;
+  background:var(--color-surface);
+  color:var(--color-text);
+  font:inherit;
+  text-align:left;
+  max-width:100%;
+}
+#admin-sizing-calibration input[type="text"] { width:14rem; }
+#admin-sizing-calibration input[type="number"] { width:6rem; }
+#admin-sizing-calibration select { min-width:10rem; }
+#admin-sizing-calibration .admin-cal-table { min-width:760px; }
+#sizing-project-type { width:100%; margin-top:8px; }
+
 /* ──── Design Tokens ──── */
 /* Base palette, shared with the Project Estimate view (/css/estimator-v3.css,
    whose component rules read these directly). Defined here rather than there

@@ -1,0 +1,77 @@
+/* Material Symbols Rounded by Google, Apache-2.0; license in /fonts/. */
+@font-face {
+  font-family: 'Material Symbols Rounded';
+  font-style: normal;
+  font-weight: 400;
+  font-display: block;
+  src: url('../fonts/material-symbols-rounded.ttf') format('truetype');
+}
+.material-symbols-rounded, .bi::before {
+  font-family: 'Material Symbols Rounded' !important;
+  font-weight: 400 !important;
+  font-style: normal !important;
+  font-size: 1.25em;
+  line-height: 1;
+  display: inline-block;
+  text-transform: none;
+  letter-spacing: normal;
+  white-space: nowrap;
+  word-wrap: normal;
+  direction: ltr;
+  font-feature-settings: 'liga';
+  -webkit-font-smoothing: antialiased;
+  vertical-align: -.15em;
+}
+/* Keep existing icon hooks, including theme and density toggle updates. */
+.bi-list::before { content: 'menu'; }
+.bi-house-fill::before { content: 'home'; }
+.bi-save::before { content: 'save'; }
+.bi-cloud-arrow-down::before { content: 'cloud_download'; }
+.bi-file-earmark-arrow-down::before { content: 'download'; }
+.bi-file-earmark-arrow-up::before { content: 'upload'; }
+.bi-share::before { content: 'share'; }
+.bi-distribute-vertical::before { content: 'density_medium'; }
+.bi-distribute-horizontal::before { content: 'density_small'; }
+.bi-moon::before { content: 'dark_mode'; }
+.bi-sun::before { content: 'light_mode'; }
+.bi-lock::before { content: 'lock'; }
+.bi-box-arrow-right::before { content: 'logout'; }
+.bi-box-arrow-in-right::before { content: 'login'; }
+.bi-gear::before { content: 'settings'; }
+.bi-speedometer2::before { content: 'speed'; }
+.bi-layout-sidebar-inset::before { content: 'left_panel_close'; }
+.bi-layout-sidebar-inset-reverse::before { content: 'left_panel_open'; }
+.bi-check-circle-fill::before { content: 'check_circle'; }
+.bi-exclamation-triangle-fill::before { content: 'warning'; }
+.bi-info-circle-fill::before { content: 'info'; }
+.bi-folder2-open::before { content: 'folder_open'; }
+.bi-diagram-3::before { content: 'account_tree'; }
+.bi-check2-square::before { content: 'check_box'; }
+.bi-check2-circle::before { content: 'task_alt'; }
+.bi-eye::before { content: 'visibility'; }
+.bi-link-45deg::before { content: 'link'; }
+.bi-layers::before { content: 'layers'; }
+.bi-layout-text-sidebar-reverse::before { content: 'view_sidebar'; }
+.bi-kanban::before { content: 'view_kanban'; }
+.bi-file-earmark-richtext::before, .bi-file-text::before { content: 'description'; }
+.bi-rulers::before { content: 'straighten'; }
+.bi-calculator::before { content: 'calculate'; }
+.bi-trash::before { content: 'delete'; }
+.bi-plus-circle::before { content: 'add_circle'; }
+.bi-plus-square-dotted::before { content: 'add_box'; }
+.bi-arrow-counterclockwise::before { content: 'restart_alt'; }
+.bi-arrow-clockwise::before { content: 'redo'; }
+.bi-type-bold::before { content: 'format_bold'; }
+.bi-type-italic::before { content: 'format_italic'; }
+.bi-type-underline::before { content: 'format_underlined'; }
+.bi-type-strikethrough::before { content: 'format_strikethrough'; }
+.bi-list-ul::before { content: 'format_list_bulleted'; }
+.bi-list-ol::before { content: 'format_list_numbered'; }
+.bi-text-left::before { content: 'format_align_left'; }
+.bi-text-center::before { content: 'format_align_center'; }
+.bi-text-right::before { content: 'format_align_right'; }
+.bi-eraser::before { content: 'ink_eraser'; }
+.bi-arrow-up::before { content: 'arrow_upward'; }
+.bi-arrow-down::before { content: 'arrow_downward'; }
+.bi-list-check::before { content: 'checklist'; }
+.bi-chevron-down::before { content: 'expand_more'; }

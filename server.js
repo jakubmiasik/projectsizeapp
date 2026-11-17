@@ -3,6 +3,7 @@ const compression = require('compression');
 const path = require('path');
 const db = require('./db');
 const graph = require('./graph');
+const sizingRecipe = require('./public/js/sizing-recipe');
 
 const app = express();
 const PORT = process.env.PORT || 8080;
@@ -21,6 +22,20 @@ app.use(compression());
 // Estimations embed images as base64 data URLs, so bodies are far larger than
 // a typical JSON API request.
 app.use(express.json({ limit: '25mb' }));
+// Gate document entry points too, not just data APIs. Static assets remain public.
+async function gateWorkspace(req, res, next) {
+  const user = getUser(req);
+  if (!user) return res.sendFile(path.join(__dirname, 'public', 'access-blocked.html'));
+  try {
+    const access = await resolveUserAccess(user);
+    if (access.role) return next();
+    return res.status(403).sendFile(path.join(__dirname, 'public', 'access-blocked.html'));
+  } catch (err) {
+    console.error('Failed to validate page access:', err);
+    return res.status(503).send('Unable to verify application access. Please try again later.');
+  }
+}
+app.get(['/', '/index.html', '/requirements.html'], gateWorkspace);
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Extract user identity from App Service EasyAuth headers
@@ -55,16 +70,10 @@ function normalizeEmail(value) {
 }
 
 async function resolveUserAccess(user) {
- const configuredUserCount = await db.countAppUsers();
- if (configuredUserCount === 0) {
-   return { role: 'explorer', configuredUserCount };
- }
-
  const appUser = user.email ? await db.getUserRole(user.email) : null;
  return {
-   role: appUser?.role || null,
-   displayName: appUser?.display_name || '',
-   configuredUserCount
+   role: isValidRole(appUser?.role) ? appUser.role : null,
+   displayName: appUser?.display_name || ''
  };
 }
 
@@ -261,7 +270,7 @@ app.delete('/api/admin/estimations/:id', requireAuth, requireAdmin, async (req, 
 // ==================== CALIBRATION DEFAULTS API ====================
 
 // The Project Estimate's scope input sections a project type can include.
-const SCOPE_SECTION_KEYS = ['discovery', 'sources', 'transform', 'legacy', 'models', 'reports', 'ops'];
+const SCOPE_SECTION_KEYS = ['discovery', 'sources', 'transform', 'legacy', 'models', 'reports', 'ops', 'env'];
 
 // Every signed-in user reads the organisation calibration, because a new
 // estimation starts from it; only an administrator may change it.
@@ -302,8 +311,16 @@ app.put('/api/rate-defaults', requireAuth, requireAdmin, async (req, res) => {
       projectTypes[type] = SCOPE_SECTION_KEYS.filter((x) => sections.includes(x));
     }
   }
+  let sizing;
+  if (req.body?.sizing !== undefined) {
+    try {
+      sizing = sizingRecipe.validate(req.body.sizing);
+    } catch (err) {
+      return res.status(400).json({ error: `Invalid sizing recipe: ${err.message}` });
+    }
+  }
   try {
-    const saved = await db.saveRateDefaults(clean, { userOid: req.user?.oid, userName: req.user?.name }, projectTypes);
+    const saved = await db.saveRateDefaults(clean, { userOid: req.user?.oid, userName: req.user?.name }, projectTypes, sizing);
     res.json(saved);
   } catch (err) {
     console.error('Failed to save rate defaults:', err);
@@ -616,7 +633,7 @@ app.all('/api/*', (req, res) => {
 });
 
 // SPA fallback - serve the page (auth check happens client-side)
-app.get('*', (_req, res) => {
+app.get('*', gateWorkspace, (_req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
