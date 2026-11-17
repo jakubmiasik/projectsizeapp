@@ -401,9 +401,13 @@
     var brand = document.createElement('a');
     brand.className = 'sidebar-brand';
     brand.href = '/';
-    var logo = document.createElement('span');
+    brand.setAttribute('aria-label', 'Fabric Project Sizing home');
+    var logo = document.createElement('img');
     logo.className = 'brand-logo';
-    logo.textContent = 'F';
+    logo.src = '/images/app-icon.svg';
+    logo.alt = '';
+    logo.width = 36;
+    logo.height = 36;
     var brandText = document.createElement('span');
     brandText.className = 'brand-text';
     brandText.appendChild(document.createTextNode('Fabric Project Sizing'));

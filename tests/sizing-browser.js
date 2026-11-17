@@ -24,6 +24,8 @@ const puppeteer = require(process.env.PUPPETEER_PATH || 'puppeteer-core');
     await page.setExtraHTTPHeaders({'x-ms-client-principal': principal});
     await page.goto(base, {waitUntil: 'networkidle0'});
     await page.waitForSelector('[data-nav-id="admin"]');
+    assert.equal(await page.$eval('.brand-logo', el => el.tagName === 'IMG' && el.naturalWidth > 0), true);
+    assert.equal(await page.$eval('link[rel="icon"]', el => el.getAttribute('href')), '/images/app-icon.svg');
     assert.equal(await page.$$eval('#sizing-project-type option', els => els.length), 6);
     assert.deepEqual(await page.$$eval('#sizing-project-type option', els => els.map(el => [el.value, el.textContent])),
       await page.evaluate(() => FabricEstimatorV3.getProjectTypes().map(type => [type.key, type.name])));
@@ -117,11 +119,17 @@ const puppeteer = require(process.env.PUPPETEER_PATH || 'puppeteer-core');
 
     const blocked = await browser.newPage();
     await blocked.goto(base, {waitUntil: 'networkidle0'});
-    assert.match(await blocked.$eval('main', el => el.textContent), /Page under maintenance/);
-    assert.equal(await blocked.$eval('#access-action', el => el.hidden), false);
+    assert.equal(await blocked.$eval('body', el => el.classList.contains('is-landing')), true);
+    assert.equal(await blocked.$eval('#landing-section', el => getComputedStyle(el).display !== 'none'), true);
+    assert.equal(await blocked.$eval('#landing-sign-in', el => el.textContent), 'Sign in with Microsoft');
+    assert.equal(await blocked.$eval('.landing-app-icon', el => el.naturalWidth > 0), true);
+    assert.equal(await blocked.$eval('#app-section', el => getComputedStyle(el).display), 'none');
+    if (process.env.ARTIFACT_DIR) await blocked.screenshot({path: path.join(process.env.ARTIFACT_DIR, 'public-landing.png')});
     await blocked.setExtraHTTPHeaders({'x-ms-client-principal': Buffer.from(JSON.stringify({
       userId: 'blocked', claims: [{typ: 'preferred_username', val: 'unapproved@test.local'}]
     })).toString('base64')});
+    assert.equal((await blocked.goto(base, {waitUntil: 'networkidle0'})).status(), 403);
+    assert.match(await blocked.$eval('main', el => el.textContent), /Page under maintenance/);
     assert.equal((await blocked.goto(base + '/requirements.html', {waitUntil: 'networkidle0'})).status(), 403);
     assert.equal(await blocked.$eval('#access-signout', el => el.hidden), false);
     assert.equal(await blocked.$eval('#access-action', el => el.hidden), true);

@@ -294,13 +294,8 @@ body.sidebar-collapsed { --shell-offset: var(--sidebar-collapsed); }
   width: 36px;
   height: 36px;
   border-radius: 10px;
-  background: var(--brand-gradient);
-  color: #fff;
-  display: grid;
-  place-items: center;
-  font-family: var(--font-display);
-  font-weight: 800;
-  font-size: var(--fs-base);
+  display: block;
+  object-fit: contain;
   box-shadow: 0 6px 16px -6px rgba(6, 78, 59, .55);
   flex-shrink: 0;
 }

@@ -63,11 +63,12 @@ step in the portal.
 | Requirements | edit | edit | edit |
 | Cost / rate totals | — | — | view |
 
-Sharing an estimation with someone who has no app access provisions them as an
-**Explorer** automatically, so the share is usable the moment they sign in.
+Sharing never grants application access. An administrator must first add the
+recipient as an **Admin** or **Explorer** in **Manage Access**.
 
-All workspace entry points show **Access blocked / Page under maintenance** to
-unapproved accounts. Signed-out visitors can sign in; only an explicit `admin`
+Signed-out visitors see the normal landing page with Microsoft sign-in.
+After sign-in, all workspace entry points show **Access blocked / Page under
+maintenance** to unapproved accounts; only an explicit `admin`
 or `explorer` entry in `app_users` grants workspace/API access. An empty access
 list no longer grants Explorer access automatically. On a new installation,
 provision the first administrator in `app_users` through your database's
