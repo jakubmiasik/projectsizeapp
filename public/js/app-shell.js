@@ -411,9 +411,6 @@
     var brandText = document.createElement('span');
     brandText.className = 'brand-text';
     brandText.appendChild(document.createTextNode('Fabric Project Sizing'));
-    var brandSub = document.createElement('small');
-    brandSub.textContent = 'xdcWarsaw internal';
-    brandText.appendChild(brandSub);
     brand.appendChild(logo);
     brand.appendChild(brandText);
     sidebar.appendChild(brand);
