@@ -18,6 +18,63 @@
 
   // How many estimations may be open at once.
   var MAX_PROJECTS = 5;
+  var loadingCount = document.documentElement.classList.contains('app-loading') ? 1 : 0;
+  var initialLoadingFinished = false;
+  var loadingMessage = 'Loading your workspace...';
+  var loadingError = '';
+  var loadingFocus = null;
+
+  function renderLoading() {
+    var overlay = document.getElementById('app-loading-overlay');
+    if (!overlay) return;
+    var busy = loadingCount > 0 || Boolean(loadingError);
+    var wasHidden = overlay.hidden;
+    overlay.hidden = !busy;
+    document.documentElement.classList.toggle('app-loading', busy);
+    var layout = document.querySelector('.app-layout');
+    if (layout) {
+      layout.inert = busy;
+      layout.setAttribute('aria-busy', String(busy));
+    }
+    document.getElementById('app-loading-title').textContent = loadingError ? 'Unable to load' : 'Loading';
+    document.getElementById('app-loading-message').textContent = loadingError || loadingMessage;
+    document.getElementById('app-loading-spinner').hidden = Boolean(loadingError);
+    document.getElementById('app-loading-retry').hidden = !loadingError;
+    if (busy && wasHidden) {
+      loadingFocus = document.activeElement;
+      overlay.focus({preventScroll: true});
+    } else if (!busy && loadingFocus && loadingFocus.isConnected) {
+      loadingFocus.focus({preventScroll: true});
+      loadingFocus = null;
+    }
+  }
+
+  function showLoading(message) {
+    loadingCount++;
+    loadingMessage = message || 'Loading your workspace...';
+    renderLoading();
+    var finished = false;
+    return function () {
+      if (finished) return;
+      finished = true;
+      loadingCount = Math.max(0, loadingCount - 1);
+      renderLoading();
+    };
+  }
+
+  function finishInitialLoading() {
+    if (initialLoadingFinished) return;
+    initialLoadingFinished = true;
+    loadingCount = Math.max(0, loadingCount - 1);
+    renderLoading();
+  }
+
+  function showLoadingError(message) {
+    loadingError = message;
+    renderLoading();
+    var retry = document.getElementById('app-loading-retry');
+    if (retry) retry.focus({preventScroll: true});
+  }
 
   // Nav entries shared by every page. "Sizing Workspace" is deliberately a
   // clean link with no query string: it is the blank form for starting
@@ -606,6 +663,9 @@
     state.active = opts.active || null;
 
     function boot() {
+      renderLoading();
+      var retry = document.getElementById('app-loading-retry');
+      if (retry) retry.addEventListener('click', function () { global.location.reload(); });
       applyDensity(readStored(STORAGE.density) === 'compact' ? 'compact' : 'comfortable');
       // Restore the estimations left open on other pages before first paint of
       // the nav, so the sidebar is complete on arrival. Pages that opened a
@@ -681,6 +741,9 @@
     toggleSidebar: toggleSidebarMobile,
     collapseSidebar: toggleSidebarCollapse,
     toast: toast,
-    getTheme: currentTheme
+    getTheme: currentTheme,
+    showLoading: showLoading,
+    finishInitialLoading: finishInitialLoading,
+    showLoadingError: showLoadingError
   };
 })(window);

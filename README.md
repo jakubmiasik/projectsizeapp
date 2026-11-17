@@ -74,6 +74,11 @@ list no longer grants Explorer access automatically. On a new installation,
 provision the first administrator in `app_users` through your database's
 administrative connection.
 
+Workspace pages show a small loading dialog over a blurred, non-interactive
+background until authentication and initial data loading finish. The sign-in
+landing is shown only after a signed-out response. Access-check failures show
+a reload action instead of presenting the login page.
+
 ## High-level sizing calibration
 
 Sizing offers the same six project types as Project Estimate. Its questionnaire
@@ -109,3 +114,5 @@ For the browser integration check, install `puppeteer-core` in your test
 environment, set `PUPPETEER_PATH` to its module directory and `CHROME_PATH` to
 Chrome, then run `node tests/sizing-browser.js`. The fixture boots the real
 Express app with an in-memory database substitute; it never uses production data.
+Run `node tests/loading-browser.js` with the same settings to exercise delayed
+authentication, deep-linked estimates, Requirements and loading failure states.

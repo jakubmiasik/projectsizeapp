@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="light">
+<html lang="en" data-theme="light" class="app-loading">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -284,7 +284,15 @@
   </style>
 </head>
 <body>
-  <div class="app-layout">
+  <div id="app-loading-overlay" class="app-loading-overlay" role="dialog" aria-modal="true" aria-labelledby="app-loading-title" tabindex="-1">
+    <div class="app-loading-dialog">
+      <span id="app-loading-spinner" class="app-loading-spinner" aria-hidden="true"></span>
+      <h2 id="app-loading-title">Loading</h2>
+      <p id="app-loading-message" role="status">Loading your workspace...</p>
+      <button id="app-loading-retry" type="button" class="btn" hidden>Reload page</button>
+    </div>
+  </div>
+  <div class="app-layout" inert aria-busy="true">
     <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
     <aside class="sidebar" id="appSidebar"></aside>
 
@@ -1506,6 +1514,8 @@
 
     // Cloud save/load functionality
     (async function initCloud() {
+      let authenticated = false;
+      let leavingPage = false;
       const headerActions = document.getElementById('header-actions');
       const landingSection = document.getElementById('landing-section');
       const appSection = document.getElementById('app-section');
@@ -1565,6 +1575,7 @@
       }
 
       function showAccessDeniedLanding() {
+        leavingPage = true;
         window.location.replace('/access-blocked.html');
       }
 
@@ -1590,15 +1601,17 @@
           return;
         }
 
-        if (!res.ok) {
+        if (res.status === 401) {
           showUnauthenticatedLanding();
           return;
         }
+        if (!res.ok) throw new Error('Unable to verify your access. Reload the page to try again.');
 
         removeHeaderButton('header-sign-in-btn');
         removeHeaderButton('header-sign-out-btn');
 
         const user = payload;
+        authenticated = true;
         currentUserRole = user.role || null;
 
         setLandingMode(false);
@@ -1731,10 +1744,15 @@
         }
 
         async function loadEstimationById(id, { shared = false } = {}) {
-          const estimation = await fetchJson(shared ? `/api/estimations/shared/${id}` : `/api/estimations/${id}`, {}, 'Failed to load');
-          importState(estimation.data);
-          setLoadedEstimationState(estimation);
-          closeOverlay(overlay);
+          const finishLoading = AppShell.showLoading('Loading estimation...');
+          try {
+            const estimation = await fetchJson(shared ? `/api/estimations/shared/${id}` : `/api/estimations/${id}`, {}, 'Failed to load');
+            importState(estimation.data);
+            setLoadedEstimationState(estimation);
+            closeOverlay(overlay);
+          } finally {
+            finishLoading();
+          }
         }
 
         async function saveEstimationRequest(url, method, payload, successMessage) {
@@ -2891,8 +2909,12 @@
           }
           if (typeof window.__syncDetailedView === 'function') window.__syncDetailedView();
         }
-      } catch {
-        showUnauthenticatedLanding();
+      } catch (err) {
+        console.error('Workspace loading failed:', err);
+        if (authenticated) AppShell.toast('The page could not be loaded. Please reload to try again.', 'error');
+        else AppShell.showLoadingError('Unable to verify your access. Reload the page to try again.');
+      } finally {
+        if (!leavingPage) AppShell.finishInitialLoading();
       }
     })();
 
