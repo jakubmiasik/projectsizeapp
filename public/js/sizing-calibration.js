@@ -31,7 +31,7 @@
       <p class="modal-copy">High-level sizing is separate from the detailed activity rate card.
       Each choice adds fixed hours plus a percentage of another included section's base hours.
       Section uplifts and safety buffer apply next, then PM. Excluded dependencies contribute zero.
-      Saved sizing versions retain their recipe; these defaults apply to new sizings.</p>
+      Saved sizing versions retain their recipe, these defaults apply to new sizings.</p>
       <div class="sizing-recipe-globals">
         <label>PM uplift (%) <input type="number" min="0" max="500" step="0.1" data-global="pmPercent" value="${recipe.pmPercent}"></label>
         <label>Productive time (%) <input type="number" min="1" max="100" step="1" data-global="productivePercent" value="${recipe.productivePercent}"></label>

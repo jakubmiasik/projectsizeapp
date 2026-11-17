@@ -546,7 +546,7 @@
       <div class="tabs" id="de3-tabs"><button type="button" class="tab active" data-tab="scope">Scope</button><!-- FPS-VIEW:architecture TAB START --><button type="button" class="tab" data-tab="architecture">Architecture</button><!-- FPS-VIEW:architecture TAB END --><!-- FPS-VIEW:process TAB START --><button type="button" class="tab" data-tab="process">Delivery process</button><!-- FPS-VIEW:process TAB END --><button type="button" class="tab" data-tab="inputs">Scope inputs</button><button type="button" class="tab" data-tab="timeline">Timeline</button><button type="button" class="tab" data-tab="activities">Activity hours</button><button type="button" class="tab" data-tab="calibration">Calibration</button></div>
 
       <div class="tabpane active" id="de3-pane-scope"><section class="card"><h2>Scope</h2>
-      <p class="small" style="margin:0">The written scope behind the numbers. Choose <b>✎ Edit</b> on a section to change it, then paste content from Word, Outlook, Excel or another estimate – headings, lists, tables and links are kept, other formatting is cleaned up. While editing you can set the text size, drag table column borders, rename, reorder or remove the section; add predefined or custom sections at the bottom. Sections go back to reading mode when you save. The Scope tab is saved with the estimation.</p></section>
+      <p class="small" style="margin:0">The written scope behind the numbers. Choose <b>✎ Edit</b> on a section to change it, then paste content from Word, Outlook, Excel or another estimate – headings, lists, tables and links are kept, other formatting is cleaned up. While editing you can set the text size, drag table column borders, rename, reorder or remove the section, add predefined or custom sections at the bottom. Sections go back to reading mode when you save. The Scope tab is saved with the estimation.</p></section>
       <div id="de3-scope"></div></div>
 
       <!-- Optional views, filled by /js/estimation-views.js. Download writes
@@ -604,7 +604,7 @@
       <section class="card" data-show="discovery"><h2 data-info="sec.discovery"><span class="num">B</span>Discovery and assessment</h2><div class="form-grid">
       <label>Workshops<input type="number" data-bind="discovery.workshops"></label><label>Sources assessed<input type="number" data-bind="discovery.assessedSources"></label>
       <label>Objects sampled<input type="number" data-bind="discovery.sampledObjects"><span class="help">Representative sample</span></label>
-      <label>Legacy assets inventoried<input type="number" data-bind="discovery.inventoriedAssets"><span class="help">Full inventory with lineage; do not double count with samples.</span></label>
+      <label>Legacy assets inventoried<input type="number" data-bind="discovery.inventoriedAssets"><span class="help">Full inventory with lineage, do not double count with samples.</span></label>
       <label>Processes sampled<input type="number" data-bind="discovery.sampledProcesses"></label><label>Reports assessed<input type="number" data-bind="discovery.assessedReports"></label>
       <label>Semantic models assessed<input type="number" data-bind="discovery.assessedModels"><span class="help">Tables, measures, RLS and refresh.</span></label>
       <label>Architecture complexity<select data-bind="discovery.archComplexity"><option value="0.8">Low</option><option value="1">Medium</option><option value="1.35">High</option></select></label>
@@ -934,7 +934,7 @@
       block.dataset.sizingSection = section.id;
       block.style.setProperty('--sec-c', sectionColors[section.id] || 'var(--color-primary)');
       block.innerHTML = `
-        <h3><span class="group-num">${idx + 1}</span> ${escapeHtml(section.title)} <span class="info-icon">i<span class="info-tooltip">${escapeHtml(sectionInfoDescriptions[section.id] || 'High-level scope allowance; configurable in Admin > Calibration.')}</span></span></h3>
+        <h3><span class="group-num">${idx + 1}</span> ${escapeHtml(section.title)} <span class="info-icon">i<span class="info-tooltip">${escapeHtml(sectionInfoDescriptions[section.id] || 'High-level scope allowance, configurable in Admin > Calibration.')}</span></span></h3>
         <div class="section-adjustment">
           <label for="${section.id}-multiplier">
             <span>Section multiplier</span>
@@ -1179,7 +1179,7 @@
       const tshirtRange = getTshirtRange(tshirt);
       const timelineRange = getTimelineRange(tshirt, resourcePlan.capacityRatio);
 
-      document.getElementById('narrative').textContent = `Recipe: choice hours + dependent section base hours × configured percentage; then section uplifts, safety buffer and ${sizingRecipe.pmPercent}% PM. Timeline assumes ${sizingRecipe.productivePercent}% productive time. Excluded sections contribute zero hours.`;
+      document.getElementById('narrative').textContent = `Recipe: choice hours + dependent section base hours × configured percentage, then section uplifts, safety buffer and ${sizingRecipe.pmPercent}% PM. Timeline assumes ${sizingRecipe.productivePercent}% productive time. Excluded sections contribute zero hours.`;
       document.getElementById('buffer-summary').textContent = bufferPercent > 0
         ? `Safety buffer of ${formatWhole(bufferPercent)}% adds ${formatWhole(bufferedTotalHours - totalHours)} hours to the estimate.`
         : 'No safety buffer applied.';
@@ -3350,7 +3350,7 @@ ${viewsJson}<script>${asScript(viewsJs)}<\/script>
           <h4 class="admin-cal-section-title">High-level Sizing recipe</h4>
           <div id="admin-sizing-calibration"></div>
           <h4 class="admin-cal-section-title">Scope sections per project type</h4>
-          <p class="modal-copy">Tick the scope input sections each project type includes. A section that is not ticked is hidden on the Project Estimate and adds no hours. Highlighted rows differ from the built-in setup; like the rates, a change here also reaches saved estimations the next time they are opened.</p>
+          <p class="modal-copy">Tick the scope input sections each project type includes. A section that is not ticked is hidden on the Project Estimate and adds no hours. Highlighted rows differ from the built-in setup, like the rates, a change here also reaches saved estimations the next time they are opened.</p>
           <div id="admin-calibration-types"></div>
           <h4 class="admin-cal-section-title">Hours per activity unit</h4>
           <div id="admin-calibration-groups"></div>
