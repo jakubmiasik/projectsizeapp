@@ -34,7 +34,10 @@ test('signed-in unapproved accounts get the maintenance page and no API access',
     for (const url of ['/', '/index.html', '/requirements.html', '/unknown-workspace']) {
       const response = await fetch(base + url, {headers: headers(role)});
       assert.equal(response.status, 403);
-      assert.match(await response.text(), /Page under maintenance/);
+      const html = await response.text();
+      assert.match(html, /<h1>Access blocked<\/h1>/);
+      assert.match(html, /<h2>Page under maintenance<\/h2>/);
+      assert.doesNotMatch(html, /approved|administrator|access-status|access-blocked\.js/i);
     }
     const response = await fetch(base + '/api/rate-defaults', {headers: headers(role)});
     assert.equal(response.status, 403);
